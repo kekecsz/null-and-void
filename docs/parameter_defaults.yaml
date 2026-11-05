@@ -1,0 +1,93 @@
+# Null & Void: game parameter defaults
+#
+# Every numeric game setting lives here. The rulebook refers to the top-level
+# settings by name, as [name]. A scenario can override any of them in its
+# parameter_overrides block, and the host can change them before a game starts.
+# Comments give units only; what each setting does is in the rulebook.
+
+# Players
+min_players: 2
+max_players: 5
+
+# Staff
+cost_of_postdoc: 1                         # money per postdoc per round
+student_base_hire_cap: 4                   # students
+student_unassigned_base_threshold: 4       # six-sided die result
+unpaid_postdoc_penalty: -4                 # academic credit
+fired_postdoc_penalty: -1                  # academic credit
+unused_staff_penalty: -1                   # academic credit per staff member
+
+# Starting positions
+starting_academic_credit: 10
+talent_development_track_starting_position: 0
+grant_track_starting_position: 1           # position number in grant_track (1 = first entry)
+talent_track_max: 3
+
+# Game Period Deck (Calm period cards per player in each part of the deck)
+calm_cards_per_player_top: 40
+calm_cards_per_player_warning: 20
+calm_cards_per_player_crisis: 20
+
+# Probes and sensors
+probe_deck_copies: 10
+input_parameter_deck_size: 120              # cards; must divide by every parameter's state count
+probe_true_input_deck_size: 8              # cards
+probe_fake_input_deck_size: 4              # Noise Cards at sensor level 1
+sensor_install_and_upgrade_AC_reward: 1    # academic credit per sensor level reached
+
+# Experiments and methods
+experiment_free_input_parameters: 2
+experiment_method_citation_AC_reward: 1    # academic credit
+
+# Predictions (academic credit)
+citation_reward: 1
+failed_non_prereg_pred_ac: -1
+failed_prereg_pred_ac: 0
+failed_prereg_pred_ac_crisis: -5
+crisis_failed_pred_citation_penalty: -3
+crisis_pred_base_bonus: 2
+crisis_pred_citation_reward_bonus: 1
+
+# Nobel Prize and retraction
+nobel_condition: 6                         # consecutive successful predictions
+retraction_threshold: 3                    # retraction counter value
+retraction_ac_penalty: -5                  # academic credit
+
+# Crisis
+crisis_condition: 5                        # unsuccessful predictions
+crisis_length: 4                           # rounds
+
+# Publication
+submission_portal_positions: 40
+peer_review_random_draws: 2
+min_reviews_for_decision: 2
+OA_publication_AC_reward: 1                # academic credit
+
+# Funding
+patent_funding: 1                          # money per patent per round
+
+# Grant funding track: one entry per position, lowest position first.
+# The number of positions is the length of this list.
+# expected_to_increase is null where there is no higher position.
+grant_track:
+  - {funding: 1, admin: 0, expected_to_maintain: 0, expected_to_increase: 1}
+  - {funding: 2, admin: 1, expected_to_maintain: 1, expected_to_increase: 2}
+  - {funding: 3, admin: 1, expected_to_maintain: 1, expected_to_increase: 2}
+  - {funding: 4, admin: 2, expected_to_maintain: 2, expected_to_increase: 3}
+  - {funding: 5, admin: 2, expected_to_maintain: 3, expected_to_increase: 4}
+  - {funding: 6, admin: 2, expected_to_maintain: 4, expected_to_increase: null}
+
+# Journal tiers: one entry per tier, tier 0 first (list position = tier number).
+#   min_records       observations and experiments combined
+#   min_observations  separate minimum of observations
+#   min_experiments   separate minimum of experiments
+#   min_elements      input parameters plus world outcomes in the theory
+#   submission_fee    money paid at submission (replaces predatory_APC)
+#   apc               money for the optional article processing charge (replaces APC)
+journal_tiers:
+  - {min_records: 0, min_observations: 0, min_experiments: 0, min_elements: 2, rounds_in_processing: 0, peer_review: false, methods_accepted: true,  submission_fee: 1, apc: 0}
+  - {min_records: 1, min_observations: 0, min_experiments: 0, min_elements: 2, rounds_in_processing: 1, peer_review: true,  methods_accepted: true,  submission_fee: 0, apc: 1}
+  - {min_records: 2, min_observations: 0, min_experiments: 0, min_elements: 2, rounds_in_processing: 1, peer_review: true,  methods_accepted: true,  submission_fee: 0, apc: 2}
+  - {min_records: 3, min_observations: 0, min_experiments: 0, min_elements: 3, rounds_in_processing: 2, peer_review: true,  methods_accepted: true,  submission_fee: 0, apc: 3}
+  - {min_records: 3, min_observations: 0, min_experiments: 0, min_elements: 4, rounds_in_processing: 2, peer_review: true,  methods_accepted: false, submission_fee: 0, apc: 4}
+  - {min_records: 4, min_observations: 2, min_experiments: 2, min_elements: 5, rounds_in_processing: 3, peer_review: true,  methods_accepted: false, submission_fee: 0, apc: 5}
