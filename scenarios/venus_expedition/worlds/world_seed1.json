@@ -1,0 +1,912 @@
+{
+ "format_version": 1,
+ "scenario_id": "venus_expedition",
+ "yaml_hash": "b693fcda4c53ecc32bea2dfe55edcd43505503e7fb016407415e47e824f8c3b4",
+ "requested_seed": 1,
+ "seed": 1006,
+ "tries": 7,
+ "main_effects": [
+  {
+   "outcome": "WO1",
+   "outcome_state": "fat blue",
+   "input": "IP1",
+   "input_state": "fat blue",
+   "effect": "+small"
+  },
+  {
+   "outcome": "WO1",
+   "outcome_state": "fat blue",
+   "input": "IP2",
+   "input_state": "smooth",
+   "effect": "+medium"
+  },
+  {
+   "outcome": "WO1",
+   "outcome_state": "fat blue",
+   "input": "IP3",
+   "input_state": "sugar",
+   "effect": "-medium"
+  },
+  {
+   "outcome": "WO1",
+   "outcome_state": "fat blue",
+   "input": "IP3",
+   "input_state": "sulfur",
+   "effect": "-large"
+  },
+  {
+   "outcome": "WO1",
+   "outcome_state": "fat blue",
+   "input": "IP4",
+   "input_state": "scorching hot",
+   "effect": "+large"
+  },
+  {
+   "outcome": "WO1",
+   "outcome_state": "fat blue",
+   "input": "IP4",
+   "input_state": "acid rain",
+   "effect": "-small"
+  },
+  {
+   "outcome": "WO1",
+   "outcome_state": "green ameba",
+   "input": "IP1",
+   "input_state": "fat blue",
+   "effect": "-small"
+  },
+  {
+   "outcome": "WO1",
+   "outcome_state": "green ameba",
+   "input": "IP2",
+   "input_state": "spiky",
+   "effect": "-large"
+  },
+  {
+   "outcome": "WO1",
+   "outcome_state": "green ameba",
+   "input": "IP3",
+   "input_state": "sugar",
+   "effect": "+medium"
+  },
+  {
+   "outcome": "WO1",
+   "outcome_state": "green ameba",
+   "input": "IP3",
+   "input_state": "sulfur",
+   "effect": "+small"
+  },
+  {
+   "outcome": "WO1",
+   "outcome_state": "green ameba",
+   "input": "IP4",
+   "input_state": "scorching hot",
+   "effect": "-medium"
+  },
+  {
+   "outcome": "WO1",
+   "outcome_state": "green ameba",
+   "input": "IP4",
+   "input_state": "acid rain",
+   "effect": "+large"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "smooth",
+   "input": "IP1",
+   "input_state": "green ameba",
+   "effect": "-large"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "smooth",
+   "input": "IP2",
+   "input_state": "smooth",
+   "effect": "-medium"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "smooth",
+   "input": "IP2",
+   "input_state": "cratered",
+   "effect": "-small"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "smooth",
+   "input": "IP3",
+   "input_state": "sulfur",
+   "effect": "+medium"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "smooth",
+   "input": "IP4",
+   "input_state": "scorching hot",
+   "effect": "+large"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "smooth",
+   "input": "IP4",
+   "input_state": "acid rain",
+   "effect": "+small"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "cratered",
+   "input": "IP1",
+   "input_state": "fat blue",
+   "effect": "-small"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "cratered",
+   "input": "IP1",
+   "input_state": "green ameba",
+   "effect": "+medium"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "cratered",
+   "input": "IP2",
+   "input_state": "spiky",
+   "effect": "-medium"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "cratered",
+   "input": "IP3",
+   "input_state": "sulfur",
+   "effect": "+large"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "cratered",
+   "input": "IP4",
+   "input_state": "scorching hot",
+   "effect": "-large"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "cratered",
+   "input": "IP4",
+   "input_state": "acid rain",
+   "effect": "+small"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "spiky",
+   "input": "IP1",
+   "input_state": "fat blue",
+   "effect": "-large"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "spiky",
+   "input": "IP1",
+   "input_state": "green ameba",
+   "effect": "+small"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "spiky",
+   "input": "IP2",
+   "input_state": "spiky",
+   "effect": "+large"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "spiky",
+   "input": "IP3",
+   "input_state": "sugar",
+   "effect": "-medium"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "spiky",
+   "input": "IP3",
+   "input_state": "sulfur",
+   "effect": "+medium"
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "spiky",
+   "input": "IP4",
+   "input_state": "scorching hot",
+   "effect": "-small"
+  }
+ ],
+ "interactions": [
+  {
+   "outcome": "WO2",
+   "outcome_state": "cratered",
+   "input_a": "IP1",
+   "state_a": "green ameba",
+   "input_b": "IP3",
+   "state_b": "sugar",
+   "size": "large",
+   "sign": -1
+  },
+  {
+   "outcome": "WO1",
+   "outcome_state": "fat blue",
+   "input_a": "IP3",
+   "state_a": "sugar",
+   "input_b": "IP4",
+   "state_b": "scorching hot",
+   "size": "large",
+   "sign": 1
+  },
+  {
+   "outcome": "WO2",
+   "outcome_state": "spiky",
+   "input_a": "IP1",
+   "state_a": "fat blue",
+   "input_b": "IP2",
+   "state_b": "spiky",
+   "size": "medium",
+   "sign": -1
+  }
+ ],
+ "rows": [
+  {
+   "inputs": {
+    "IP1": "fat blue",
+    "IP2": "smooth",
+    "IP3": "sugar",
+    "IP4": "scorching hot"
+   },
+   "outcomes": {
+    "WO1": "fat blue",
+    "WO2": "smooth"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.9918374288468401,
+     "green ameba": 0.008162571153159897
+    },
+    "WO2": {
+     "smooth": 0.9446280201005516,
+     "cratered": 0.04255473886413555,
+     "spiky": 0.012817241035312864
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "fat blue",
+    "IP2": "smooth",
+    "IP3": "sugar",
+    "IP4": "acid rain"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "cratered"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.06913842034334683,
+     "green ameba": 0.9308615796566531
+    },
+    "WO2": {
+     "smooth": 0.3221161058598078,
+     "cratered": 0.6486621802950346,
+     "spiky": 0.02922171384515751
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "fat blue",
+    "IP2": "smooth",
+    "IP3": "sulfur",
+    "IP4": "scorching hot"
+   },
+   "outcomes": {
+    "WO1": "fat blue",
+    "WO2": "smooth"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.9478464369215823,
+     "green ameba": 0.05215356307841774
+    },
+    "WO2": {
+     "smooth": 0.8804621572268222,
+     "cratered": 0.07987372485239823,
+     "spiky": 0.03966411792077964
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "fat blue",
+    "IP2": "smooth",
+    "IP3": "sulfur",
+    "IP4": "acid rain"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "cratered"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.06913842034334683,
+     "green ameba": 0.9308615796566531
+    },
+    "WO2": {
+     "smooth": 0.1866927575953871,
+     "cratered": 0.7570764644109546,
+     "spiky": 0.05623077799365841
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "fat blue",
+    "IP2": "cratered",
+    "IP3": "sugar",
+    "IP4": "scorching hot"
+   },
+   "outcomes": {
+    "WO1": "fat blue",
+    "WO2": "smooth"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.973403006423134,
+     "green ameba": 0.02659699357686586
+    },
+    "WO2": {
+     "smooth": 0.9717146319704388,
+     "cratered": 0.021738006341108607,
+     "spiky": 0.006547361688452657
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "fat blue",
+    "IP2": "cratered",
+    "IP3": "sugar",
+    "IP4": "acid rain"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "smooth"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.021881270936130476,
+     "green ameba": 0.9781187290638694
+    },
+    "WO2": {
+     "smooth": 0.4889857900873896,
+     "cratered": 0.4889857900873896,
+     "spiky": 0.022028419825220597
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "fat blue",
+    "IP2": "cratered",
+    "IP3": "sulfur",
+    "IP4": "scorching hot"
+   },
+   "outcomes": {
+    "WO1": "fat blue",
+    "WO2": "smooth"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.8455347349164652,
+     "green ameba": 0.1544652650835347
+    },
+    "WO2": {
+     "smooth": 0.9368383805098718,
+     "cratered": 0.04220382181364215,
+     "spiky": 0.020957797676486
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "fat blue",
+    "IP2": "cratered",
+    "IP3": "sulfur",
+    "IP4": "acid rain"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "cratered"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.021881270936130476,
+     "green ameba": 0.9781187290638694
+    },
+    "WO2": {
+     "smooth": 0.3161234337977878,
+     "cratered": 0.636594420705159,
+     "spiky": 0.047282145497053216
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "fat blue",
+    "IP2": "spiky",
+    "IP3": "sugar",
+    "IP4": "scorching hot"
+   },
+   "outcomes": {
+    "WO1": "fat blue",
+    "WO2": "smooth"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.995929862284104,
+     "green ameba": 0.004070137715896127
+    },
+    "WO2": {
+     "smooth": 0.9878333324977386,
+     "cratered": 0.004037049049214536,
+     "spiky": 0.008129618453046886
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "fat blue",
+    "IP2": "spiky",
+    "IP3": "sugar",
+    "IP4": "acid rain"
+   },
+   "outcomes": {
+    "WO1": "fat blue",
+    "WO2": "cratered"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.13010847436299786,
+     "green ameba": 0.8698915256370021
+    },
+    "WO2": {
+     "smooth": 0.807945827846131,
+     "cratered": 0.1475983910746353,
+     "spiky": 0.04445578107923378
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "fat blue",
+    "IP2": "spiky",
+    "IP3": "sulfur",
+    "IP4": "scorching hot"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "smooth"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.973403006423134,
+     "green ameba": 0.02659699357686586
+    },
+    "WO2": {
+     "smooth": 0.9656671813251655,
+     "cratered": 0.007947196635846272,
+     "spiky": 0.026385622038988168
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "fat blue",
+    "IP2": "spiky",
+    "IP3": "sulfur",
+    "IP4": "acid rain"
+   },
+   "outcomes": {
+    "WO1": "fat blue",
+    "WO2": "smooth"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.13010847436299786,
+     "green ameba": 0.8698915256370021
+    },
+    "WO2": {
+     "smooth": 0.6449270506441008,
+     "cratered": 0.2372554029872983,
+     "spiky": 0.11781754636860083
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "green ameba",
+    "IP2": "smooth",
+    "IP3": "sugar",
+    "IP4": "scorching hot"
+   },
+   "outcomes": {
+    "WO1": "fat blue",
+    "WO2": "spiky"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.9781187290638694,
+     "green ameba": 0.021881270936130476
+    },
+    "WO2": {
+     "smooth": 0.44511766732094277,
+     "cratered": 0.10976466535811452,
+     "spiky": 0.44511766732094266
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "green ameba",
+    "IP2": "smooth",
+    "IP3": "sugar",
+    "IP4": "acid rain"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "cratered"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.02659699357686586,
+     "green ameba": 0.973403006423134
+    },
+    "WO2": {
+     "smooth": 0.053450008793321784,
+     "cratered": 0.5891888744756303,
+     "spiky": 0.357361116731048
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "green ameba",
+    "IP2": "smooth",
+    "IP3": "sulfur",
+    "IP4": "scorching hot"
+   },
+   "outcomes": {
+    "WO1": "fat blue",
+    "WO2": "spiky"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.8698915256370021,
+     "green ameba": 0.13010847436299786
+    },
+    "WO2": {
+     "smooth": 0.1308860461898701,
+     "cratered": 0.43455697690506484,
+     "spiky": 0.43455697690506495
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "green ameba",
+    "IP2": "smooth",
+    "IP3": "sulfur",
+    "IP4": "acid rain"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "cratered"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.02659699357686586,
+     "green ameba": 0.973403006423134
+    },
+    "WO2": {
+     "smooth": 0.005827128545245569,
+     "cratered": 0.8648225558966957,
+     "spiky": 0.12935031555805893
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "green ameba",
+    "IP2": "cratered",
+    "IP3": "sugar",
+    "IP4": "scorching hot"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "smooth"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.9308615796566531,
+     "green ameba": 0.06913842034334683
+    },
+    "WO2": {
+     "smooth": 0.6176493046521309,
+     "cratered": 0.07563512776063785,
+     "spiky": 0.3067155675872313
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "green ameba",
+    "IP2": "cratered",
+    "IP3": "sugar",
+    "IP4": "acid rain"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "cratered"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.008162571153159897,
+     "green ameba": 0.9918374288468401
+    },
+    "WO2": {
+     "smooth": 0.1021026580888603,
+     "cratered": 0.558904578933931,
+     "spiky": 0.33899276297720876
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "green ameba",
+    "IP2": "cratered",
+    "IP3": "sulfur",
+    "IP4": "scorching hot"
+   },
+   "outcomes": {
+    "WO1": "fat blue",
+    "WO2": "cratered"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.6681877721681662,
+     "green ameba": 0.33181222783183395
+    },
+    "WO2": {
+     "smooth": 0.23269653761889864,
+     "cratered": 0.3836517311905506,
+     "spiky": 0.38365173119055074
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "green ameba",
+    "IP2": "cratered",
+    "IP3": "sulfur",
+    "IP4": "acid rain"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "cratered"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.008162571153159897,
+     "green ameba": 0.9918374288468401
+    },
+    "WO2": {
+     "smooth": 0.011665484747716883,
+     "cratered": 0.8597438193125154,
+     "spiky": 0.1285906959397676
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "green ameba",
+    "IP2": "spiky",
+    "IP3": "sugar",
+    "IP4": "scorching hot"
+   },
+   "outcomes": {
+    "WO1": "fat blue",
+    "WO2": "smooth"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.9890130573694068,
+     "green ameba": 0.01098694263059318
+    },
+    "WO2": {
+     "smooth": 0.3293673682276526,
+     "cratered": 0.007368202251486501,
+     "spiky": 0.6632644295208608
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "green ameba",
+    "IP2": "spiky",
+    "IP3": "sugar",
+    "IP4": "acid rain"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "smooth"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.05215356307841774,
+     "green ameba": 0.9478464369215823
+    },
+    "WO2": {
+     "smooth": 0.06466741726589854,
+     "cratered": 0.06466741726589854,
+     "spiky": 0.8706651654682029
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "green ameba",
+    "IP2": "spiky",
+    "IP3": "sulfur",
+    "IP4": "scorching hot"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "spiky"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.9308615796566531,
+     "green ameba": 0.06913842034334683
+    },
+    "WO2": {
+     "smooth": 0.12520206589609084,
+     "cratered": 0.03771013756735268,
+     "spiky": 0.8370877965365565
+    }
+   }
+  },
+  {
+   "inputs": {
+    "IP1": "green ameba",
+    "IP2": "spiky",
+    "IP3": "sulfur",
+    "IP4": "acid rain"
+   },
+   "outcomes": {
+    "WO1": "green ameba",
+    "WO2": "spiky"
+   },
+   "probabilities": {
+    "WO1": {
+     "fat blue": 0.05215356307841774,
+     "green ameba": 0.9478464369215823
+    },
+    "WO2": {
+     "smooth": 0.016901906691784034,
+     "cratered": 0.22756284399022228,
+     "spiky": 0.7555352493179937
+    }
+   }
+  }
+ ],
+ "screening": {
+  "passed": true,
+  "failed": [],
+  "base_rates": {
+   "WO1": {
+    "fat blue": "11/24",
+    "green ameba": "13/24"
+   },
+   "WO2": {
+    "smooth": "11/24",
+    "cratered": "3/8",
+    "spiky": "1/6"
+   }
+  },
+  "best_accuracy_by_inputs": {
+   "1": "5/6",
+   "2": "1/1",
+   "3": "1/1",
+   "4": "1/1"
+  },
+  "nobel_counts": {
+   "theories": 7,
+   "input_patterns": 5,
+   "maximal_theories": 5
+  },
+  "nobel_grade": [
+   {
+    "inputs": {
+     "IP2": "smooth",
+     "IP4": "scorching hot"
+    },
+    "outcomes": {
+     "WO1": "fat blue"
+    },
+    "coverage": "1/6",
+    "accuracy": "1/1"
+   },
+   {
+    "inputs": {
+     "IP2": "smooth",
+     "IP4": "acid rain"
+    },
+    "outcomes": {
+     "WO2": "cratered"
+    },
+    "coverage": "1/6",
+    "accuracy": "1/1"
+   },
+   {
+    "inputs": {
+     "IP2": "smooth",
+     "IP4": "acid rain"
+    },
+    "outcomes": {
+     "WO1": "green ameba"
+    },
+    "coverage": "1/6",
+    "accuracy": "1/1"
+   },
+   {
+    "inputs": {
+     "IP2": "smooth",
+     "IP4": "acid rain"
+    },
+    "outcomes": {
+     "WO1": "green ameba",
+     "WO2": "cratered"
+    },
+    "coverage": "1/6",
+    "accuracy": "1/1"
+   },
+   {
+    "inputs": {
+     "IP2": "cratered",
+     "IP4": "acid rain"
+    },
+    "outcomes": {
+     "WO1": "green ameba"
+    },
+    "coverage": "1/6",
+    "accuracy": "1/1"
+   },
+   {
+    "inputs": {
+     "IP1": "fat blue",
+     "IP4": "scorching hot"
+    },
+    "outcomes": {
+     "WO2": "smooth"
+    },
+    "coverage": "1/4",
+    "accuracy": "1/1"
+   },
+   {
+    "inputs": {
+     "IP1": "green ameba",
+     "IP4": "acid rain"
+    },
+    "outcomes": {
+     "WO1": "green ameba"
+    },
+    "coverage": "1/4",
+    "accuracy": "1/1"
+   }
+  ]
+ }
+}
