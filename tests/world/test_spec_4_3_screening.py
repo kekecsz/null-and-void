@@ -37,18 +37,53 @@ from tests.world.conftest import (
 #   r1 red  round  -> hit,  light     r4 blue round  -> miss, light
 #   r2 red  square -> hit,  light     r5 blue square -> miss, dark
 #   r3 red  flat   -> miss, dark      r6 blue flat   -> hit,  dark
+#
+# Every row counts once (4.1: scenarios have no state weights), so every share below is a
+# number of rows divided by a number of rows.
+#
+# The "ten-row" scenario: IP1 colour [red, blue], IP2 number [one, two, three, four, five],
+# WO1 result [hit, miss]; 2 x 5 = 10 rows, so shares such as 3/5 and 7/10 can occur.
+# Rows in table order: red one .. red five, then blue one .. blue five.
+#
+# World D (base rate on 0.7):
+#   red:  hit  hit  hit  miss miss       blue: hit  hit  hit  hit  miss
+#   hit in 3 + 4 = 7 of 10 rows -> 7/10; miss 3/10.
+#
+# World E (one-input accuracy on 0.6):
+#   red:  hit  hit  hit  miss miss       blue: miss miss miss hit  hit
+#   hit 5/10 and miss 5/10. red -> hit 3/5, blue -> miss 3/5 (red -> miss, blue -> hit 2/5);
+#   every number state covers one red and one blue row with different outcomes -> 1/2.
+#   Every two-input theory covers exactly one row: accuracy 1 or 0.
 
 COMBOS = [("red", "round"), ("red", "square"), ("red", "flat"),
           ("blue", "round"), ("blue", "square"), ("blue", "flat")]
 WORLD_A = ["hit", "hit", "miss", "miss", "miss", "hit"]
-# World A2: a second one-outcome table, used where weights change the base rates.
+# World A2: a second one-outcome table (hit in r1 r2 r4, miss in r3 r5 r6).
 WORLD_A2 = ["hit", "hit", "miss", "hit", "miss", "miss"]
+NUMBERS = ["one", "two", "three", "four", "five"]
+TEN_COMBOS = [(c, n) for c in ("red", "blue") for n in NUMBERS]
+WORLD_D = ["hit", "hit", "hit", "miss", "miss", "hit", "hit", "hit", "hit", "miss"]
+WORLD_E = ["hit", "hit", "hit", "miss", "miss", "miss", "miss", "miss", "hit", "hit"]
 WORLD_C = [("hit", "light"), ("hit", "light"), ("miss", "dark"),
            ("miss", "light"), ("miss", "dark"), ("hit", "dark")]
 
 
 def rows_a(outcomes=WORLD_A):
     return [Row(inputs={"IP1": c, "IP2": s}, outcomes={"WO1": o}) for (c, s), o in zip(COMBOS, outcomes)]
+
+
+def rows_ten(outcomes):
+    return [Row(inputs={"IP1": c, "IP2": n}, outcomes={"WO1": o}) for (c, n), o in zip(TEN_COMBOS, outcomes)]
+
+
+def ten_row_data() -> dict:
+    """The tiny scenario with IP2 replaced by a five-state parameter: 2 x 5 = 10 rows."""
+    data = tiny_data()
+    data["scenario"]["id"] = "tiny_ten"
+    data["input_parameters"][1] = {"id": "IP2", "name": "number", "states": list(NUMBERS)}
+    # The Input Parameter Deck size must divide by 2 and by 5 (4.1).
+    data["parameter_overrides"] = {"input_parameter_deck_size": 10}
+    return data
 
 
 def rows_c():
@@ -62,15 +97,6 @@ def T(inputs: dict, outcomes: dict) -> Theory:
 
 def load(tmp_path, data, name="scenario.md"):
     return load_scenario(write_scenario(tmp_path, data, name))
-
-
-def weighted(data, weights=(2, 1, 1)):
-    """IP2 weights [2, 1, 1] -> round 1/2, square 1/4, flat 1/4; IP1 stays 1/2 each.
-
-    Row weights: red/round 1/4, red/square 1/8, red/flat 1/8, and the same for blue.
-    """
-    data["input_parameters"][1]["weights"] = list(weights)
-    return data
 
 
 def strict_counts_criteria(data, *, max_inputs=2, min_accuracy=0.9, count="theories",
@@ -142,7 +168,7 @@ def test_theories_compare_by_content():
 
 # --- coverage and accuracy -----------------------------------------------------------------
 
-# World A, unweighted (each row 1/6).
+# World A (each row counts once, 1/6 of the table).
 A_SCORES = [
     # theory inputs, theory outcomes, coverage, accuracy
     ({"IP1": "red"}, {"WO1": "hit"}, F(1, 2), F(2, 3)),       # r1 r2 r3: hit in r1 r2
@@ -154,20 +180,16 @@ A_SCORES = [
     ({"IP1": "blue", "IP2": "flat"}, {"WO1": "miss"}, F(1, 6), F(0)),   # r6 only, a hit
 ]
 
-# World A, IP2 weights [2, 1, 1] (rows weigh 1/4, 1/8, 1/8, 1/4, 1/8, 1/8).
-A_WEIGHTED_SCORES = [
-    ({"IP1": "red"}, {"WO1": "hit"}, F(1, 2), F(3, 4)),       # (1/4 + 1/8) / (1/2)
-    ({"IP1": "blue"}, {"WO1": "miss"}, F(1, 2), F(3, 4)),     # (1/4 + 1/8) / (1/2)
-    ({"IP1": "blue"}, {"WO1": "hit"}, F(1, 2), F(1, 4)),      # (1/8) / (1/2)
-    ({"IP2": "round"}, {"WO1": "hit"}, F(1, 2), F(1, 2)),     # (1/4) / (1/4 + 1/4)
-    ({"IP2": "square"}, {"WO1": "hit"}, F(1, 4), F(1, 2)),    # (1/8) / (1/8 + 1/8)
-    ({"IP2": "flat"}, {"WO1": "miss"}, F(1, 4), F(1, 2)),     # (1/8) / (1/8 + 1/8)
-    ({"IP1": "red", "IP2": "round"}, {"WO1": "hit"}, F(1, 4), F(1)),
-    ({"IP1": "red", "IP2": "square"}, {"WO1": "hit"}, F(1, 8), F(1)),
-    ({"IP1": "blue", "IP2": "flat"}, {"WO1": "miss"}, F(1, 8), F(0)),
+# World E (ten rows): every share is a number of rows out of 10 or out of the covered rows.
+E_SCORES = [
+    ({"IP1": "red"}, {"WO1": "hit"}, F(1, 2), F(3, 5)),        # 5 of 10 rows; hit in 3 of 5
+    ({"IP1": "blue"}, {"WO1": "hit"}, F(1, 2), F(2, 5)),       # hit in blue four, five
+    ({"IP2": "four"}, {"WO1": "hit"}, F(1, 5), F(1, 2)),       # red four miss, blue four hit
+    ({"IP1": "blue", "IP2": "five"}, {"WO1": "hit"}, F(1, 10), F(1)),
+    ({"IP1": "red", "IP2": "five"}, {"WO1": "hit"}, F(1, 10), F(0)),
 ]
 
-# World C, unweighted.
+# World C.
 C_SCORES = [
     ({"IP1": "red"}, {"WO1": "hit", "WO2": "light"}, F(1, 2), F(2, 3)),   # r1 r2 of r1 r2 r3
     ({"IP1": "blue"}, {"WO1": "miss", "WO2": "light"}, F(1, 2), F(1, 3)),  # r4 of r4 r5 r6
@@ -190,13 +212,13 @@ def _check_scores(scenario, rows, cases):
 
 
 def test_coverage_and_accuracy_hand_checked(tmp_path):
-    """4.3 Screening: coverage and accuracy of a theory (unweighted world)."""
+    """4.3 Screening: coverage and accuracy of a theory are shares of rows."""
     _check_scores(load(tmp_path, tiny_data()), rows_a(), A_SCORES)
 
 
-def test_coverage_and_accuracy_are_weighted(tmp_path):
-    """4.3 Screening: coverage and accuracy are weighted shares of rows."""
-    _check_scores(load(tmp_path, weighted(tiny_data())), rows_a(), A_WEIGHTED_SCORES)
+def test_coverage_and_accuracy_of_a_ten_row_world(tmp_path):
+    """4.3 Screening: coverage and accuracy are plain shares of rows (every row counts once)."""
+    _check_scores(load(tmp_path, ten_row_data()), rows_ten(WORLD_E), E_SCORES)
 
 
 def test_coverage_and_accuracy_with_two_outcomes(tmp_path):
@@ -216,25 +238,23 @@ def test_base_rates_hand_checked(tmp_path):
     }
 
 
-def test_base_rate_is_weighted_share_of_rows(tmp_path):
-    """4.1 Reading the scenario file (row weight); 4.3 Screening: base rates are weighted shares."""
-    rows = rows_a(WORLD_A2)  # hit in r1 r2 r4, miss in r3 r5 r6
-    plain = load(tmp_path, tiny_data(), "plain.md")
-    heavy = load(tmp_path, weighted(tiny_data()), "weighted.md")
-    # Unweighted: 3 of 6 rows.
-    assert base_rates(plain, rows) == {"WO1": {"hit": F(1, 2), "miss": F(1, 2)}}
-    # Weighted: hit = 1/4 + 1/8 + 1/4 = 5/8, miss = 1/8 + 1/8 + 1/8 = 3/8.
-    assert base_rates(heavy, rows) == {"WO1": {"hit": F(5, 8), "miss": F(3, 8)}}
+def test_base_rate_is_plain_share_of_rows(tmp_path):
+    """4.1 Reading the scenario file (each row counts once); 4.3 Screening: a base rate is the
+    share of rows in which the state is realised."""
+    # World A2: hit in r1 r2 r4, miss in r3 r5 r6 -> 3 of 6 rows each.
+    assert base_rates(load(tmp_path, tiny_data(), "six.md"), rows_a(WORLD_A2)) == {
+        "WO1": {"hit": F(1, 2), "miss": F(1, 2)}}
+    # World D: hit in 7 of 10 rows, miss in 3.
+    rates = base_rates(load(tmp_path, ten_row_data(), "ten.md"), rows_ten(WORLD_D))
+    assert rates == {"WO1": {"hit": F(7, 10), "miss": F(3, 10)}}
+    assert all(isinstance(r, F) for r in rates["WO1"].values())
 
 
-def test_shares_are_normalised_by_the_rows_passed_in(tmp_path):
-    """4.3 Screening: shares are weighted shares of the rows of the table."""
+def test_shares_are_of_the_rows_passed_in(tmp_path):
+    """4.3 Screening: shares are shares of the rows of the table that is screened."""
     red_rows = rows_a()[:3]  # r1 hit, r2 hit, r3 miss
     plain = load(tmp_path, tiny_data(), "plain.md")
-    heavy = load(tmp_path, weighted(tiny_data()), "weighted.md")
     assert base_rates(plain, red_rows) == {"WO1": {"hit": F(2, 3), "miss": F(1, 3)}}
-    # Weights 1/4, 1/8, 1/8 out of 1/2: hit = 3/8 / 1/2 = 3/4.
-    assert base_rates(heavy, red_rows) == {"WO1": {"hit": F(3, 4), "miss": F(1, 4)}}
 
 
 # --- the screening report ---------------------------------------------------------------
@@ -248,9 +268,9 @@ def test_report_base_rates_and_best_accuracy(tmp_path):
     # one row, so the best is 1.
     assert report.best_accuracy_by_inputs == {1: F(2, 3), 2: F(1)}
 
-    heavy = screen(load(tmp_path, weighted(tiny_data()), "weighted.md"), rows_a())
-    # Weighted: red -> hit and blue -> miss reach 3/4.
-    assert heavy.best_accuracy_by_inputs == {1: F(3, 4), 2: F(1)}
+    ten = screen(load(tmp_path, ten_row_data(), "ten.md"), rows_ten(WORLD_E))
+    # World E: red -> hit and blue -> miss reach 3/5; two-input theories cover one row each.
+    assert ten.best_accuracy_by_inputs == {1: F(3, 5), 2: F(1)}
 
     two = screen(load(tmp_path, two_outcome_data(), "two.md"), rows_c())
     # round -> light and flat -> dark are always right.
@@ -338,19 +358,19 @@ def test_more_input_parameters_than_allowed_are_not_nobel_grade(tmp_path):
 @pytest.mark.parametrize(
     "changes, failed",
     [
-        # Weighted world A: base rates 1/2 and 1/2 (hit = 1/4 + 1/8 + 1/8).
+        # World E: base rates 1/2 and 1/2.
         ({"max_base_rate": 0.5}, []),
         ({"max_base_rate": 0.49}, ["max_base_rate"]),
-        # Best one-input accuracy 3/4 (red -> hit, blue -> miss).
-        ({"max_one_input_theory_accuracy": 0.75}, []),
-        ({"max_one_input_theory_accuracy": 0.74}, ["max_one_input_theory_accuracy"]),
-        # min_accuracy 0.9: the six two-input theories naming their row's outcome.
-        ({"nobel_min_count": 6}, []),
-        ({"nobel_min_count": 7}, ["nobel_grade.min_count"]),
-        ({"nobel_max_count": 6}, []),
-        ({"nobel_max_count": 5}, ["nobel_grade.max_count"]),
-        ({"nobel_min_count": 6, "nobel_max_count": 6}, []),
-        ({"max_base_rate": 0.49, "max_one_input_theory_accuracy": 0.74, "nobel_max_count": 5},
+        # Best one-input accuracy exactly 3/5 (red -> hit, blue -> miss).
+        ({"max_one_input_theory_accuracy": 0.6}, []),
+        ({"max_one_input_theory_accuracy": 0.59}, ["max_one_input_theory_accuracy"]),
+        # min_accuracy 0.9: the ten two-input theories naming their row's outcome.
+        ({"nobel_min_count": 10}, []),
+        ({"nobel_min_count": 11}, ["nobel_grade.min_count"]),
+        ({"nobel_max_count": 10}, []),
+        ({"nobel_max_count": 9}, ["nobel_grade.max_count"]),
+        ({"nobel_min_count": 10, "nobel_max_count": 10}, []),
+        ({"max_base_rate": 0.49, "max_one_input_theory_accuracy": 0.59, "nobel_max_count": 9},
          ["max_base_rate", "max_one_input_theory_accuracy", "nobel_grade.max_count"]),
     ],
     ids=["base on limit", "base above", "one-input on limit", "one-input above",
@@ -359,9 +379,9 @@ def test_more_input_parameters_than_allowed_are_not_nobel_grade(tmp_path):
 )
 def test_criteria_limits(tmp_path, changes, failed):
     """4.3 Screening (Comparisons): max_ passes at or below the limit, min_ at or above it."""
-    data = strict_counts_criteria(weighted(tiny_data()), max_inputs=2, min_accuracy=0.9)
+    data = strict_counts_criteria(ten_row_data(), max_inputs=2, min_accuracy=0.9)
     data = with_criteria(data, **changes)
-    report = screen(load(tmp_path, data), rows_a())
+    report = screen(load(tmp_path, data), rows_ten(WORLD_E))
     assert sorted(report.failed) == sorted(failed)
     assert report.passed is (not failed)
 
@@ -390,40 +410,46 @@ def test_count_named_by_nobel_grade_count(tmp_path, count, low, high, failed):
     assert report.passed is (not failed)
 
 
-def test_shares_on_the_limit_are_exact(tmp_path):
+def test_base_rate_on_the_limit_is_exact(tmp_path):
     """4.3 Screening (Comparisons): a value on the limit is never misjudged by rounding."""
-    data = tiny_data()
-    # IP1 weights [3, 7]: red rows weigh 3/10 in total, blue rows 7/10. In floating point,
-    # 0.7 * (1/3) summed three times and divided by the total comes out above 0.7.
-    data["input_parameters"][0]["weights"] = [3, 7]
-    data = with_criteria(data, max_base_rate=0.7)
-    scenario = load(tmp_path, data)
-    rows = rows_a(["miss", "miss", "miss", "hit", "hit", "hit"])
-    report = screen(scenario, rows)
+    # World D: hit in 7 of 10 rows. In floating point 7 * (1/10) is 0.7000000000000001,
+    # which is above 0.7; as an exact fraction it is 7/10, on the limit, and passes (<=).
+    data = with_criteria(ten_row_data(), max_base_rate=0.7)
+    report = screen(load(tmp_path, data, "on.md"), rows_ten(WORLD_D))
     assert report.base_rates == {"WO1": {"hit": F(7, 10), "miss": F(3, 10)}}
     assert "max_base_rate" not in report.failed
+    assert report.passed
+    # Just below the share, the same table fails.
+    below = screen(load(tmp_path, with_criteria(ten_row_data(), max_base_rate=0.69), "below.md"),
+                   rows_ten(WORLD_D))
+    assert below.failed == ["max_base_rate"]
+
+
+def test_accuracy_on_the_limit_is_exact(tmp_path):
+    """4.3 Screening (Comparisons): a value on the limit is never misjudged by rounding."""
+    # World E: red -> hit is right in 3 of 5 covered rows. In floating point 1/5 + 1/5 + 1/5 is
+    # 0.6000000000000001, above 0.6; as an exact fraction it is 3/5, on both limits below.
+    data = strict_counts_criteria(ten_row_data(), max_inputs=1, min_accuracy=0.6)
+    data = with_criteria(data, max_one_input_theory_accuracy=0.6)
+    report = screen(load(tmp_path, data), rows_ten(WORLD_E))
+    # max_one_input_theory_accuracy 0.6: the best one-input accuracy, 3/5, is on the limit.
+    assert report.best_accuracy_by_inputs[1] == F(3, 5)
+    assert "max_one_input_theory_accuracy" not in report.failed
+    # min_accuracy 0.6 with one input parameter: red -> hit and blue -> miss (3/5 each) are
+    # Nobel-grade; the number states (1/2) and red -> miss, blue -> hit (2/5) are not.
+    assert {s.theory for s in report.nobel_grade} == {
+        T({"IP1": "red"}, {"WO1": "hit"}), T({"IP1": "blue"}, {"WO1": "miss"})}
+    assert report.nobel_counts == {"theories": 2, "input_patterns": 2, "maximal_theories": 2}
     assert report.passed
 
 
 # --- screening a generated world --------------------------------------------------------------
 
 def _reference_screen(data, rows):
-    """A plain re-implementation of 4.3 for cross-checking generated worlds."""
-    weight = {}
-    for p in data["input_parameters"]:
-        raw = [F(w) for w in p.get("weights", [1] * len(p["states"]))]
-        for s, w in zip(p["states"], raw):
-            weight[(p["id"], s)] = w / sum(raw)
-    row_w = []
-    for r in rows:
-        w = F(1)
-        for pid, s in r.inputs.items():
-            w *= weight[(pid, s)]
-        row_w.append(w)
-    total = sum(row_w)
+    """A plain re-implementation of 4.3 for cross-checking generated worlds (every row counts once)."""
+    total = len(rows)
     rates = {
-        o["id"]: {s: sum(w for r, w in zip(rows, row_w) if r.outcomes[o["id"]] == s) / total
-                  for s in o["states"]}
+        o["id"]: {s: F(sum(1 for r in rows if r.outcomes[o["id"]] == s), total) for s in o["states"]}
         for o in data["world_outcomes"]
     }
     nobel_rule = data["acceptance_criteria"]["nobel_grade"]
@@ -431,9 +457,8 @@ def _reference_screen(data, rows):
     best, nobel = {}, []
     for inputs, outcomes in _expected_theories(data):
         inputs, outcomes = dict(inputs), dict(outcomes)
-        covered = [(r, w) for r, w in zip(rows, row_w) if all(r.inputs[k] == v for k, v in inputs.items())]
-        cov_w = sum(w for _, w in covered)
-        acc = sum(w for r, w in covered if all(r.outcomes[k] == v for k, v in outcomes.items())) / cov_w
+        covered = [r for r in rows if all(r.inputs[k] == v for k, v in inputs.items())]
+        acc = F(sum(1 for r in covered if all(r.outcomes[k] == v for k, v in outcomes.items())), len(covered))
         n = len(inputs)
         best[n] = max(best.get(n, F(0)), acc)
         if n <= max_in and acc >= min_acc:
@@ -453,7 +478,7 @@ def _reference_screen(data, rows):
 @pytest.mark.parametrize("seed", [2, 9])
 def test_generated_world_matches_reference_screening(tmp_path, seed):
     """4.3 Screening: base rates, best accuracies and Nobel counts of a generated world."""
-    data = weighted(two_outcome_data())
+    data = two_outcome_data()
     data["effect_model"]["interactions"] = ["large", "small"]
     data = strict_counts_criteria(data, max_inputs=1, min_accuracy=0.6)
     scenario = load(tmp_path, data)

@@ -24,8 +24,6 @@ scenario:
   title: "Null & Void: Venus Expedition"
 
 # Input parameters, in World Grid row order (IP1 is the top row).
-# Optional per-state "weights" set how common each state is; equal when omitted
-# (format: specification, section "World generator").
 input_parameters:
   - id: IP1
     name: parent microbe type

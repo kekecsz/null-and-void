@@ -63,7 +63,7 @@ The world generator turns a scenario file into a World Table, screens it against
 
 - The generator reads the first fenced `yaml` block of the scenario file and validates it against a schema. The Story section is passed as text to the interface and to the AI players (a scenario without a Story section has an empty story).
 - It stops with an error naming the field when the data is incomplete or inconsistent, e.g. a state name repeated within one input parameter or world outcome (the same name in different ones is fine), an unknown effect size in the urn, or an Input Parameter Deck size (from `parameter_defaults.yaml`, after the scenario's overrides) that is not divisible by a parameter's state count.
-- Optional state `weights` are a list parallel to `states`: positive numbers, normalised to sum to 1. Without them every state of a parameter is equally common. A World Table row's weight is the product of the weights of its input states.
+- Every state of an input parameter is equally common: the World Table has one row per input combination, and each row counts once (scenarios have no state weights, so the Probe deck and the Input Parameter Decks the rulebook describes match the table).
 
 ### 4.2 Generating the World Table
 
@@ -75,12 +75,12 @@ The world generator turns a scenario file into a World Table, screens it against
 ### 4.3 Screening
 
 - List every possible theory: any non-empty choice of at most one state per input parameter, combined with any non-empty choice of at most one state per world outcome.
-- A theory's **coverage** is the weighted share of World Table rows whose input states match all of the theory's input states. Its **accuracy** is the weighted share of those covered rows in which every world outcome state of the theory matches the row's realised outcome. Both are computed from the realised table, not from the softmax probabilities.
-- A state's **base rate** is the weighted share of rows in which it is the realised outcome.
+- A theory's **coverage** is the share of World Table rows whose input states match all of the theory's input states. Its **accuracy** is the share of those covered rows in which every world outcome state of the theory matches the row's realised outcome. Both are computed from the realised table, not from the softmax probabilities.
+- A state's **base rate** is the share of rows in which it is the realised outcome.
 - A theory is **Nobel-grade** when it has at most `nobel_grade.max_input_parameters` input parameters and at least `nobel_grade.min_accuracy` accuracy. The report gives three counts: every Nobel-grade theory; distinct **input patterns** (input-state combinations with at least one Nobel-grade theory); and **maximal** theories (Nobel-grade theories not implied by another Nobel-grade theory with the same input states and more world outcome states). `nobel_grade.count` in the scenario names the count that `min_count` and `max_count` apply to.
 - `max_one_input_theory_accuracy` applies to every theory with exactly one input parameter, whatever its world outcomes.
 - **Comparisons:** a `max_…` criterion passes when the value is at or below the limit (≤), a `min_…` criterion when it is at or above it (≥). Shares are computed and compared as exact fractions, so a value on the limit is never misjudged because of floating-point rounding; reports print them as decimals.
-- Check `acceptance_criteria`. If the world fails, regenerate with the next seed (seed + 1, seed + 2, …), up to `max_generation_tries` tries in total. The world file records both the requested and the accepted seed, and the report states how many tries were needed. If every try fails, the generator stops with an error that says how often each criterion failed.
+- Check `acceptance_criteria`. If the world fails, generate again, up to `max_generation_tries` tries in total. Try *k* (counting from 0) of a requested seed *s* uses the seed *s* × `max_generation_tries` + *k*, so the tries of different requested seeds never overlap and different requested seeds give different worlds. The world file records both the requested and the accepted seed, and the report states how many tries were needed. If every try fails, the generator stops with an error that says how often each criterion failed.
 
 ### 4.4 World files
 
@@ -90,7 +90,7 @@ The world generator turns a scenario file into a World Table, screens it against
 ### 4.5 Command-line tools
 
 - `nv-world generate <scenario.md> --seed <n> [--out <path>]` → a world file (default `scenarios/<id>/worlds/world_seed<n>.json`) plus its screening report, including the number of tries. Exit code 0, or 1 with the failure tally when no world passes.
-- `nv-world report <world file> [--scenario <path>] [--csv-dir <dir>] [--top <n>]` → base rates, the best theories by number of input parameters and the count of Nobel-grade theories, as text and CSV. The report recomputes these from the world's table with the current scenario file (for names, weights and criteria), warns when the scenario's data changed since generation, and stops with an error when the table no longer fits the scenario. The CSV files are `base_rates.csv`, `best_theories.csv` (the `--top` best per number of input parameters), `nobel_grade.csv` and `summary.csv` (one row, in the shape of the simulator's `worlds.csv`); shares are printed as decimals.
+- `nv-world report <world file> [--scenario <path>] [--csv-dir <dir>] [--top <n>]` → base rates, the best theories by number of input parameters and the count of Nobel-grade theories, as text and CSV. The report recomputes these from the world's table with the current scenario file (for names and criteria), warns when the scenario's data changed since generation, and stops with an error when the table no longer fits the scenario. The CSV files are `base_rates.csv`, `best_theories.csv` (the `--top` best per number of input parameters), `nobel_grade.csv` and `summary.csv` (one row, in the shape of the simulator's `worlds.csv`); shares are printed as decimals.
 
 ## 5. Rules engine (`nv_core`)
 

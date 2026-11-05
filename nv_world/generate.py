@@ -168,12 +168,17 @@ def build_world(scenario: Scenario, seed: int) -> World:
     )
 
 
+def try_seed(requested_seed: int, attempt: int, max_tries: int) -> int:
+    """Seed of try ``attempt`` (0-based) for a requested seed (section 4.3)."""
+    return requested_seed * max_tries + attempt
+
+
 def generate_world(scenario: Scenario, seed: int) -> World:
-    """Generate and screen worlds with seed, seed + 1, ... until one passes (section 4.3)."""
+    """Generate and screen worlds until one passes; try k uses try_seed(seed, k, ...) (section 4.3)."""
     max_tries = scenario.acceptance_criteria.max_generation_tries
     failures: Counter = Counter(dict.fromkeys(CRITERIA, 0))
     for attempt in range(max_tries):
-        world = build_world(scenario, seed + attempt)
+        world = build_world(scenario, try_seed(seed, attempt, max_tries))
         report = screen(scenario, world.rows, score_all(scenario, world.rows))
         if report.passed:
             return replace(world, requested_seed=seed, tries=attempt + 1, screening=report)

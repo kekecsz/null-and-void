@@ -1,11 +1,9 @@
 """Screening a World Table against the scenario's acceptance criteria (specification section 4.3).
 
-All shares are exact fractions. Internally, row weights are scaled to whole numbers by a common
-denominator, so sums stay in fast integer arithmetic and every share is an exact integer ratio.
+All shares are exact fractions: ratios of row counts.
 """
 
 import itertools
-import math
 from collections import defaultdict
 from dataclasses import dataclass, field
 from fractions import Fraction
@@ -112,20 +110,6 @@ def check_rows(scenario: Scenario, rows: list[Row]) -> None:
                     raise ValueError(f"row {number}: {state!r} is not a state of {variable_id}")
 
 
-def row_weight(scenario: Scenario, row: Row) -> Fraction:
-    """Product of the weights of the row's input states."""
-    weight = Fraction(1)
-    for parameter in scenario.input_parameters:
-        weight *= parameter.weights[parameter.states.index(row.inputs[parameter.id])]
-    return weight
-
-
-def _integer_weights(scenario: Scenario, rows: list[Row]) -> list[int]:
-    weights = [row_weight(scenario, row) for row in rows]
-    scale = math.lcm(*(w.denominator for w in weights)) if weights else 1
-    return [int(w * scale) for w in weights]
-
-
 def _matches(row_values: dict[str, str], pattern: dict[str, str]) -> bool:
     return all(row_values.get(k) == v for k, v in pattern.items())
 
@@ -136,29 +120,26 @@ def _share(part: int, whole: int) -> Fraction:
 
 def score_theory(scenario: Scenario, rows: list[Row], theory: Theory) -> TheoryScore:
     """Coverage and accuracy of one theory (straightforward version of score_all)."""
-    weights = _integer_weights(scenario, rows)
-    total = sum(weights)
     covered = correct = 0
-    for row, weight in zip(rows, weights):
+    for row in rows:
         if _matches(row.inputs, theory.inputs):
-            covered += weight
+            covered += 1
             if _matches(row.outcomes, theory.outcomes):
-                correct += weight
-    return TheoryScore(theory, _share(covered, total), _share(correct, covered))
+                correct += 1
+    return TheoryScore(theory, _share(covered, len(rows)), _share(correct, covered))
 
 
 def score_all(scenario: Scenario, rows: list[Row]) -> list[TheoryScore]:
     """Coverage and accuracy of every theory, in enumerate_theories order."""
-    weights = _integer_weights(scenario, rows)
-    total = sum(weights)
+    total = len(rows)
     outcome_choices = _choices(scenario.world_outcomes)
     scores = []
     for inputs in _choices(scenario.input_parameters):
-        # Weighted count of each realised outcome combination among the covered rows.
+        # Number of covered rows with each realised outcome combination.
         joint: dict[tuple, int] = defaultdict(int)
-        for row, weight in zip(rows, weights):
+        for row in rows:
             if _matches(row.inputs, inputs):
-                joint[tuple(sorted(row.outcomes.items()))] += weight
+                joint[tuple(sorted(row.outcomes.items()))] += 1
         covered = sum(joint.values())
         for outcomes in outcome_choices:
             correct = sum(w for combo, w in joint.items() if _matches(dict(combo), outcomes))
@@ -167,14 +148,13 @@ def score_all(scenario: Scenario, rows: list[Row]) -> list[TheoryScore]:
 
 
 def base_rates(scenario: Scenario, rows: list[Row]) -> dict[str, dict[str, Fraction]]:
-    """Weighted share of rows in which each world outcome state is realised."""
-    weights = _integer_weights(scenario, rows)
-    total = sum(weights)
+    """Share of rows in which each world outcome state is realised."""
+    total = len(rows)
     rates = {}
     for outcome in scenario.world_outcomes:
         counts = dict.fromkeys(outcome.states, 0)
-        for row, weight in zip(rows, weights):
-            counts[row.outcomes[outcome.id]] += weight
+        for row in rows:
+            counts[row.outcomes[outcome.id]] += 1
         rates[outcome.id] = {state: _share(count, total) for state, count in counts.items()}
     return rates
 

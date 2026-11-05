@@ -60,9 +60,6 @@ def test_venus_variables_match_yaml(kind):
         assert variable.id == raw["id"]
         assert variable.name == raw["name"]
         assert list(variable.states) == raw["states"]
-        if "weights" not in raw:
-            n = len(raw["states"])
-            assert list(variable.weights) == [Fraction(1, n)] * n
 
 
 def test_venus_effect_model_matches_yaml():
@@ -165,19 +162,24 @@ def test_only_the_first_yaml_block_is_read(tmp_path):
     assert load_scenario(path).id == "tiny"
 
 
-# --- weights ----------------------------------------------------------------------------
+# --- no state weights ---------------------------------------------------------------------
 
-def test_weights_are_normalised(tmp_path):
-    """4.1 Reading the scenario file: weights are normalised to sum to 1."""
+@pytest.mark.parametrize(
+    "index, weights",
+    [(1, [2, 1, 1]), (1, [1, 1, 1]), (0, [1, 1])],
+    ids=["unequal weights on IP2", "equal weights on IP2", "equal weights on IP1"],
+)
+def test_weights_key_is_an_unknown_field(tmp_path, index, weights):
+    """4.1 Reading the scenario file: scenarios have no state weights, so a `weights` key on an
+    input parameter is an unknown field and the error names it (even when the weights are equal)."""
     data = tiny_data()
-    data["input_parameters"][1]["weights"] = [2, 1, 1]
-    scenario = load_scenario(write_scenario(tmp_path, data))
-    ip1, ip2 = scenario.input_parameters
-    assert list(ip2.weights) == [Fraction(1, 2), Fraction(1, 4), Fraction(1, 4)]
-    assert all(isinstance(w, Fraction) for w in ip2.weights)
-    # Omitted weights: every state equally common.
-    assert list(ip1.weights) == [Fraction(1, 2), Fraction(1, 2)]
-    assert sum(ip2.weights) == 1
+    data["input_parameters"][index]["weights"] = weights
+    path = write_scenario(tmp_path, data)
+    with pytest.raises(ScenarioError) as excinfo:
+        load_scenario(path)
+    message = str(excinfo.value)
+    assert f"input_parameters[{index}]" in message, f"error does not name input_parameters[{index}]: {message}"
+    assert "weights" in message, f"error does not name the weights field: {message}"
 
 
 def test_same_state_name_in_different_variables_is_fine(tmp_path):
@@ -245,12 +247,6 @@ ERROR_CASES = [
      "effect_model.main_effect_urn"),
     ("unknown interaction size", _set(["effect_model", "interactions"], ["huge"]),
      "effect_model.interactions"),
-    ("weights of the wrong length", _set(["input_parameters", 1, "weights"], [1, 1]),
-     "input_parameters[1].weights"),
-    ("zero weight", _set(["input_parameters", 1, "weights"], [1, 0, 1]),
-     "input_parameters[1].weights"),
-    ("negative weight", _set(["input_parameters", 1, "weights"], [1, -1, 1]),
-     "input_parameters[1].weights"),
     # WO1 has 2 states and max 1 interaction per state: room for 2 interactions, not 3.
     ("too many interactions", _set(["effect_model", "interactions"], ["large", "large", "small"]),
      "effect_model.interactions"),

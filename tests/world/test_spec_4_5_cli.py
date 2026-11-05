@@ -55,14 +55,16 @@ def tiny_scenario(tmp_path):
 
 def test_generate_writes_a_world_file(tmp_path, capsys, tiny_scenario):
     """4.5 Command-line tools: nv-world generate gives a world file plus its screening report."""
-    _, scenario_path = tiny_scenario
+    data, scenario_path = tiny_scenario
+    max_tries = data["acceptance_criteria"]["max_generation_tries"]
     code, out = _generate(tmp_path, scenario_path, 5)
     output = _output(capsys, tmp_path)
     assert code == 0
     assert out.exists()
     world = load_world(out)
     assert world.requested_seed == 5
-    assert world.seed == 5 + world.tries - 1
+    # 4.3 Screening: try k of requested seed s uses s x max_generation_tries + k.
+    assert world.seed == 5 * max_tries + world.tries - 1
     assert world.screening is not None and world.screening.passed
     assert output.strip(), "generate printed nothing"
 
@@ -75,11 +77,14 @@ def test_generate_states_the_number_of_tries(tmp_path, capsys):
     """4.5 Command-line tools: generate prints the screening report, including the number of tries."""
     # Tiny one-outcome scenario (6 rows): max_base_rate 0.5 passes only on a 3-to-3 split.
     data = with_criteria(tiny_data(), max_base_rate=0.5, max_generation_tries=300)
+    max_tries = data["acceptance_criteria"]["max_generation_tries"]
     scenario_path = write_scenario(tmp_path, data)
     scenario = load_scenario(scenario_path)
+    # 4.3 Screening: try k of requested seed s uses s x max_generation_tries + k.
     # A requested seed whose first two tries fail (checked one try at a time), so tries >= 3.
-    requested = next(s for s in range(100, 400) if not _passes(scenario, s) and not _passes(scenario, s + 1))
-    expected_tries = next(k + 1 for k in range(300) if _passes(scenario, requested + k))
+    requested = next(s for s in range(100, 400)
+                     if not _passes(scenario, s * max_tries) and not _passes(scenario, s * max_tries + 1))
+    expected_tries = next(k + 1 for k in range(max_tries) if _passes(scenario, requested * max_tries + k))
     assert expected_tries >= 3
 
     code, out = _generate(tmp_path, scenario_path, requested)
@@ -87,7 +92,7 @@ def test_generate_states_the_number_of_tries(tmp_path, capsys):
     assert code == 0
     world = load_world(out)
     assert world.tries == expected_tries
-    assert world.seed == requested + expected_tries - 1
+    assert world.seed == requested * max_tries + expected_tries - 1
     number = re.compile(rf"(?<!\d){expected_tries}(?!\d)")
     lines = [line for line in output.splitlines() if "tr" in line.lower() and number.search(line)]
     assert lines, f"no line states the number of tries ({expected_tries}):\n{output}"
@@ -229,13 +234,10 @@ def _accuracy_column(header, name) -> int:
     return columns[0]
 
 
-# Two outcomes and IP2 weights [2, 1, 1] (rows weigh 1/4, 1/8, 1/8, twice), so base rates and
-# accuracies are not all multiples of 1/6; min_accuracy 0.6 keeps some theories out of the
+# Two outcomes (6 rows, each counted once); min_accuracy 0.6 keeps some theories out of the
 # Nobel-grade list.
 def _report_data():
-    data = two_outcome_data()
-    data["input_parameters"][1]["weights"] = [2, 1, 1]
-    return with_criteria(data, nobel_min_accuracy=0.6, max_generation_tries=5)
+    return with_criteria(two_outcome_data(), nobel_min_accuracy=0.6, max_generation_tries=5)
 
 
 @pytest.mark.parametrize("top", [1, 3])
@@ -328,35 +330,6 @@ def test_report_uses_the_current_criteria(tmp_path, capsys):
     _, nobel_b = _read_csv(tmp_path / "b" / "nobel_grade.csv")
     assert len(nobel_a) == 22  # (3*4 - 1) * (3 - 1) theories, all with accuracy >= 0
     assert len(nobel_b) == len(expected.nobel_grade) < 22
-
-
-def test_report_uses_the_current_weights(tmp_path, capsys):
-    """4.5 Command-line tools: the report recomputes with the current scenario file's weights."""
-    plain_data = with_criteria(two_outcome_data(), max_generation_tries=5)
-    heavy_data = copy.deepcopy(plain_data)
-    heavy_data["input_parameters"][1]["weights"] = [2, 1, 1]
-    plain_path = write_scenario(tmp_path, plain_data, "plain.md")
-    heavy_path = write_scenario(tmp_path, heavy_data, "heavy.md")
-    plain, heavy = load_scenario(plain_path), load_scenario(heavy_path)
-
-    def gap(seed):
-        rows = build_world(plain, seed).rows
-        a, b = screen(plain, rows).base_rates, screen(heavy, rows).base_rates
-        return max(abs(float(a[o][s]) - float(b[o][s])) for o in a for s in a[o])
-
-    # A seed whose base rates move clearly with the weights (checked with single tries).
-    seed = next(s for s in range(50) if gap(s) > 0.05)
-    world = generate_world(plain, seed)
-    world_path = tmp_path / "world.json"
-    save_world(world, world_path)
-    capsys.readouterr()
-
-    assert _report(tmp_path, world_path, plain_path, "plain") == 0
-    capsys.readouterr()
-    assert _report(tmp_path, world_path, heavy_path, "heavy") == 0
-    capsys.readouterr()
-    _check_base_rates_csv(tmp_path / "plain" / "base_rates.csv", plain_data, screen(plain, world.rows).base_rates)
-    _check_base_rates_csv(tmp_path / "heavy" / "base_rates.csv", heavy_data, screen(heavy, world.rows).base_rates)
 
 
 RENAMES = [

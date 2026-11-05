@@ -26,11 +26,9 @@ from tests.world.conftest import (
 
 @pytest.fixture
 def tiny_world(tmp_path):
-    # Two outcomes and IP2 weights, so the screening report has something in every field;
+    # Two outcomes, so the screening report has something in every field;
     # min_accuracy 0.6 keeps some theories out of the Nobel-grade list.
-    data = two_outcome_data()
-    data["input_parameters"][1]["weights"] = [2, 1, 1]
-    data = with_criteria(data, nobel_min_accuracy=0.6, max_generation_tries=5)
+    data = with_criteria(two_outcome_data(), nobel_min_accuracy=0.6, max_generation_tries=5)
     scenario = load_scenario(write_scenario(tmp_path, data))
     return scenario, generate_world(scenario, 3)
 
@@ -121,18 +119,23 @@ def _as_number(value):
         return None
 
 
+RETRIED_MAX_TRIES = 300  # max_generation_tries of the retried_world fixture (hand-chosen)
+
+
 @pytest.fixture
 def retried_world(tmp_path):
-    """A saved world whose accepted seed differs from the requested one.
+    """A saved world whose accepted seed differs from its first try seed.
 
-    Tiny two-outcome scenario (unweighted, 6 rows): max_base_rate 0.5 passes only when each
-    outcome splits 3 to 3, so many seeds fail. The requested seed is chosen (by building and
-    screening single tries) so that its first try fails, which makes tries > 1 certain.
+    Tiny two-outcome scenario (6 rows): max_base_rate 0.5 passes only when each outcome splits
+    3 to 3, so many seeds fail. The requested seed s is chosen (by building and screening single
+    tries) so that its first try, seed s x max_generation_tries (4.3), fails, which makes
+    tries > 1 certain.
     """
     data = with_criteria(two_outcome_data(), max_base_rate=0.5, nobel_min_accuracy=0.6,
-                         max_generation_tries=300)
+                         max_generation_tries=RETRIED_MAX_TRIES)
     scenario = load_scenario(write_scenario(tmp_path, data))
-    requested = next(s for s in range(7001, 7101) if not screen(scenario, build_world(scenario, s).rows).passed)
+    requested = next(s for s in range(7001, 7101)
+                     if not screen(scenario, build_world(scenario, s * RETRIED_MAX_TRIES).rows).passed)
     world = generate_world(scenario, requested)
     path = tmp_path / "world.json"
     save_world(world, path)
@@ -143,6 +146,8 @@ def test_file_holds_scenario_id_hash_seeds_and_tries(retried_world):
     """4.4 World files: the scenario id, the hash, the requested and accepted seeds, the number of tries."""
     world, content = retried_world
     assert world.tries > 1 and world.seed != world.requested_seed
+    # 4.3 Screening: try k of requested seed s uses s x max_generation_tries + k.
+    assert world.seed == world.requested_seed * RETRIED_MAX_TRIES + world.tries - 1
     leaves = _leaves(content)
     assert world.scenario_id in leaves
     assert world.yaml_hash in leaves, "the yaml hash is not stored as a value"

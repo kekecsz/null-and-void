@@ -53,14 +53,7 @@ class ScenarioInfo(_Strict):
     title: str
 
 
-class _InputParameterData(_Strict):
-    id: str
-    name: str
-    states: list[str]
-    weights: list[StrictInt | StrictFloat] | None = None
-
-
-class _WorldOutcomeData(_Strict):
+class _VariableData(_Strict):
     id: str
     name: str
     states: list[str]
@@ -93,8 +86,8 @@ class AcceptanceCriteria(_Strict):
 
 class _ScenarioData(_Strict):
     scenario: ScenarioInfo
-    input_parameters: list[_InputParameterData]
-    world_outcomes: list[_WorldOutcomeData]
+    input_parameters: list[_VariableData]
+    world_outcomes: list[_VariableData]
     effect_model: EffectModel
     acceptance_criteria: AcceptanceCriteria
     parameter_overrides: dict[str, Any] = {}
@@ -107,7 +100,6 @@ class Variable:
     id: str
     name: str
     states: list[str]
-    weights: list[Fraction]  # section 4.1
 
 
 @dataclass(frozen=True)
@@ -149,18 +141,6 @@ def extract_yaml_block(text: str) -> str:
     if not match:
         raise ScenarioError("scenario file: no fenced yaml block found")
     return match.group(1)
-
-
-def _normalised_weights(raw: list[float] | None, n_states: int, where: str) -> list[Fraction]:
-    if raw is None:
-        return [Fraction(1, n_states)] * n_states
-    if len(raw) != n_states:
-        raise ScenarioError(f"{where}.weights: has {len(raw)} entries for {n_states} states")
-    weights = [_exact_fraction(w) for w in raw]
-    if any(w <= 0 for w in weights):
-        raise ScenarioError(f"{where}.weights: every weight must be positive")
-    total = sum(weights)
-    return [w / total for w in weights]
 
 
 def _check_variables(data: _ScenarioData) -> None:
@@ -269,14 +249,8 @@ def parse_scenario(text: str, parameter_defaults: Path = PARAMETER_DEFAULTS, pat
         raise ScenarioError(str(exc)) from None
     _check_deck_divisibility(data, settings)
 
-    input_parameters = [
-        Variable(p.id, p.name, list(p.states), _normalised_weights(p.weights, len(p.states), f"input_parameters[{i}]"))
-        for i, p in enumerate(data.input_parameters)
-    ]
-    world_outcomes = [
-        Variable(o.id, o.name, list(o.states), [Fraction(1, len(o.states))] * len(o.states))
-        for o in data.world_outcomes
-    ]
+    input_parameters = [Variable(p.id, p.name, list(p.states)) for p in data.input_parameters]
+    world_outcomes = [Variable(o.id, o.name, list(o.states)) for o in data.world_outcomes]
     try:
         story = section_text(text, "Story").strip()
     except KeyError:
