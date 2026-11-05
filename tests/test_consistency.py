@@ -3,13 +3,15 @@
 - Every [parameter] named in the rulebook exists in parameter_defaults.yaml, as a
   top-level setting or as a field of the grant_track / journal_tiers tables.
 - Every top-level setting is named in the rulebook or in specification section 5.7.
-- Every scenario file passes its schema (added with the scenario reader, Milestone 1).
+- Every scenario file passes its schema.
 """
 
+import pytest
 import yaml
 
 from nv_core.markdown_text import parameter_references, read_markdown, section_text
-from nv_core.paths import PARAMETER_DEFAULTS, RULEBOOK, SPECIFICATION
+from nv_core.paths import PARAMETER_DEFAULTS, RULEBOOK, SPECIFICATION, scenario_files
+from nv_world.scenario import load_scenario
 
 TABLES = ("grant_track", "journal_tiers")
 
@@ -45,3 +47,9 @@ def test_every_parameter_is_used():
 def test_markdown_escapes_are_stripped():
     # The rulebook is a Google Docs export: references must be found through the escapes.
     assert parameter_references(read_markdown(RULEBOOK)), "no [parameter] found in the rulebook"
+
+
+@pytest.mark.parametrize("path", scenario_files(), ids=lambda p: p.parent.name)
+def test_scenario_file_passes_its_schema(path):
+    scenario = load_scenario(path)
+    assert scenario.id == path.parent.name, "a scenario's folder is named after its id"
