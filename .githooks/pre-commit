@@ -1,0 +1,11 @@
+#!/bin/sh
+# Document consistency check on every commit (specification section 13).
+# Enable once per clone with:  git config core.hooksPath .githooks
+if [ -x .venv/Scripts/python ]; then
+    PY=.venv/Scripts/python
+elif [ -x .venv/bin/python ]; then
+    PY=.venv/bin/python
+else
+    PY=python
+fi
+exec "$PY" -m pytest -q tests/test_consistency.py

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "null-and-void"
+version = "0.1.0"
+description = "Null & Void: a board game about the replication crisis, as software"
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic>=2.11",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+include = ["nv_core*", "nv_world*", "nv_server*", "nv_ai*", "nv_sim*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
