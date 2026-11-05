@@ -69,7 +69,7 @@ The world generator turns a scenario file into a World Table, screens it against
 
 1. **Main effects.** For each world outcome state (except one reference state per outcome when `reference_state_per_outcome` is true; the reference state is the first listed state, and it gets neither main effects nor interactions), pad `main_effect_urn` with zeros to the number of input states, shuffle it, and assign one value to each input state.
 2. **Interactions.** For each entry in `interactions`, pick a world outcome state uniformly from those that have fewer than `max_interactions_per_outcome_state` interactions, and a pair of input states uniformly from all pairs whose two states belong to different input parameters (the pair is drawn independently, so different outcome states, or one outcome state allowed several interactions, may get the same pair; repeated interactions add up); set the sign according to `interaction_sign`: `random` (positive or negative with equal probability, drawn per interaction), `positive` or `negative`.
-3. **Rows.** For every input combination, give each world outcome state a score: the sum of its main effects for the input states present, plus every interaction whose two input states are both present, using `effect_sizes_logit`. Convert the scores of each world outcome to probabilities (softmax) and realise the outcome as `outcome_realisation` says.
+3. **Rows.** For every input combination (rows in input-parameter order: the first input parameter changes slowest, states in the order the scenario lists them), give each world outcome state a score: the sum of its main effects for the input states present, plus every interaction whose two input states are both present, using `effect_sizes_logit`. Convert the scores of each world outcome to probabilities (softmax) and realise the outcome as `outcome_realisation` says.
 4. **Record** the seed, the effect assignments, the interactions and the table.
 
 ### 4.3 Screening
@@ -89,8 +89,8 @@ The world generator turns a scenario file into a World Table, screens it against
 
 ### 4.5 Command-line tools
 
-- `nv-world generate <scenario.md> --seed <n>` → a world file plus its screening report.
-- `nv-world report <world file>` → base rates, the best theories by number of input parameters and the count of Nobel-grade theories, as text and CSV. The report recomputes these from the world's table with the current scenario file (for names, weights and criteria), warns when the scenario's data changed since generation, and stops with an error when the table no longer fits the scenario.
+- `nv-world generate <scenario.md> --seed <n> [--out <path>]` → a world file (default `scenarios/<id>/worlds/world_seed<n>.json`) plus its screening report, including the number of tries. Exit code 0, or 1 with the failure tally when no world passes.
+- `nv-world report <world file> [--scenario <path>] [--csv-dir <dir>] [--top <n>]` → base rates, the best theories by number of input parameters and the count of Nobel-grade theories, as text and CSV. The report recomputes these from the world's table with the current scenario file (for names, weights and criteria), warns when the scenario's data changed since generation, and stops with an error when the table no longer fits the scenario. The CSV files are `base_rates.csv`, `best_theories.csv` (the `--top` best per number of input parameters), `nobel_grade.csv` and `summary.csv` (one row, in the shape of the simulator's `worlds.csv`); shares are printed as decimals.
 
 ## 5. Rules engine (`nv_core`)
 
@@ -332,7 +332,8 @@ Sabotage is inferred, not certain: the debrief labels it "failed despite contrar
 
 Game settings come from `docs/parameter_defaults.yaml`, then the scenario's `parameter_overrides`, then any changes the host makes in the lobby before the game starts. Every game stores the full settings it was played with. The settings loader:
 
-- reads the YAML file and validates it against a schema: value types, required settings, and the shape of `grant_track` and `journal_tiers`;
+- reads the YAML file and validates it against a schema: value types (whole-number settings must be written as integers, e.g. `4`, not `4.0`), required settings, and the shape of `grant_track` and `journal_tiers`;
+- applies overrides by replacing whole top-level settings (an override of `grant_track` or `journal_tiers` replaces the entire table);
 - stops with an error naming any setting that is missing, unknown (e.g. a misspelled override) or has the wrong type.
 
 The software's own settings live in `settings/software.yaml`:
