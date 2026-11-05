@@ -24,7 +24,8 @@ scenario:
   title: "Null & Void: Venus Expedition"
 
 # Input parameters, in World Grid row order (IP1 is the top row).
-# Optional per-state "weights" set how common each state is; equal when omitted.
+# Optional per-state "weights" set how common each state is; equal when omitted
+# (format: specification, section "World generator").
 input_parameters:
   - id: IP1
     name: parent microbe type
@@ -72,6 +73,9 @@ acceptance_criteria:
   nobel_grade:
     min_accuracy: 0.90
     max_input_parameters: 2
+    # What min_count and max_count count: input_patterns (input-state combinations
+    # with at least one Nobel-grade theory), theories, or maximal_theories.
+    count: input_patterns
     min_count: 2
     max_count: 5
   max_generation_tries: 1000

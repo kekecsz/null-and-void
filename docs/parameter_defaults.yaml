@@ -1,7 +1,8 @@
 # Null & Void: game parameter defaults
 #
 # Every numeric game setting lives here. The rulebook refers to the top-level
-# settings by name, as [name]. A scenario can override any of them in its
+# settings by name, as [name] (a few are used only by the rule clarifications
+# in section 5.7 of the specification). A scenario can override any of them in its
 # parameter_overrides block, and the host can change them before a game starts.
 # Comments give units only; what each setting does is in the rulebook.
 
@@ -30,7 +31,8 @@ calm_cards_per_player_crisis: 20
 
 # Probes and sensors
 probe_deck_copies: 10
-input_parameter_deck_size: 120              # cards; must divide by every parameter's state count
+probe_deck_min_rebuild_stacks: 12          # Probe stacks
+input_parameter_deck_size: 120             # cards; must divide by every parameter's state count
 probe_true_input_deck_size: 8              # cards
 probe_fake_input_deck_size: 4              # Noise Cards at sensor level 1
 sensor_install_and_upgrade_AC_reward: 1    # academic credit per sensor level reached
@@ -82,8 +84,8 @@ grant_track:
 #   min_observations  separate minimum of observations
 #   min_experiments   separate minimum of experiments
 #   min_elements      input parameters plus world outcomes in the theory
-#   submission_fee    money paid at submission (replaces predatory_APC)
-#   apc               money for the optional article processing charge (replaces APC)
+#   submission_fee    money paid at submission
+#   apc               money for the optional article processing charge
 journal_tiers:
   - {min_records: 0, min_observations: 0, min_experiments: 0, min_elements: 2, rounds_in_processing: 0, peer_review: false, methods_accepted: true,  submission_fee: 1, apc: 0}
   - {min_records: 1, min_observations: 0, min_experiments: 0, min_elements: 2, rounds_in_processing: 1, peer_review: true,  methods_accepted: true,  submission_fee: 0, apc: 1}
