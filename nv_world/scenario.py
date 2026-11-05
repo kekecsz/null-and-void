@@ -13,13 +13,13 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 import yaml
-from pydantic import BaseModel, BeforeValidator, ConfigDict, StrictBool, StrictInt, ValidationError
+from pydantic import BaseModel, BeforeValidator, ConfigDict, StrictBool, StrictFloat, StrictInt, ValidationError
 
 from nv_core.markdown_text import section_text
 from nv_core.paths import PARAMETER_DEFAULTS
 from nv_core.settings import Settings, SettingsError, load_settings
 
-_YAML_BLOCK = re.compile(r"^```ya?ml[ \t]*\r?\n(.*?)^```", re.MULTILINE | re.DOTALL)
+_YAML_BLOCK = re.compile(r"^```yaml[ \t]*\r?\n(.*?)^```", re.MULTILINE | re.DOTALL)
 _URN_ENTRY = re.compile(r"^([+-])(\w+)$")
 
 
@@ -57,7 +57,7 @@ class _InputParameterData(_Strict):
     id: str
     name: str
     states: list[str]
-    weights: list[float] | None = None
+    weights: list[StrictInt | StrictFloat] | None = None
 
 
 class _WorldOutcomeData(_Strict):
@@ -67,7 +67,7 @@ class _WorldOutcomeData(_Strict):
 
 
 class EffectModel(_Strict):
-    effect_sizes_logit: dict[str, float]
+    effect_sizes_logit: dict[str, StrictInt | StrictFloat]
     main_effect_urn: list[str]
     reference_state_per_outcome: StrictBool
     interactions: list[str]
@@ -107,7 +107,7 @@ class Variable:
     id: str
     name: str
     states: list[str]
-    weights: list[Fraction]  # normalised to sum to 1; equal when the scenario gives none
+    weights: list[Fraction]  # section 4.1
 
 
 @dataclass(frozen=True)
@@ -266,7 +266,7 @@ def parse_scenario(text: str, parameter_defaults: Path = PARAMETER_DEFAULTS, pat
     try:
         settings = load_settings(data.parameter_overrides, parameter_defaults)
     except SettingsError as exc:
-        raise ScenarioError(f"parameter_overrides: {exc}") from None
+        raise ScenarioError(str(exc)) from None
     _check_deck_divisibility(data, settings)
 
     input_parameters = [

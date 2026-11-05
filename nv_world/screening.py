@@ -23,7 +23,7 @@ class Row:
 
 
 class Theory:
-    """At least one input state and at least one world outcome state, keyed by variable id."""
+    """A theory (section 4.3); states keyed by variable id."""
 
     __slots__ = ("inputs", "outcomes", "_key")
 
@@ -55,6 +55,10 @@ class Theory:
         return f"{left} -> {right}"
 
 
+# Names of the acceptance criteria, as they appear in ScreeningReport.failed.
+CRITERIA = ("max_base_rate", "max_one_input_theory_accuracy", "nobel_grade.min_count", "nobel_grade.max_count")
+
+
 @dataclass(frozen=True)
 class TheoryScore:
     theory: Theory
@@ -76,7 +80,7 @@ class ScreeningReport:
 
 
 def _choices(variables) -> list[dict[str, str]]:
-    """Every non-empty choice of at most one state per variable, in a stable order."""
+    """The state choices section 4.3 enumerates, in a stable order."""
     options = [[None, *v.states] for v in variables]
     result = []
     for combo in itertools.product(*options):

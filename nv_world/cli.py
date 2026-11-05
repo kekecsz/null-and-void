@@ -139,8 +139,12 @@ def _report(args: argparse.Namespace) -> int:
             "the report uses the current scenario file",
             file=sys.stderr,
         )
-    scores = score_all(scenario, world.rows)
-    report = screen(scenario, world.rows, scores)
+    try:
+        scores = score_all(scenario, world.rows)
+        report = screen(scenario, world.rows, scores)
+    except (KeyError, ValueError) as exc:
+        print(f"error: the world's table no longer fits {scenario_path} (unknown id or state {exc})", file=sys.stderr)
+        return 1
     print(report_text(scenario, world, report, scores, args.top))
     folder = Path(args.csv_dir) if args.csv_dir else world_path.parent / f"{world_path.stem}_report"
     write_csvs(scenario, world, report, scores, args.top, folder)

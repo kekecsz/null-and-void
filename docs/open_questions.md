@@ -8,6 +8,22 @@ Each entry gives the document and section, the exact text, the possible readings
 
 ---
 
+## World generator follow-ups (not blocking)
+
+### B13. State weights vs. the rulebook's equal decks
+- **Where:** specification §4.1 ("Optional state `weights` … A World Table row's weight is the product of the weights of its input states"); rulebook Pieces ("Probe deck: [probe_deck_copies] copies of every Probe stack of the scenario"; Input Parameter Decks "with states in the same proportions as in the Probe deck (with equal proportions)").
+- **Problem:** with unequal weights, screening would weight rows unequally, but the Probe deck and the Input Parameter Decks the game deals are equal. The deck-size divisibility check would also no longer guarantee proportional decks. Venus Expedition has no weights, so nothing differs today.
+- **Readings:** (a) weights also set how many copies of each Probe stack the deck holds and the Input Parameter Deck proportions (so `input_parameter_deck_size` × weight must be a whole number); (b) remove weights until a scenario needs them.
+- **Suggestion:** (b). It keeps the rulebook's "equal proportions" true.
+
+### B14. Neighbouring seeds give the same world
+- **Where:** specification §4.3: "regenerate with the next seed (seed + 1, seed + 2, …)".
+- **Problem:** the try sequences of nearby seeds overlap. If seed 1 is rejected 16 times and accepted at seed 17, then seeds 2–17 also end at seed 17 and give the identical world. With Venus Expedition's acceptance rate (about 1 in 16 worlds), consecutive seeds usually give the same world. The simulator's "a fresh world per game" (§9.2) would then repeat worlds when game seeds are consecutive.
+- **Readings:** (a) keep seed + k and advise using seeds far apart; (b) derive each try's seed from the requested seed so that sequences never overlap, e.g. try k uses seed × `max_generation_tries` + k (which gives the same guarantee of reproducibility).
+- **Suggestion:** (b).
+
+---
+
 ## Answered: waiting for the next rulebook export
 
 Zoltan has written these answers into the Google Doc. `docs/rules.md` is still the export of

@@ -44,7 +44,7 @@ Every path runs through `nv_core`: the server, the AI player and the simulator n
 
 | Package | Responsibility | Depends on |
 | --- | --- | --- |
-| `nv_core` | Rules engine: settings loading, state, actions, phases, scoring, views, text rendering; builds the Probe deck, Input Parameter Decks and sensor noise from a world file | nothing (pure Python) |
+| `nv_core` | Rules engine: settings loading, state, actions, phases, scoring, views, text rendering; builds the Probe deck, Input Parameter Decks and sensor noise from a world file | no other project package; Pydantic and PyYAML only (no network, clock or database) |
 | `nv_world` | Scenario loading, World Table generation, screening, world files | `nv_core` data types and settings |
 | `nv_server` | FastAPI app: lobby, joining, WebSocket updates, persistence, host controls | `nv_core`, `nv_ai` |
 | `nv_ai` | AI player: prompt building, tool-call action choice, token and cost tracking | `nv_core`, Anthropic SDK |
@@ -53,7 +53,7 @@ Every path runs through `nv_core`: the server, the AI player and the simulator n
 | `scenarios/` | One folder per scenario: its scenario.md and generated world files | — |
 | docs/ | rules.md (exported from Google Docs), specification.md and parameter\_defaults.yaml | — |
 
-**Technology:** the latest stable Python (3.14 when this was written; the project requires at least that version), FastAPI, Pydantic models for every action and view, WebSockets for live updates, Firestore for persistence, Google Cloud Run for hosting, pytest for tests. The web client stays dependency-light (no build step in the first version).
+**Technology:** the latest stable Python (3.14 when this was written; the project requires at least that version), FastAPI, Pydantic models for every action and view, PyYAML for the settings and scenario files, WebSockets for live updates, Firestore for persistence, Google Cloud Run for hosting, pytest for tests. The web client stays dependency-light (no build step in the first version).
 
 ## 4. World generator (`nv_world`)
 
@@ -61,14 +61,14 @@ The world generator turns a scenario file into a World Table, screens it against
 
 ### 4.1 Reading the scenario file
 
-- The generator reads the first fenced `yaml` block of the scenario file and validates it against a schema. The Story section is passed as text to the interface and to the AI players.
+- The generator reads the first fenced `yaml` block of the scenario file and validates it against a schema. The Story section is passed as text to the interface and to the AI players (a scenario without a Story section has an empty story).
 - It stops with an error naming the field when the data is incomplete or inconsistent, e.g. a state name repeated within one input parameter or world outcome (the same name in different ones is fine), an unknown effect size in the urn, or an Input Parameter Deck size (from `parameter_defaults.yaml`, after the scenario's overrides) that is not divisible by a parameter's state count.
 - Optional state `weights` are a list parallel to `states`: positive numbers, normalised to sum to 1. Without them every state of a parameter is equally common. A World Table row's weight is the product of the weights of its input states.
 
 ### 4.2 Generating the World Table
 
 1. **Main effects.** For each world outcome state (except one reference state per outcome when `reference_state_per_outcome` is true; the reference state is the first listed state, and it gets neither main effects nor interactions), pad `main_effect_urn` with zeros to the number of input states, shuffle it, and assign one value to each input state.
-2. **Interactions.** For each entry in `interactions`, pick a world outcome state uniformly from those that have fewer than `max_interactions_per_outcome_state` interactions, and a pair of input states uniformly from all pairs whose two states belong to different input parameters (different outcome states may get the same pair); set the sign according to `interaction_sign`.
+2. **Interactions.** For each entry in `interactions`, pick a world outcome state uniformly from those that have fewer than `max_interactions_per_outcome_state` interactions, and a pair of input states uniformly from all pairs whose two states belong to different input parameters (the pair is drawn independently, so different outcome states, or one outcome state allowed several interactions, may get the same pair; repeated interactions add up); set the sign according to `interaction_sign`: `random` (positive or negative with equal probability, drawn per interaction), `positive` or `negative`.
 3. **Rows.** For every input combination, give each world outcome state a score: the sum of its main effects for the input states present, plus every interaction whose two input states are both present, using `effect_sizes_logit`. Convert the scores of each world outcome to probabilities (softmax) and realise the outcome as `outcome_realisation` says.
 4. **Record** the seed, the effect assignments, the interactions and the table.
 
@@ -90,7 +90,7 @@ The world generator turns a scenario file into a World Table, screens it against
 ### 4.5 Command-line tools
 
 - `nv-world generate <scenario.md> --seed <n>` → a world file plus its screening report.
-- `nv-world report <world file>` → base rates, the best theories by number of input parameters and the count of Nobel-grade theories, as text and CSV.
+- `nv-world report <world file>` → base rates, the best theories by number of input parameters and the count of Nobel-grade theories, as text and CSV. The report recomputes these from the world's table with the current scenario file (for names, weights and criteria), warns when the scenario's data changed since generation, and stops with an error when the table no longer fits the scenario.
 
 ## 5. Rules engine (`nv_core`)
 
@@ -333,7 +333,7 @@ Sabotage is inferred, not certain: the debrief labels it "failed despite contrar
 Game settings come from `docs/parameter_defaults.yaml`, then the scenario's `parameter_overrides`, then any changes the host makes in the lobby before the game starts. Every game stores the full settings it was played with. The settings loader:
 
 - reads the YAML file and validates it against a schema: value types, required settings, and the shape of `grant_track` and `journal_tiers`;
-- stops with an error naming any setting that is missing or has the wrong type.
+- stops with an error naming any setting that is missing, unknown (e.g. a misspelled override) or has the wrong type.
 
 The software's own settings live in `settings/software.yaml`:
 

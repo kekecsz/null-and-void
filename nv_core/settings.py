@@ -102,7 +102,7 @@ class Settings(_Strict):
             raise ValueError("grant_track: needs at least one position")
         if not self.journal_tiers:
             raise ValueError("journal_tiers: needs at least one tier")
-        # The parameter file: expected_to_increase is null exactly where there is no higher position.
+        # See the grant_track comment in parameter_defaults.yaml.
         for number, position in enumerate(self.grant_track, start=1):
             is_top = number == len(self.grant_track)
             if (position.expected_to_increase is None) != is_top:
@@ -126,7 +126,8 @@ def _location(error: dict[str, Any]) -> str:
     return ".".join(parts)
 
 
-def _validate(data: dict[str, Any], source: str) -> Settings:
+def _validate(data: dict[str, Any], path: Path, overridden: set[str]) -> Settings:
+    """Validate; each problem names its setting and whether it came from the file or an override."""
     try:
         return Settings.model_validate(data)
     except ValidationError as exc:
@@ -134,14 +135,17 @@ def _validate(data: dict[str, Any], source: str) -> Settings:
         for error in exc.errors():
             where = _location(error)
             if error["type"] == "missing":
-                problems.append(f"{where}: missing")
+                text = f"{where}: missing"
             elif error["type"] == "extra_forbidden":
-                problems.append(f"{where}: unknown setting")
+                text = f"{where}: unknown setting"
             elif where:
-                problems.append(f"{where}: {error['msg']}")
+                text = f"{where}: {error['msg']}"
             else:  # raised by a model validator; the message starts with the setting name
-                problems.append(error["msg"].removeprefix("Value error, "))
-        raise SettingsError(f"{source}: " + "; ".join(problems)) from None
+                text = error["msg"].removeprefix("Value error, ")
+            name = text.split(":", 1)[0].split(".", 1)[0].split("[", 1)[0]
+            source = "parameter_overrides" if name in overridden else str(path)
+            problems.append(f"{source}: {text}")
+        raise SettingsError("; ".join(problems)) from None
 
 
 def load_settings(overrides: dict[str, Any] | None = None, path: Path = PARAMETER_DEFAULTS) -> Settings:
@@ -152,5 +156,5 @@ def load_settings(overrides: dict[str, Any] | None = None, path: Path = PARAMETE
     overrides = overrides or {}
     unknown = sorted(set(overrides) - set(data))
     if unknown:
-        raise SettingsError(f"parameter overrides: unknown setting(s) {', '.join(unknown)}")
-    return _validate({**data, **overrides}, str(path))
+        raise SettingsError(f"parameter_overrides: unknown setting(s) {', '.join(unknown)}")
+    return _validate({**data, **overrides}, Path(path), set(overrides))

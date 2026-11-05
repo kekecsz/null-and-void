@@ -11,7 +11,7 @@ from collections import Counter
 from dataclasses import dataclass, replace
 
 from nv_world.scenario import Scenario
-from nv_world.screening import Row, ScreeningReport, score_all, screen
+from nv_world.screening import CRITERIA, Row, ScreeningReport, score_all, screen
 
 
 @dataclass(frozen=True)
@@ -153,7 +153,7 @@ def build_world(scenario: Scenario, seed: int) -> World:
         inputs = {p.id: s for p, s in zip(parameters, combo)}
         scores = outcome_scores(scenario, main_effects, interactions, inputs)
         probabilities = {outcome: softmax(s) for outcome, s in scores.items()}
-        # outcome_realisation "draw_once" (the only one the schema accepts): one draw per row.
+        # outcome_realisation (section 4.2 step 3); the schema accepts only draw_once.
         outcomes = {outcome: _draw(p, rng) for outcome, p in probabilities.items()}
         rows.append(Row(inputs, outcomes, probabilities))
     return World(
@@ -171,7 +171,7 @@ def build_world(scenario: Scenario, seed: int) -> World:
 def generate_world(scenario: Scenario, seed: int) -> World:
     """Generate and screen worlds with seed, seed + 1, ... until one passes (section 4.3)."""
     max_tries = scenario.acceptance_criteria.max_generation_tries
-    failures: Counter = Counter()
+    failures: Counter = Counter(dict.fromkeys(CRITERIA, 0))
     for attempt in range(max_tries):
         world = build_world(scenario, seed + attempt)
         report = screen(scenario, world.rows, score_all(scenario, world.rows))
