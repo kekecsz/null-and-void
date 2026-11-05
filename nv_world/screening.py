@@ -97,6 +97,21 @@ def enumerate_theories(scenario: Scenario) -> list[Theory]:
     return [Theory(i, o) for i in input_choices for o in outcome_choices]
 
 
+def check_rows(scenario: Scenario, rows: list[Row]) -> None:
+    """Raise ValueError naming the first id or state in ``rows`` that the scenario does not define."""
+    for kind, variables in (("inputs", scenario.input_parameters), ("outcomes", scenario.world_outcomes)):
+        expected = {v.id: v.states for v in variables}
+        for number, row in enumerate(rows):
+            values = getattr(row, kind)
+            if set(values) != set(expected):
+                raise ValueError(
+                    f"row {number} {kind} have ids {sorted(values)}, the scenario has {sorted(expected)}"
+                )
+            for variable_id, state in values.items():
+                if state not in expected[variable_id]:
+                    raise ValueError(f"row {number}: {state!r} is not a state of {variable_id}")
+
+
 def row_weight(scenario: Scenario, row: Row) -> Fraction:
     """Product of the weights of the row's input states."""
     weight = Fraction(1)

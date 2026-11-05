@@ -13,7 +13,7 @@ from pathlib import Path
 from nv_core.paths import SCENARIOS_DIR
 from nv_world.generate import GenerationFailed, World, generate_world
 from nv_world.scenario import Scenario, ScenarioError, load_scenario
-from nv_world.screening import ScreeningReport, TheoryScore, best_theories, score_all, screen
+from nv_world.screening import ScreeningReport, TheoryScore, best_theories, check_rows, score_all, screen
 from nv_world.worldfile import load_world, save_world, scenario_changed
 
 DEFAULT_TOP = 5  # how many theories the report lists per number of input parameters (display only)
@@ -140,11 +140,12 @@ def _report(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
     try:
-        scores = score_all(scenario, world.rows)
-        report = screen(scenario, world.rows, scores)
-    except (KeyError, ValueError) as exc:
-        print(f"error: the world's table no longer fits {scenario_path} (unknown id or state {exc})", file=sys.stderr)
+        check_rows(scenario, world.rows)
+    except ValueError as exc:
+        print(f"error: the world's table no longer fits {scenario_path}: {exc}", file=sys.stderr)
         return 1
+    scores = score_all(scenario, world.rows)
+    report = screen(scenario, world.rows, scores)
     print(report_text(scenario, world, report, scores, args.top))
     folder = Path(args.csv_dir) if args.csv_dir else world_path.parent / f"{world_path.stem}_report"
     write_csvs(scenario, world, report, scores, args.top, folder)

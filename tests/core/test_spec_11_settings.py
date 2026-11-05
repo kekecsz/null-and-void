@@ -22,6 +22,17 @@ def _defaults() -> dict:
 DEFAULTS = _defaults()
 ALL_SETTINGS = sorted(DEFAULTS)
 INTEGER_SETTINGS = sorted(k for k, v in DEFAULTS.items() if type(v) is int)
+# A top-level whole-number setting to override, taken from the file (no name written here).
+SOME_SETTING = INTEGER_SETTINGS[0]
+
+
+def _fields_of_type(table: str, kind: type) -> list:
+    """Fields of a table whose value in the first entry has exactly this type."""
+    return sorted(k for k, v in DEFAULTS[table][0].items() if type(v) is kind)
+
+
+TABLE_INT_FIELDS = [(table, field) for table in TABLES for field in _fields_of_type(table, int)]
+JOURNAL_BOOL_FIELDS = _fields_of_type("journal_tiers", bool)
 
 
 def _write(tmp_path, data: dict):
@@ -145,6 +156,55 @@ def test_table_entry_wrong_type(tmp_path, table):
 
 
 @pytest.mark.parametrize("table", TABLES)
+def test_table_entry_unknown_field(tmp_path, table):
+    """11. Configuration: the shape of grant_track and journal_tiers is validated (no unknown fields)."""
+    data = copy.deepcopy(DEFAULTS)
+    # A misspelling of the entry's first field, added next to the real one.
+    first_field = next(iter(data[table][0]))
+    data[table][0][first_field + "s"] = data[table][0][first_field]
+    path = _write(tmp_path, data)
+    _raises_naming(table, lambda: load_settings(path=path))
+
+
+@pytest.mark.parametrize("table", TABLES)
+def test_table_entry_misspelled_field(tmp_path, table):
+    """11. Configuration: the shape of grant_track and journal_tiers is validated (misspelled field)."""
+    data = copy.deepcopy(DEFAULTS)
+    # The last entry's first field renamed: one field missing and one unknown.
+    entry = data[table][-1]
+    first_field = next(iter(entry))
+    entry[first_field.upper()] = entry.pop(first_field)
+    path = _write(tmp_path, data)
+    _raises_naming(table, lambda: load_settings(path=path))
+
+
+@pytest.mark.parametrize("table, field", TABLE_INT_FIELDS)
+@pytest.mark.parametrize("bad_value", ["float", "bool"])
+def test_table_whole_number_field_must_be_an_integer(tmp_path, table, field, bad_value):
+    """11. Configuration: whole-number settings must be written as integers (also in the tables)."""
+    data = copy.deepcopy(DEFAULTS)
+    value = data[table][0][field]
+    data[table][0][field] = float(value) if bad_value == "float" else True
+    path = _write(tmp_path, data)
+    _raises_naming(table, lambda: load_settings(path=path))
+
+
+def test_journal_tiers_have_boolean_fields():
+    """11. Configuration: the journal_tiers table has true/false fields (precondition of the next test)."""
+    assert JOURNAL_BOOL_FIELDS, "no boolean field in journal_tiers"
+
+
+@pytest.mark.parametrize("field", JOURNAL_BOOL_FIELDS)
+@pytest.mark.parametrize("bad_value", ["yes", 1, "maybe"], ids=["string yes", "integer 1", "string maybe"])
+def test_journal_tier_boolean_field_must_be_a_bool(tmp_path, field, bad_value):
+    """11. Configuration: value types are validated (a non-bool in a journal tier's true/false field)."""
+    data = copy.deepcopy(DEFAULTS)
+    data["journal_tiers"][0][field] = bad_value
+    path = _write(tmp_path, data)
+    _raises_naming("journal_tiers", lambda: load_settings(path=path))
+
+
+@pytest.mark.parametrize("table", TABLES)
 def test_table_that_is_not_a_list(tmp_path, table):
     """11. Configuration: the shape of grant_track and journal_tiers is validated."""
     data = copy.deepcopy(DEFAULTS)
@@ -166,9 +226,9 @@ def test_table_entry_that_is_not_a_mapping(tmp_path, table):
 
 def test_override_replaces_a_setting():
     """11. Configuration: defaults, then the scenario's parameter_overrides."""
-    name = "nobel_condition"
+    name = SOME_SETTING
     settings = load_settings({name: DEFAULTS[name] + 1})
-    assert settings.nobel_condition == DEFAULTS[name] + 1
+    assert getattr(settings, name) == DEFAULTS[name] + 1
     dumped = settings.model_dump()
     for other, value in DEFAULTS.items():
         if other != name:
@@ -182,6 +242,24 @@ def test_override_replaces_a_whole_table():
     assert len(settings.grant_track) == 1
     assert settings.grant_track[0].funding == first["funding"]
     assert settings.grant_track[0].expected_to_increase is None
+
+
+def test_override_replaces_the_whole_journal_tiers_table():
+    """11. Configuration: an override of journal_tiers replaces the entire table."""
+    last = copy.deepcopy(DEFAULTS["journal_tiers"][-1])
+    settings = load_settings({"journal_tiers": [last]})
+    assert len(settings.journal_tiers) == 1
+    for field, value in last.items():
+        assert getattr(settings.journal_tiers[0], field) == value, field
+
+
+@pytest.mark.parametrize("table", TABLES)
+def test_table_override_is_not_merged_with_the_defaults(table):
+    """11. Configuration: a table override replaces the table, so each entry must be complete."""
+    # One entry with a field left out: with replacement (not merging) that field is missing.
+    entry = copy.deepcopy(DEFAULTS[table][0])
+    del entry[next(iter(entry))]
+    _raises_naming(table, lambda: load_settings({table: [entry]}))
 
 
 def test_empty_or_missing_overrides_change_nothing():
@@ -203,6 +281,11 @@ def test_override_with_wrong_type_is_named():
 
 def test_overrides_do_not_change_the_defaults():
     """11. Configuration: overrides apply to one load only."""
-    name = "nobel_condition"
+    name = SOME_SETTING
     load_settings({name: DEFAULTS[name] + 3})
-    assert load_settings().nobel_condition == DEFAULTS[name]
+    assert getattr(load_settings(), name) == DEFAULTS[name]
+
+
+def test_override_with_a_whole_number_float_is_the_wrong_type():
+    """11. Configuration: whole-number settings must be written as integers, also in overrides."""
+    _raises_naming(SOME_SETTING, lambda: load_settings({SOME_SETTING: float(DEFAULTS[SOME_SETTING])}))

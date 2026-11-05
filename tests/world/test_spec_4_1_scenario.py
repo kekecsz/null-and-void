@@ -137,6 +137,24 @@ def test_story_of_a_tmp_scenario(tmp_path):
     assert "## " not in story
 
 
+def test_scenario_without_a_story_section_has_an_empty_story(tmp_path):
+    """4.1 Reading the scenario file: a scenario without a Story section has an empty story."""
+    block = yaml.safe_dump(tiny_data(), sort_keys=False)
+    text = (
+        "# Scenario: no story\n\n"
+        "Intro text, but no Story heading.\n\n"
+        "## Scenario data\n\n"
+        f"```yaml\n{block.rstrip()}\n```\n\n"
+        "## How these values are used\n\n"
+        "Text after the data block.\n"
+    )
+    path = tmp_path / "scenario.md"
+    path.write_text(text, encoding="utf-8")
+    scenario = load_scenario(path)
+    assert scenario.id == "tiny"
+    assert scenario.story == ""
+
+
 def test_only_the_first_yaml_block_is_read(tmp_path):
     """4.1 Reading the scenario file: the first fenced yaml block."""
     second = tiny_data()
@@ -324,7 +342,10 @@ def test_deck_size_from_the_defaults_file_is_checked(tmp_path):
     defaults["input_parameter_deck_size"] = 4
     defaults_path = tmp_path / "defaults.yaml"
     defaults_path.write_text(yaml.safe_dump(defaults, sort_keys=False), encoding="utf-8")
-    path = write_scenario(tmp_path, tiny_data())
+    data = tiny_data()
+    # No override here, so the deck size really comes from the defaults file.
+    data["parameter_overrides"] = {}
+    path = write_scenario(tmp_path, data)
     with pytest.raises(ScenarioError) as excinfo:
         load_scenario(path, parameter_defaults=defaults_path)
     message = str(excinfo.value)
@@ -346,7 +367,8 @@ def test_divisible_deck_size_override_is_applied(tmp_path):
 def test_unknown_override_is_rejected(tmp_path):
     """4.1 Reading the scenario file; 11. Configuration: overrides must name existing settings."""
     data = tiny_data()
-    data["parameter_overrides"] = {"no_such_setting": 3}
+    # Keep the fixture's own deck size, so the only problem is the unknown setting.
+    data["parameter_overrides"]["no_such_setting"] = 3
     path = write_scenario(tmp_path, data)
     with pytest.raises((ScenarioError, SettingsError)) as excinfo:
         load_scenario(path)

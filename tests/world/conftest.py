@@ -16,6 +16,10 @@ VENUS = SCENARIOS_DIR / "venus_expedition" / "scenario.md"
 
 DEFAULT_STORY = "A tiny world made for the tests.\n\nIt has a second paragraph."
 
+# The tiny scenarios set their own Input Parameter Deck size (4.1: it must divide by every
+# parameter's state count), so they never depend on the value in parameter_defaults.yaml.
+TINY_DECK_SIZE = 12  # divides by 2 and by 3
+
 # Criteria that every world passes: no base rate or accuracy can exceed 1, and with
 # min_accuracy 0 every theory is Nobel-grade, which no count range below excludes.
 EASY_CRITERIA = {
@@ -35,7 +39,8 @@ EASY_CRITERIA = {
 def tiny_data() -> dict:
     """Two input parameters (2 and 3 states), one world outcome with 2 states.
 
-    5 input states in total; an Input Parameter Deck size of 120 divides by 2 and 3.
+    5 input states in total. The scenario overrides input_parameter_deck_size with
+    TINY_DECK_SIZE, which divides by 2 and 3.
     """
     return {
         "scenario": {"id": "tiny", "title": "Tiny test world"},
@@ -56,7 +61,7 @@ def tiny_data() -> dict:
             "outcome_realisation": "draw_once",
         },
         "acceptance_criteria": copy.deepcopy(EASY_CRITERIA),
-        "parameter_overrides": {},
+        "parameter_overrides": {"input_parameter_deck_size": TINY_DECK_SIZE},
     }
 
 

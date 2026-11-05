@@ -8,6 +8,7 @@ import copy
 import itertools
 import math
 from collections import Counter
+from types import SimpleNamespace
 
 import pytest
 
@@ -112,9 +113,16 @@ def _check_main_effects(data, world, reference: bool):
 def test_main_effects_are_the_urn_for_every_outcome_state(venus_worlds):
     """4.2 Generating the World Table, step 1 (Main effects): each outcome state draws the urn."""
     data = venus_data()
-    assert data["effect_model"]["reference_state_per_outcome"] is False
+    reference = bool(data["effect_model"]["reference_state_per_outcome"])
     for world in venus_worlds.values():
-        _check_main_effects(data, world, reference=False)
+        _check_main_effects(data, world, reference=reference)
+
+
+def test_every_outcome_state_draws_without_a_reference_state(tmp_path):
+    """4.2 Generating the World Table, step 1: with reference_state_per_outcome false, no state is skipped."""
+    data, scenario = _venus_variant(tmp_path, reference_state_per_outcome=False)
+    for seed in (0, 1):
+        _check_main_effects(data, build_world(scenario, seed), reference=False)
 
 
 def test_reference_state_gets_no_effects(tmp_path):
@@ -163,14 +171,18 @@ def _check_interactions(data, world, reference: bool = False):
 def test_interactions_follow_the_effect_model(venus_worlds):
     """4.2 Generating the World Table, step 2 (Interactions)."""
     data = venus_data()
+    reference = bool(data["effect_model"]["reference_state_per_outcome"])
     for world in venus_worlds.values():
-        _check_interactions(data, world)
+        _check_interactions(data, world, reference=reference)
 
 
-def test_random_interaction_signs_take_both_values(venus):
+def test_random_interaction_signs_take_both_values(tmp_path):
     """4.2 Generating the World Table, step 2: interaction_sign random gives either sign."""
-    assert venus_data()["effect_model"]["interaction_sign"] == "random"
-    signs = Counter(i.sign for seed in range(10) for i in build_world(venus, seed).interactions)
+    model = venus_data()["effect_model"]
+    # A Venus copy with random signs and at least one interaction, whatever the real file says.
+    interactions = list(model["interactions"]) or [next(iter(model["effect_sizes_logit"]))]
+    _, scenario = _venus_variant(tmp_path, interaction_sign="random", interactions=interactions)
+    signs = Counter(i.sign for seed in range(10) for i in build_world(scenario, seed).interactions)
     assert set(signs) == {1, -1}, signs
 
 
@@ -191,10 +203,100 @@ def test_interactions_spread_over_outcome_states(tmp_path):
     # As many interactions as there is room for at one per outcome state: every state gets one.
     data["effect_model"]["interactions"] = [next(iter(data["effect_model"]["effect_sizes_logit"]))] * room
     data["effect_model"]["max_interactions_per_outcome_state"] = 1
+    data["effect_model"]["reference_state_per_outcome"] = False
     scenario = load_scenario(write_scenario(tmp_path, data))
     world = build_world(scenario, 3)
     _check_interactions(data, world)
     assert len({(i.outcome, i.outcome_state) for i in world.interactions}) == room
+
+
+# Several interactions per outcome state. Hand-made fixture: 2 x 2 input states, so there are
+# only 4 pairs from different input parameters (a-c, a-d, b-c, b-d) and pairs repeat often;
+# WO1 has 2 states with room for 3 interactions each.
+def _crowded_data() -> dict:
+    return {
+        "scenario": {"id": "crowded", "title": "Crowded interactions"},
+        "input_parameters": [
+            {"id": "IP1", "name": "first", "states": ["a", "b"]},
+            {"id": "IP2", "name": "second", "states": ["c", "d"]},
+        ],
+        "world_outcomes": [{"id": "WO1", "name": "result", "states": ["x", "y"]}],
+        "effect_model": {
+            "effect_sizes_logit": {"small": 0.5, "large": 2.0},
+            "main_effect_urn": ["+small"],
+            "reference_state_per_outcome": False,
+            # 5 interactions on 2 outcome states: one state always holds at least 3.
+            "interactions": ["large", "large", "small", "small", "large"],
+            # Positive signs, so a repeated pair can never cancel out.
+            "interaction_sign": "positive",
+            "max_interactions_per_outcome_state": 3,
+            "outcome_realisation": "draw_once",
+        },
+        "acceptance_criteria": {
+            "max_base_rate": 1.0,
+            "max_one_input_theory_accuracy": 1.0,
+            "nobel_grade": {"min_accuracy": 0.0, "max_input_parameters": 2, "count": "theories",
+                            "min_count": 0, "max_count": 1000000},
+            "max_generation_tries": 5,
+        },
+        # 8 divides by both state counts (2 and 2).
+        "parameter_overrides": {"input_parameter_deck_size": 8},
+    }
+
+
+CROWDED_SEEDS = range(20)
+
+
+@pytest.fixture(scope="module")
+def crowded(tmp_path_factory):
+    data = _crowded_data()
+    scenario = load_scenario(write_scenario(tmp_path_factory.mktemp("crowded"), data))
+    return data, {seed: build_world(scenario, seed) for seed in CROWDED_SEEDS}
+
+
+def _pair_key(i):
+    return (i.outcome, i.outcome_state, frozenset({(i.input_a, i.state_a), (i.input_b, i.state_b)}))
+
+
+def test_one_outcome_state_can_hold_several_interactions(crowded):
+    """4.2 Generating the World Table, step 2: max_interactions_per_outcome_state above 1."""
+    data, worlds = crowded
+    largest = 0
+    for world in worlds.values():
+        _check_interactions(data, world)
+        per_state = Counter((i.outcome, i.outcome_state) for i in world.interactions)
+        largest = max(largest, max(per_state.values()))
+    # 5 interactions on 2 states: some state holds at least 3 in every world.
+    assert largest >= 3
+
+
+def test_repeated_pair_on_one_outcome_state_adds_up(crowded):
+    """4.2 Generating the World Table, steps 2 and 3: repeated interactions add up."""
+    data, worlds = crowded
+    # Each world puts at least 3 interactions on one state, drawn from 4 pairs; the chance that
+    # no pair repeats on the same state in any of the 20 seeds is far below one in a million.
+    repeated = [w for w in worlds.values()
+                if max(Counter(_pair_key(i) for i in w.interactions).values()) >= 2]
+    assert repeated, "no seed put the same pair twice on one outcome state"
+    for world in repeated:
+        # The recomputation counts every interaction, so a repeated one counts twice ...
+        for row in world.rows:
+            expected = _expected_probabilities(data, world, row)
+            for outcome, states in expected.items():
+                for state, p in states.items():
+                    assert row.probabilities[outcome][state] == pytest.approx(p, abs=1e-12), (
+                        row.inputs, outcome, state)
+        # ... and that matters: counting each repeated pair only once gives other probabilities.
+        seen, once = set(), []
+        for i in world.interactions:
+            if _pair_key(i) not in seen:
+                seen.add(_pair_key(i))
+                once.append(i)
+        deduplicated = SimpleNamespace(main_effects=world.main_effects, interactions=once)
+        assert any(
+            _expected_probabilities(data, deduplicated, row) != _expected_probabilities(data, world, row)
+            for row in world.rows
+        )
 
 
 # --- step 3: rows -----------------------------------------------------------------------
