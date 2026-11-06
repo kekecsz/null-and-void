@@ -587,17 +587,17 @@ Advance the Hot topic marker one space to the right. (When it is at the rightmos
 
 Return the Researcher's markers from the Probe time slots.
 
-Grant funding track requirements are checked and positions are adjusted.
-
-The researcher suffers \[unused\_staff\_penalty\] academic credit penalty for each staff member left on the task allocation mat.
-
-Return all staff members to their researchers.
-
 Any Fresh out of print markers are removed.
 
 Those manuscripts in the Accept area of the Submission Portal that have 0 Rounds in processing tokens during the publication step of the Clean-up phase are revealed (if not open already) and published. When published, theories and methods are moved to the Published Papers area and they each get a Fresh out of print marker (meaning that they can only be used by the researcher who published them until the marker is present).
 
 1 Rounds in processing token is removed from each manuscript in the accept area of the Submission Portal.
+
+Grant funding track requirements are checked and positions are adjusted.
+
+The researcher suffers \[unused\_staff\_penalty\] academic credit penalty for each staff member left on the task allocation mat.
+
+Return all staff members to their researchers.
 
 Each researcher gets as much money as the level of funding indicated for their current position on the Grant funding track.
 
@@ -615,7 +615,7 @@ The First researcher token moves to the next player counterclockwise.
 
 A formal alliance can be formed at any time before the Crisis card is revealed. A formal alliance between two researchers means that if one of the researchers would win the game due to any game rule, the other player would also win. The formal alliance needs to be publicly announced and accepted by all players in the alliance. Alliances can be broken at any time unilaterally until the Warning shot card is revealed. At the time the Warning shot card is revealed, a “last chance to leave” stage is triggered, where players get a last chance to leave a formal alliance. Once this stage is over (everyone who wants leaves or passes), alliances are unbreakable.
 
-A player can be involved in up to 4 pairwise alliances at a time. Alliance victory is not transitional; it only applies to the direct allies of the primary victor.
+A player can be in a pairwise alliance with any number of other players. Alliance victory is not transitional; it only applies to the direct allies of the primary victor.
 
 Other cooperation is also possible between players, which could be open or secret, but are not bound by game rules. Even when cooperating or in a formal alliance, players must respect rules related to hidden game material. They cannot directly show each other experiment results, or predictions, although they can talk about them.
 
