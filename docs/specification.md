@@ -121,11 +121,12 @@ The engine runs the phases in the order, and with the steps, that the rulebook g
 | Observation and prediction phase: revealing input parameters, pruning, outcome reveal, scoring, recording observations | automatic |
 | Observation and prediction phase: formulating predictions and preregistration; prediction reveal | simultaneous secret |
 | Development phase | simultaneous secret |
-| Publication: submission and revisions | simultaneous |
+| Publication: submission and revisions | open: any researcher acts at any time, each action is applied the moment it arrives (so the first to submit gets the free Submission Portal position), until everyone has committed |
 | Publication: peer review votes | simultaneous secret (allocation, random draws and tally automatic) |
 | Publication: article processing and publication | automatic |
 | Talent development phase, Clean-up phase | automatic |
 | Alliance actions | any time the rulebook allows |
+| Alliance: "last chance to leave" stage | simultaneous secret, once (no second round after others' choices are revealed) |
 
 Win and loss checks (Nobel Prize, Crisis Crash, end of the Crisis period) run after every event that can trigger them, so the game ends at exactly the moment the rules say.
 
@@ -155,6 +156,9 @@ All randomness comes from one seeded generator per game, split into named stream
 
 The rulebook is written for human readers and leaves some details to common sense. The designer's answers on those details are listed here, by rulebook section, so the engine and its tests read them the same way. The rulebook still wins where it says otherwise.
 
+- **Recording experimental findings; Recording observations.** Recording is automatic: experiment cards always go to the Fresh records area, and the researcher with Probe time on a Probe always records it.
+- **Preregistration pruning (citation reward).** The author of the cited theory gets `[citation_reward]` for each discarded prediction.
+- **Preregistration pruning (identical theories).** Only theories the predictor may use are candidates (not someone else's theory with a Fresh out of print marker). When the rulebook's three preferences still leave a tie, the theory published earliest is cited; among theories published in the same round, the one whose author is earlier in turn order.
 - **Outcome and Prediction Reveal (one researcher, one theory twice).** A researcher must discard all but one of their own revealed predictions that are based on the same theory. The engine applies this when the choice is made: it does not let a researcher preregister or reveal a second prediction based on a theory they already preregistered or revealed that round.
 - **Supporting observational and experimental records.** Every record stack has exactly one card per input parameter and world outcome. An observation record is always a full, intact Probe column. An experiment record is built from the experiment cards of one record area. Observation and experiment cards are never mixed in one stack.
 - **Supporting records for methods.** A method manuscript must meet the tier's record minimums (`min_records`, `min_observations`, `min_experiments`), with any full record stacks. `min_elements` does not apply to methods.

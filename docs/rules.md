@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.05. 23:53
+Last updated: 2026.11.06. 17:37
 
 # Summary
 
@@ -307,7 +307,7 @@ Once everyone is finished with Formulating predictions and preregistration assig
 
 There cannot be two revealed predictions that are based on the same theory (no matter which Probe they are predicting). If two predictions that are Preregistered are based on the same theory, the one belonging to the researcher who is earlier in turn order stays in the game. The other predictions are discarded and \[citation\_reward\] academic credits are awarded for the researcher who published the cited theory. If the same player has multiple predictions revealed citing the same theory, they must discard all but one of them.
 
-When there are multiple identical theories matching the prediction, the cited theory is determined based on this preference order: 1\. the researcher’s own theory, 2\. the theory with the lowest value on its Nobel Prize counter (to prevent another researcher from getting the Nobel Prize), 3\. the theory of the researcher with the lowest academic credit (to reduce the lead of the leading player).
+When there are multiple identical theories matching the prediction, the cited theory is determined based on this preference order: 1\. the researcher’s own theory, 2\. the theory with the lowest value on its Nobel Prize counter (to prevent another researcher from getting the Nobel Prize), 3\. the theory of the researcher with the lowest academic credit (to reduce the lead of the leading player), 4\. the earlier published theory gets the citation.
 
 ## Outcome and Prediction Reveal
 
@@ -575,12 +575,6 @@ The talent development track positions range between 0 and \[talent\_track\_max\
 
 Each researcher pays \[cost\_of\_postdoc\] after each of their postdocs to the bank.
 
-Unpaid postdocs leave. For each unpaid postdoc, suffer a penalty of \[unpaid\_postdoc\_penalty\] academic credits. Additionally, if there were any unpaid postdocs in the lab this round, the researcher has to move their marker backwards by 1 position on the Talent development track.
-
-All students leave the lab.
-
-Unspent money is returned to the bank.
-
 Methods and Theories that have been turned sideways are returned to the upright position.
 
 Advance the Hot topic marker one space to the right. (When it is at the rightmost Probe at the beginning of the Clean-up phase, advance it to the leftmost Probe.) 
@@ -596,6 +590,12 @@ Those manuscripts in the Accept area of the Submission Portal that have 0 Rounds
 Grant funding track requirements are checked and positions are adjusted.
 
 The researcher suffers \[unused\_staff\_penalty\] academic credit penalty for each staff member left on the task allocation mat.
+
+Unpaid postdocs leave. For each unpaid postdoc, suffer a penalty of \[unpaid\_postdoc\_penalty\] academic credits. Additionally, if there were any unpaid postdocs in the lab this round, the researcher has to move their marker backwards by 1 position on the Talent development track.
+
+All students leave the lab.
+
+Unspent money is returned to the bank.
 
 Return all staff members to their researchers.
 
@@ -613,7 +613,7 @@ The First researcher token moves to the next player counterclockwise.
 
 # Alliance
 
-A formal alliance can be formed at any time before the Crisis card is revealed. A formal alliance between two researchers means that if one of the researchers would win the game due to any game rule, the other player would also win. The formal alliance needs to be publicly announced and accepted by all players in the alliance. Alliances can be broken at any time unilaterally until the Warning shot card is revealed. At the time the Warning shot card is revealed, a “last chance to leave” stage is triggered, where players get a last chance to leave a formal alliance. Once this stage is over (everyone who wants leaves or passes), alliances are unbreakable.
+A formal alliance can be formed at any time before the Crisis card is revealed. A formal alliance between two researchers means that if one of the researchers would win the game due to any game rule, the other player would also win. The formal alliance needs to be publicly announced and accepted by all players in the alliance. Alliances can be broken at any time unilaterally until the Warning shot card is revealed. At the time the Warning shot card is revealed, a “last chance to leave” stage is triggered, where players get a last chance to leave a formal alliance. This is decided secretly (behind the lab shields) in parallel by researchers by setting aside the alliance tokens that the player wants to leave. Once everyone is done, decisions are revealed at the same time for every player. Once this stage is over (everyone who wants leaves or passes), alliances are unbreakable.
 
 A player can be in a pairwise alliance with any number of other players. Alliance victory is not transitional; it only applies to the direct allies of the primary victor.
 
