@@ -205,6 +205,29 @@ def test_engine_refusal_reaches_the_model(venus, software):
     assert player.decisions[0]["refusals"] == ["this action belongs to another phase"]
 
 
+def test_next_decision_shows_the_choices_already_made_in_this_step(venus, software):
+    """Each decision is a fresh conversation; without its earlier choices a model repeats them
+    instead of committing (seen in the first real game: 90% of the calls)."""
+    provider = FakeProvider()
+    player = _player(provider, software)
+    state, view, options = _first_decision(venus, player)
+    first = player.choose(view, options)
+    assert "YOUR CHOICES SO FAR" not in provider.calls[0]["items"][0]["content"]
+    player.choose(view, options)
+    text = provider.calls[1]["items"][0]["content"]
+    assert "YOUR CHOICES SO FAR IN THIS STEP" in text and first.type in text
+    assert "call `commit` now" in text
+
+    # a refused action is not listed as a choice
+    provider = FakeProvider([{"name": "pass", "arguments": {"reason": "x"}}, None, None])
+    player = _player(provider, software)
+    refused = player.choose(view, options)
+    player.refused(refused, "this action belongs to another phase")
+    player.choose(view, options)  # the retry, inside the same conversation
+    player.choose(view, options)
+    assert '"pass"' not in provider.calls[-1]["items"][0]["content"].split("WHAT YOU CAN DO NOW")[0]
+
+
 @pytest.mark.parametrize(
     "script, why",
     [

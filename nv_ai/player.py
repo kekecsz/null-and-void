@@ -64,6 +64,7 @@ class AIPlayer:
         self._reason = ""
         self._step: tuple | None = None
         self._step_actions = 0
+        self._step_choices: list[str] = []  # accepted actions in this step, shown to the model
         self._fixed_chars = len(self.instructions) + len(json.dumps(self.tools))
         self._api_errors = 0
         self._disabled = ""
@@ -71,13 +72,15 @@ class AIPlayer:
     # ------------------------------------------------------------------------------------
     def refused(self, action: BaseModel, reason: str) -> None:
         self._refusal = reason
+        if self._step_choices:
+            self._step_choices.pop()  # the engine did not accept it
         if self.decisions:
             self.decisions[-1]["refusals"].append(reason)
 
     def choose(self, view: dict[str, Any], options: list[Option]) -> BaseModel:
         step = (view["round"], view["phase"])
         if step != self._step:
-            self._step, self._step_actions = step, 0
+            self._step, self._step_actions, self._step_choices = step, 0, []
         self._step_actions += 1
         if self._refusal is None:
             self._new_decision(view, options)
@@ -123,7 +126,7 @@ class AIPlayer:
 
     # ------------------------------------------------------------------------------------
     def _new_decision(self, view: dict[str, Any], options: list[Option]) -> None:
-        text = decision_message(view, options, view.get("recent_events", []), self.notes)
+        text = decision_message(view, options, view.get("recent_events", []), self.notes, self._step_choices)
         self._items = [self.provider.user_item(text)]
         self._last_call = None
         self._attempts = 0
@@ -179,6 +182,7 @@ class AIPlayer:
         return action
 
     def _record(self, action: BaseModel, reply: Reply | None, fallback: str = "") -> None:
+        self._step_choices.append(action.model_dump_json(exclude={"seat"}))
         usage = self._decision_usage
         self.decisions.append(
             {

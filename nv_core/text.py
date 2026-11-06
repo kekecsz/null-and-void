@@ -194,7 +194,11 @@ def _lab_lines(lab: dict[str, Any], name) -> list[str]:
             f"  Planned: hire {a['hire_postdocs']} postdoc(s), fire {a['fire_postdocs']}, hire {a['hire_students']} student(s); {staff}"
         )
     if lab["leaving_students"]:
-        lines.append(f"  {lab['leaving_students']} student(s) must leave: choose from which tasks")
+        if pending["leaving_students"]:
+            chosen = ", ".join(f"{n} from {t}" for t, n in pending["leaving_students"].items())
+            lines.append(f"  {lab['leaving_students']} student(s) must leave; chosen: {chosen}")
+        else:
+            lines.append(f"  {lab['leaving_students']} student(s) must leave: choose from which tasks")
     if pending["votes"]:
         lines.append("  Votes: " + ", ".join(f"card {int(k) + 1}: {v}" for k, v in pending["votes"].items()))
     if pending["leave_alliances"]:

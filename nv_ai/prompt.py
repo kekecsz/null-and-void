@@ -181,13 +181,26 @@ def options_text(options: list[Option]) -> str:
     return "\n".join(lines) or "(nothing)"
 
 
-def decision_message(view: dict[str, Any], options: list[Option], events: list[str], notes: str) -> str:
+def decision_message(
+    view: dict[str, Any], options: list[Option], events: list[str], notes: str, step_choices: list[str] = ()
+) -> str:
+    """``step_choices``: the actions of this seat the engine accepted earlier in the same step.
+    Each decision is a fresh conversation, so without them a model cannot tell that it has
+    already chosen and repeats the same choice instead of committing."""
     seat = view["seat"]
     parts = [
         f"You are seat {seat}, {view['players'][seat]}.",
         render_text(view),
         "RECENT EVENTS (oldest first)\n" + ("\n".join(f"  {e}" for e in events) or "  (none)"),
         "YOUR NOTES\n" + (notes or "(empty)"),
-        "WHAT YOU CAN DO NOW (call one tool)\n" + options_text(options),
     ]
+    if step_choices:
+        listed = "\n".join(f"  {n}. {c}" for n, c in enumerate(step_choices, 1))
+        hint = (
+            " If these are what you want, call `commit` now; repeating a choice changes nothing."
+            if any(o.type == "commit" for o in options)
+            else ""
+        )
+        parts.append(f"YOUR CHOICES SO FAR IN THIS STEP (accepted by the engine)\n{listed}\n{hint.strip()}".rstrip())
+    parts.append("WHAT YOU CAN DO NOW (call one tool)\n" + options_text(options))
     return "\n\n".join(parts)
