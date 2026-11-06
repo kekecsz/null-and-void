@@ -315,3 +315,18 @@ def test_nv_sim_with_ai_seats_writes_decisions_and_records(software, monkeypatch
     assert "AI cost of this run" in capsys.readouterr().out
     save = tmp_path / "copy.json"
     assert run.main(["record", str(out), "1", "--save", str(save)]) == 0 and save.exists()
+
+
+def test_nv_sim_max_cost_holds_within_a_game(software, monkeypatch, tmp_path):
+    """With a run limit below one decision's cost, every AI decision falls back on the budget."""
+    from nv_sim import run
+
+    expensive = Usage(1_000_000, 0, 0, 0, 0)  # 0.10 USD per call at the fake model's prices
+    monkeypatch.setattr(run, "ai_context", lambda: _context(software, lambda: FakeProvider(usage=expensive)))
+    out = tmp_path / "capped"
+    assert run.main(["run", "--players", "2", "--seats", "ai,random", "--games", "1", "--world", WORLD_FILE,
+                     "--yes", "--max-cost", "0.25", "--out", str(out)]) == 0
+    with open(out / "ai_decisions.csv", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert sum(float(r["cost"]) for r in rows) <= 0.25 + 0.10 + 1e-9  # at most one call past the limit
+    assert any("budget" in r["fallback"] for r in rows)

@@ -174,6 +174,8 @@ def _run(args: argparse.Namespace) -> int:
     max_cost = None
     if ai is not None:
         max_cost = min(args.max_cost, ai.ledger.remaining) if args.max_cost is not None else ai.ledger.remaining
+        # The run's limit holds within a game too: no AI call once it is reached (the seats fall back).
+        ai.ledger.budget = min(ai.ledger.budget, ai.ledger.total + max_cost)
         n_ai = sum(1 for s in seats if s.split(":")[0] == "ai")
         print(
             f"AI seats: {n_ai} per game, model {ai.software.ai_default_model}. Spent so far: "
