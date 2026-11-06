@@ -369,8 +369,8 @@ Build in this order, so the rules and numbers are mostly tuned before anyone pla
 | # | Milestone | Done when |
 | --- | --- | --- |
 | 1 | World generator and report | The same scenario and seed always give the same World Table; the report lists base rates and Nobel-grade theories; accuracy calculations are unit-tested against a hand-checked small world. |
-| 2 | Rules engine and text client (local, all seats on one machine) | A full game can be played by hand in the text client; replaying the action log reproduces the final state exactly. |
-| 3 | Random bot and simulator | 1,000 random-bot games finish without errors or broken invariants (e.g. no negative staff, one Probe time per Probe, counters within range); CSV outputs are written. |
+| 2 | Rules engine and text client (local, all seats on one machine) | Full games can be played in the text client (by scripted players; playing a whole game by hand is too slow with typed commands, so hand play is tested with the web UI in milestone 5); replaying the action log reproduces the final state exactly. |
+| 3 | Random bot and simulator | 100 random-bot games finish without errors or broken invariants (e.g. no negative staff, one Probe time per Probe, counters within range); CSV outputs are written. |
 | 4 | AI player | An AI seat finishes complete games in the text client; invalid moves fall back safely; token use and cost are reported. |
 | 5 | Server, persistence and web UI | 2–5 people on separate computers finish a game; a refreshed browser rejoins its seat; a paused game resumes after a server restart. |
 | 6 | Spectator mode and debrief | A spectator sees the hidden World Table; the debrief appears at game end and can be reopened later; fabrication and file-drawer panels show totals only. |

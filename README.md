@@ -18,7 +18,7 @@ true world.
 | Milestone | | |
 | --- | --- | --- |
 | 1 | World generator and report | done |
-| 2 | Rules engine and text client | in progress: built, waiting for a full game played by hand |
+| 2 | Rules engine and text client | done |
 | 3–7 | Simulator, AI player, server and web UI, spectator mode and debrief, deployment | planned |
 
 The milestones and their acceptance criteria are in the specification, section 13.
