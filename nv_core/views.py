@@ -50,7 +50,9 @@ def _paper(state: GameState, paper: Paper) -> dict[str, Any]:
     }
 
 
-def _manuscript(m: Manuscript, show_content: bool, spectator: bool) -> dict[str, Any]:
+def _manuscript(m: Manuscript, show_content: bool, show_records: bool, spectator: bool) -> dict[str, Any]:
+    """``show_records``: the author, peer reviewers allocated to it (Peer review: they "peek at
+    the manuscript") and spectators see the supporting record cards too."""
     data: dict[str, Any] = {
         "id": m.id,
         "author": m.author,
@@ -62,6 +64,9 @@ def _manuscript(m: Manuscript, show_content: bool, spectator: bool) -> dict[str,
         "records": len(m.records),
         "open_access": m.open_access,
         "content": _idea(m.idea) if show_content else None,
+        "record_cards": (
+            [{"kind": r.kind, "cards": _cards(r.cards)} for r in m.records] if show_records else None
+        ),
     }
     if spectator:
         data["vote_list"] = list(m.votes)
@@ -185,7 +190,12 @@ def _view(state: GameState, seat: int | None) -> dict[str, Any]:
         "proposals": [list(pair) for pair in state.proposals],
         "published": [_paper(state, p) for p in state.published],
         "manuscripts": [
-            _manuscript(m, spectator or m.open_access or m.author == seat or m.position in reviewing, spectator)
+            _manuscript(
+                m,
+                show_content=spectator or m.open_access or m.author == seat or m.position in reviewing,
+                show_records=spectator or m.author == seat or m.position in reviewing,
+                spectator=spectator,
+            )
             for m in state.manuscripts
         ],
         "predictions": predictions,
@@ -196,15 +206,19 @@ def _view(state: GameState, seat: int | None) -> dict[str, Any]:
     if seat is not None:
         view["lab"] = _lab(state, seat)
     else:
-        view["labs"] = [_lab(state, s) for s in range(state.n_players)]
+        view["labs"] = [_lab(state, s, all_rounds=True) for s in range(state.n_players)]
         view["world_table"] = [row.model_dump() for row in state.world.rows]
         view["probe_truth"] = [
-            {v: c.state for v, c in p.outcomes.items()} if dealt else None for p in state.probes
+            {**state.world.rows[state.stack_rows[p.stack]].inputs, **{v: c.state for v, c in p.outcomes.items()}}
+            if dealt and p.stack is not None
+            else None
+            for p in state.probes
         ]
+        view["prediction_log"] = [_prediction(p, True) for p in state.prediction_log]
     return view
 
 
-def _lab(state: GameState, seat: int) -> dict[str, Any]:
+def _lab(state: GameState, seat: int, all_rounds: bool = False) -> dict[str, Any]:
     r = state.researcher(seat)
     pending = state.pending[seat]
     return {
@@ -221,7 +235,7 @@ def _lab(state: GameState, seat: int) -> dict[str, Any]:
             "votes": {str(k): v for k, v in pending.votes.items()},
             "scoring_order": pending.scoring_order,
         },
-        "experiments": [e.model_dump() for e in r.experiments if e.round == state.round],
+        "experiments": [e.model_dump() for e in r.experiments if all_rounds or e.round == state.round],
     }
 
 

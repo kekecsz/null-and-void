@@ -12,7 +12,7 @@ T = TypeVar("T")
 
 # The named streams. Keeping them separate means that, e.g., an extra experiment does not
 # change the next Probe stack that is dealt.
-STREAMS = ("setup", "probe_deck", "input_decks", "sensor_noise", "experiments", "dice", "peer_review")
+STREAMS = ("setup", "probe_deck", "input_decks", "sensor_noise", "dice", "peer_review")
 
 
 class Rng:

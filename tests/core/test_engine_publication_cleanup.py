@@ -177,7 +177,7 @@ def test_cleanup_publishes_scores_and_moves_the_grant_marker():
 
 
 def test_cleanup_counts_students_as_unused_and_unpaid_postdocs_leave():
-    """Zoltan's answer E1: students and unpaid postdocs still count for the unused-staff penalty."""
+    """Clean-up phase: the unused-staff penalty comes before unpaid postdocs and students leave."""
     state = game()
     r = state.researcher(0)
     r.credit, r.money, r.postdocs, r.students, r.talent_position = 20, 1 * S.cost_of_postdoc, 2, 1, 1
@@ -247,6 +247,17 @@ def test_last_chance_to_leave_is_simultaneous():
     assert state.alliances == [] and state.last_chance_done
 
 
+def test_leave_choice_can_be_withdrawn_before_commit():
+    """Specification 5.3: choices in a simultaneous step stay editable until CommitPhase."""
+    state = game(n=3)
+    state = do(state, a.ProposeAlliance(seat=0, partner=1), a.AcceptAlliance(seat=1, partner=0))
+    state.period_deck = "w" + "c" * 50
+    state = to_phase(state, Phase.LAST_CHANCE, {s: {"experimentation": 1} for s in range(3)})
+    state = do(state, a.LeaveAlliance(seat=0, partner=1), a.StayInAlliance(seat=0, partner=1))
+    state = do(state, a.CommitPhase(seat=0), a.CommitPhase(seat=1))
+    assert state.alliances == [[0, 1]]
+
+
 def test_end_game_includes_direct_allies_only():
     state = game(n=4)
     state.alliances = [[0, 1], [1, 2]]
@@ -264,6 +275,26 @@ def test_player_view_hides_other_labs_and_spectator_sees_all():
     assert player_view(state, 1)["researchers"][0]["ideas"] == 2  # only the count is public
     spectator = spectator_view(state)
     assert spectator["labs"][0]["ideas"] and len(spectator["world_table"]) == len(tiny_world().rows)
+
+
+def test_peer_reviewers_see_the_records_of_their_manuscripts():
+    """Peer review: reviewers peek at the manuscript, records included; others see only counts."""
+    state = _submission_state()
+    tier = next(i for i, t in enumerate(S.journal_tiers) if t.peer_review and t.min_records >= 1 and t.min_observations == 0)
+    state = do(state, a.Submit(seat=0, manuscript=901, tier=tier, records=[a.ObservationRecord(observation=701)]))
+    position = state.manuscript(901).position
+    assert player_view(state, 1)["manuscripts"][0]["record_cards"] is None
+    state.phase, state.review_cards = Phase.PEER_REVIEW, {1: [position]}
+    record_cards = player_view(state, 1)["manuscripts"][0]["record_cards"]
+    assert record_cards == [{"kind": "observation", "cards": {"IP1": "a", "IP2": None, "IP3": None, "WO1": "up"}}]
+
+
+def test_spectator_sees_true_probe_states():
+    state = to_phase(game(), Phase.DEVELOPMENT, {0: {"development": 1}, 1: {"development": 1}})
+    truth = spectator_view(state)["probe_truth"]
+    for probe, states in zip(state.probes, truth):
+        assert states == {**state.world.rows[state.stack_rows[probe.stack]].inputs, "WO1": probe.outcomes["WO1"].state}
+    assert "probe_truth" not in player_view(state, 0)
 
 
 # Replay and records ------------------------------------------------------------------------

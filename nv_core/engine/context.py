@@ -126,14 +126,14 @@ class Ctx:
 
 
 def build_input_deck(ctx: Ctx, parameter: str) -> list[str]:
-    """[input_parameter_deck_size] cards, every state equally often (Pieces)."""
+    """A full Input Parameter Deck (Pieces; specification 4.1)."""
     states = ctx.world.variable(parameter).states
     size = ctx.settings.input_parameter_deck_size
     return [states[i % len(states)] for i in range(size)]
 
 
 def build_probe_deck(ctx: Ctx) -> list[int]:
-    """[probe_deck_copies] copies of every Probe stack, as new stack ids (Pieces)."""
+    """A full Probe deck, as new stack ids (Pieces)."""
     state = ctx.state
     ids = []
     for _ in range(ctx.settings.probe_deck_copies):

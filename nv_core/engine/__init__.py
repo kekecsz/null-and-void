@@ -142,6 +142,7 @@ HANDLERS: dict[type, tuple[Phase | None, Callable]] = {
     a.ProposeAlliance: (None, alliances.propose),
     a.AcceptAlliance: (None, alliances.accept),
     a.LeaveAlliance: (None, alliances.leave),
+    a.StayInAlliance: (Phase.LAST_CHANCE, alliances.stay),
     a.CommitPhase: (None, _commit),
 }
 

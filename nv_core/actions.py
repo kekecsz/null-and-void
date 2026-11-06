@@ -160,6 +160,13 @@ class LeaveAlliance(_Action):
     partner: int
 
 
+class StayInAlliance(_Action):
+    """Withdraw a leave choice in the "last chance to leave" stage."""
+
+    type: Literal["stay_in_alliance"] = "stay_in_alliance"
+    partner: int
+
+
 # Simultaneous steps
 class CommitPhase(_Action):
     type: Literal["commit"] = "commit"
@@ -187,6 +194,7 @@ Action = Annotated[
         ProposeAlliance,
         AcceptAlliance,
         LeaveAlliance,
+        StayInAlliance,
         CommitPhase,
     ],
     Field(discriminator="type"),

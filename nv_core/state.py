@@ -48,11 +48,10 @@ class Phase(StrEnum):
 
 
 class Card(_Model):
-    """A physical card, tracked by origin (Revealing input parameters).
+    """A physical card, tracked by origin so it returns to the right pile (Revealing input parameters).
 
-    ``state`` None is a blank card. ``origin`` says where the card goes when it is thrown away:
-    State Cards return to the general supply, Input Parameter Deck cards to that deck's discard
-    pile, and Probe stack cards (``stack`` = the stack's id) to the Probe discard pile.
+    ``state`` None is a blank card; ``origin`` is "supply" (State Cards), "input_deck" or "probe"
+    (``stack`` = the Probe stack's id).
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)

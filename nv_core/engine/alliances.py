@@ -1,6 +1,6 @@
 """Alliance actions, which researchers can take at any time the rulebook allows."""
 
-from nv_core.actions import AcceptAlliance, LeaveAlliance, ProposeAlliance
+from nv_core.actions import AcceptAlliance, LeaveAlliance, ProposeAlliance, StayInAlliance
 from nv_core.engine.context import Ctx, IllegalAction
 from nv_core.state import Phase
 
@@ -52,3 +52,13 @@ def leave(ctx: Ctx, action: LeaveAlliance) -> None:
         raise IllegalAction("alliances are unbreakable after the Warning shot card")
     state.alliances.remove(pair)
     ctx.log("alliance", f"{ctx.name(action.seat)} leaves the alliance with {ctx.name(action.partner)}")
+
+
+def stay(ctx: Ctx, action: StayInAlliance) -> None:
+    """Withdraw a leave choice in the "last chance to leave" stage before committing."""
+    state = ctx.state
+    if state.phase != Phase.LAST_CHANCE or action.seat not in state.waiting:
+        raise IllegalAction("there is no leave choice to withdraw now")
+    choices = state.pending[action.seat].leave_alliances
+    if action.partner in choices:
+        choices.remove(action.partner)

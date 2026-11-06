@@ -47,6 +47,7 @@ O12 observation, E9 experiment, Q4 prediction; state names with _ for spaces, pr
                 revise D4
   Peer review   vote 1 accept      (your 1st peer review card)
   Alliances     ally NAME   accept-ally NAME   leave-ally NAME   (any time the rules allow)
+                stay-ally NAME   (withdraw a leave choice in the last chance to leave stage)
   Any step      commit (or done)  when your choices for this step are final
 Client: view | log [N] | as NAME | help | quit"""
 
@@ -233,9 +234,14 @@ def parse(state: GameState, seat: int, line: str) -> BaseModel:
         if vote not in ("accept", "revise"):
             raise CommandError("vote accept or revise")
         return a.ReviewVote(seat=seat, card=int(args[0]) - 1, vote=vote)
-    if verb in ("ally", "accept-ally", "leave-ally") and len(args) == 1:
+    if verb in ("ally", "accept-ally", "leave-ally", "stay-ally") and len(args) == 1:
         partner = _seat(state, args[0])
-        cls = {"ally": a.ProposeAlliance, "accept-ally": a.AcceptAlliance, "leave-ally": a.LeaveAlliance}[verb]
+        cls = {
+            "ally": a.ProposeAlliance,
+            "accept-ally": a.AcceptAlliance,
+            "leave-ally": a.LeaveAlliance,
+            "stay-ally": a.StayInAlliance,
+        }[verb]
         return cls(seat=seat, partner=partner)
     if verb in ("commit", "done"):
         return a.CommitPhase(seat=seat)

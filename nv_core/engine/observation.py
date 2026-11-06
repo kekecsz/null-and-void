@@ -159,7 +159,7 @@ def cited_theory(ctx: Ctx, prediction: Prediction) -> int:
 
 
 def _prune(ctx: Ctx, predictions: list[Prediction], step: int) -> None:
-    """Of revealed predictions on the same theory, the earliest in turn order stays."""
+    """Discard revealed predictions based on the same theory (Preregistration pruning)."""
     order = ctx.state.turn_order()
     by_theory: dict[int, list[Prediction]] = {}
     for prediction in predictions:

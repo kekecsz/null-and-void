@@ -93,7 +93,7 @@ def finish(ctx: Ctx) -> None:
 
 
 def reveal_period_cards(ctx: Ctx) -> None:
-    """End of the Hiring phase: one Game Period card per staff member (Crisis)."""
+    """End of the Hiring and task allocation phase: reveal Game Period cards (see also Crisis)."""
     state = ctx.state
     total = sum(r.postdocs + r.students for r in state.researchers)
     revealed, state.period_deck = state.period_deck[:total], state.period_deck[total:]

@@ -5,7 +5,7 @@ from nv_core.state import GameResult, Phase
 
 
 def allies(ctx: Ctx, seat: int) -> list[int]:
-    """Direct allies only: alliance victory is not transitional (Alliance)."""
+    """The direct allies of a researcher (Alliance)."""
     return sorted(other for pair in ctx.state.alliances if seat in pair for other in pair if other != seat)
 
 
@@ -23,7 +23,7 @@ def end_game(ctx: Ctx, ending: str, primary: list[int], theory: int | None = Non
 
 
 def credit_victory(ctx: Ctx) -> list[int]:
-    """Highest academic credit; ties go to the most published theories, then a tied victory."""
+    """The researchers who win an academic credit victory (Victory; Academic credit rules)."""
     state = ctx.state
     best = max(r.credit for r in state.researchers)
     leaders = [r.seat for r in state.researchers if r.credit == best]

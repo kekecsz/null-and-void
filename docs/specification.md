@@ -120,6 +120,7 @@ The engine runs the phases in the order, and with the steps, that the rulebook g
 | Probe time | sequential, in the order the rulebook sets |
 | Observation and prediction phase: revealing input parameters, pruning, outcome reveal, scoring, recording observations | automatic |
 | Observation and prediction phase: formulating predictions and preregistration; prediction reveal | simultaneous secret |
+| Scoring predictions: the order of one researcher's predictions on the same Probe | simultaneous secret, asked only when the order decides who wins the Nobel Prize (otherwise automatic) |
 | Development phase | simultaneous secret |
 | Publication: submission and revisions | open: any researcher acts at any time, each action is applied the moment it arrives (so the first to submit gets the free Submission Portal position), until everyone has committed |
 | Publication: peer review votes | simultaneous secret (allocation, random draws and tally automatic) |
@@ -141,7 +142,7 @@ Every action is a typed Pydantic model in one discriminated union, so the server
 
 - `player_view(state, player)` — everything public plus that player's own hidden material (lab shield, hand, records, unrevealed predictions).
 - `spectator_view(state)` — everything, including the World Table, true Probe states and all hands.
-- `render_text(view)` — a compact, stable text rendering with short ids (`P1`–`P4` for Probes, `IP1`–`IP4`, `WO1`–`WO2`, `T7` for theory 7, `M3`, `R12` for records). The text client and the AI player use it directly; the web UI renders the same view as JSON.
+- `render_text(view)` — a compact, stable text rendering with short ids (`P1`–`P4` for Probes, `IP1`–`IP4`, `WO1`–`WO2`, `T7` for published theory 7, `M3` for a published method, `D5` for a development stack and its manuscript, `O12` for an observation record, `E9` for an experiment, `Q4` for a prediction). The text client and the AI player use it directly; the web UI renders the same view as JSON.
 - The event log has a public part (what everyone saw happen) and a full part (for spectators, replays and the debrief).
 
 ### 5.5 Records

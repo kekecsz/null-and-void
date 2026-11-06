@@ -7,7 +7,7 @@ from nv_core.world_data import WorldData
 
 
 def specialty_parameters(world: WorldData, probe_index: int) -> list[str]:
-    """IP1 on every Probe, plus one more input parameter in rotation from IP2 onwards."""
+    """The Probe's Specialty Input Parameters (Revealing input parameters)."""
     ids = world.input_ids
     if len(ids) == 1:
         return [ids[0]]

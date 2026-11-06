@@ -4,7 +4,7 @@ from nv_core.actions import ClaimProbeTime, InstallSensor, Pass, RunExperiment
 from nv_core.engine.context import Ctx, IllegalAction
 from nv_core.state import Card, Experiment, ExperimentCard, Paper, Task
 
-MAX_SENSOR_LEVEL = 3  # Pieces: level 1, 2 and 3 Sensor markers
+MAX_SENSOR_LEVEL = 3  # the highest Sensor marker (Pieces; Sensor installation and upgrade)
 
 
 # Turn handling -------------------------------------------------------------------------------

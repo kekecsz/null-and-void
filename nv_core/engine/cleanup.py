@@ -99,7 +99,7 @@ def cleanup(ctx: Ctx) -> None:
             ctx.credit(seat, s.unpaid_postdoc_penalty * r.unpaid, "unpaid postdocs")
             if r.talent_position > 0:
                 r.talent_position -= 1
-            ctx.log("talent", f"{ctx.name(seat)} moves back to {r.talent_position} on the Talent development track")
+                ctx.log("talent", f"{ctx.name(seat)} moves back to {r.talent_position} on the Talent development track")
             r.unpaid = 0
         r.students = 0
         r.money = 0  # unspent money returned to the bank

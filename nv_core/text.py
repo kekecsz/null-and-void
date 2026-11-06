@@ -86,7 +86,7 @@ def render_text(view: dict[str, Any]) -> str:
     lines += _table(rows)
     out("  (* Specialty Input Parameter, L1-L3 sensor level, . blank, ? not revealed)")
     if view.get("probe_truth") and any(view["probe_truth"]):
-        out("  True outcomes: " + " | ".join(f"P{i + 1} {_values(t)}" for i, t in enumerate(view["probe_truth"]) if t))
+        out("  True states: " + " | ".join(f"P{i + 1} {_values(t)}" for i, t in enumerate(view["probe_truth"]) if t))
 
     # Researchers ---------------------------------------------------------------------------
     out("")
@@ -147,6 +147,8 @@ def render_text(view: dict[str, Any]) -> str:
                 content = f" | {idea_text(m['content'])}" if m["content"] else ""
                 spectator = f" | votes {m['vote_list']} | fabricated records {m['fabricated_records']}" if "vote_list" in m else ""
                 out(f"  {title}: {where}D{m['id']} {name(m['author'])} tier {m['tier']} | {m['records']} record(s){' | open access' if m['open_access'] else ''}{extra}{content}{spectator}")
+                for record in m.get("record_cards") or []:
+                    out(f"      {record['kind']} record: {_values(record['cards'])}")
 
     # Predictions ---------------------------------------------------------------------------
     if view["predictions"] or view["hidden_predictions"]:
