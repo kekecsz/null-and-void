@@ -110,7 +110,7 @@ def test_fired_postdoc_penalty_and_period_cards():
 
 
 def test_zero_credit_firing_only_what_cannot_be_paid():
-    """Specification 5.7: at 0 credit only the postdocs the researcher cannot afford may be fired."""
+    """Academic credit rules: at 0 credit only the un-fundable postdocs may (and must) be fired."""
     s = settings()
     state = game()
     r = state.researcher(0)

@@ -24,8 +24,7 @@ def cleanup(ctx: Ctx) -> None:
     state, s = ctx.state, ctx.settings
     order = state.turn_order()
 
-    # Pay the postdocs. Unpaid postdocs leave after the grant check and the unused-staff
-    # penalty (Zoltan's answer E1, waiting for the next rulebook export).
+    # Pay the postdocs; the unpaid ones leave after the grant check and the unused-staff penalty.
     for seat in order:
         r = state.researcher(seat)
         paid = r.postdocs if s.cost_of_postdoc == 0 else min(r.postdocs, r.money // s.cost_of_postdoc)
@@ -34,8 +33,6 @@ def cleanup(ctx: Ctx) -> None:
         if r.unpaid:
             ctx.log("unpaid", f"{ctx.name(seat)} cannot pay {r.unpaid} postdoc(s)", seat=seat)
 
-    for r in state.researchers:
-        r.money = 0  # unspent money returned to the bank
     for paper in state.published:
         paper.sideways = False
     state.hot_topic = (state.hot_topic + 1) % len(state.probes)
@@ -91,7 +88,7 @@ def cleanup(ctx: Ctx) -> None:
         if r.grant_position != before:
             ctx.log("grant", f"{ctx.name(seat)} moves to position {r.grant_position} on the Grant funding track")
 
-    # Unused staff, then the staff who leave (E1)
+    # Unused staff, the staff who leave, unspent money, returning staff
     for seat in order:
         r = state.researcher(seat)
         unused = sum(r.remaining(task) for task in r.staff)
@@ -105,6 +102,7 @@ def cleanup(ctx: Ctx) -> None:
             ctx.log("talent", f"{ctx.name(seat)} moves back to {r.talent_position} on the Talent development track")
             r.unpaid = 0
         r.students = 0
+        r.money = 0  # unspent money returned to the bank
         r.staff = {}
         r.used = {}
 

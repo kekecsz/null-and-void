@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.06. 17:37
+Last updated: 2026.11.06. 18:12
 
 # Summary
 
@@ -623,4 +623,4 @@ Other cooperation is also possible between players, which could be open or secre
 
 If the game ends with an academic credit victory, and players are tied for the first place, the one with the most published theories in the published theories area wins. If this is also a tie, they win a tied victory.
 
-Academic credit can never drop below 0\. When at 0 academic credit, a researcher can not willingly take an action that will definitely cause an academic credit penalty. E.g. they cannot spend money if they will not be able to pay their postdocs, and they cannot reveal a failed non-preregistered prediction. 
+Academic credit can never drop below 0\. When at 0 academic credit, a researcher can not willingly take an action that will definitely cause an academic credit penalty. E.g. they cannot spend money if they will not be able to pay their postdocs, and they cannot reveal a failed non-preregistered prediction. A researcher who has 0 academic credits, cannot spend money beyond which would allow them to pay for their postdocs. If they drop in funding outside of their control, where they don’t have enough money to pay for their postdocs, they must fire the un-fundable postdocs.

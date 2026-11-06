@@ -126,7 +126,7 @@ The engine runs the phases in the order, and with the steps, that the rulebook g
 | Publication: article processing and publication | automatic |
 | Talent development phase, Clean-up phase | automatic |
 | Alliance actions | any time the rulebook allows |
-| Alliance: "last chance to leave" stage | simultaneous secret, once (no second round after others' choices are revealed) |
+| Alliance: "last chance to leave" stage | simultaneous secret |
 
 Win and loss checks (Nobel Prize, Crisis Crash, end of the Crisis period) run after every event that can trigger them, so the game ends at exactly the moment the rules say.
 
@@ -158,7 +158,7 @@ The rulebook is written for human readers and leaves some details to common sens
 
 - **Recording experimental findings; Recording observations.** Recording is automatic: experiment cards always go to the Fresh records area, and the researcher with Probe time on a Probe always records it.
 - **Preregistration pruning (citation reward).** The author of the cited theory gets `[citation_reward]` for each discarded prediction.
-- **Preregistration pruning (identical theories).** Only theories the predictor may use are candidates (not someone else's theory with a Fresh out of print marker). When the rulebook's three preferences still leave a tie, the theory published earliest is cited; among theories published in the same round, the one whose author is earlier in turn order.
+- **Preregistration pruning (identical theories).** Only theories the predictor may use are candidates (not someone else's theory with a Fresh out of print marker). When the rulebook's preferences still leave a tie (theories published in the same round), the one whose author is earlier in turn order is cited.
 - **Outcome and Prediction Reveal (one researcher, one theory twice).** A researcher must discard all but one of their own revealed predictions that are based on the same theory. The engine applies this when the choice is made: it does not let a researcher preregister or reveal a second prediction based on a theory they already preregistered or revealed that round.
 - **Supporting observational and experimental records.** Every record stack has exactly one card per input parameter and world outcome. An observation record is always a full, intact Probe column. An experiment record is built from the experiment cards of one record area. Observation and experiment cards are never mixed in one stack.
 - **Supporting records for methods.** A method manuscript must meet the tier's record minimums (`min_records`, `min_observations`, `min_experiments`), with any full record stacks. `min_elements` does not apply to methods.
@@ -167,7 +167,7 @@ The rulebook is written for human readers and leaves some details to common sens
 - **Research grants (staff used).** The number of Grants staff counted as used is the admin requirement of the position held before that round's grant check moves the marker.
 - **Crisis (missed Probes).** A Probe whose only predictions were pruned counts as a Probe where no one made a prediction.
 - **Revealing input parameters (rebuilding the Probe deck).** When the Probe deck is exhausted and the discard pile holds fewer than `[probe_deck_min_rebuild_stacks]` complete Probe stacks, the full Probe deck is rebuilt and reshuffled instead. Likewise, when an Input Parameter Deck is exhausted and its discard pile is empty (every card is held in records or manuscripts), a fresh full Input Parameter Deck is built and shuffled.
-- **Academic credit rules (at 0 academic credit).** A researcher at 0 academic credit cannot fire a postdoc, except those they cannot afford: when paying all their postdocs would cost more than their money (e.g. after their grant funding dropped), they fire exactly that many, which is a forced firing, not a willing one. They must use every staff member that can still be used, cannot spend money in a way that would leave them unable to pay their postdocs, and cannot reveal a non-preregistered prediction that failed.
+- **Academic credit rules (at 0 academic credit).** A researcher at 0 academic credit cannot fire a postdoc other than the un-fundable ones the rulebook makes them fire, must use every staff member that can still be used, and cannot reveal a non-preregistered prediction that failed.
 
 ## 6. Multiplayer server (`nv_server`)
 
