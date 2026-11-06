@@ -147,7 +147,7 @@ Every action is a typed Pydantic model in one discriminated union, so the server
 
 ### 5.5 Records
 
-Records follow the rulebook. The engine adds one thing the rules do not need: each experiment record is silently flagged as fabricated when its cards do not match a single experiment the player actually ran. The flag never appears in player views; it feeds the debrief (section 10).
+Records follow the rulebook. The engine refuses supporting records that mismatch the theory they support. (A tabletop game could let players submit mismatching records and leave it to reviewers to catch them; the software does not, so that no one has to stop and check for cheating.) Fabrication in the software therefore means one thing: an experiment record whose cards do not come from a single experiment the player actually ran. The engine silently flags such records. The flag never appears in player views; it feeds the debrief (section 10).
 
 ### 5.6 Randomness
 
@@ -163,12 +163,16 @@ The rulebook is written for human readers and leaves some details to common sens
 - **Outcome and Prediction Reveal (one researcher, one theory twice).** A researcher must discard all but one of their own revealed predictions that are based on the same theory. The engine applies this when the choice is made: it does not let a researcher preregister or reveal a second prediction based on a theory they already preregistered or revealed that round.
 - **Supporting observational and experimental records.** Every record stack has exactly one card per input parameter and world outcome. An observation record is always a full, intact Probe column. An experiment record is built from the experiment cards of one record area. Observation and experiment cards are never mixed in one stack.
 - **Supporting records for methods.** A method manuscript must meet the tier's record minimums (`min_records`, `min_observations`, `min_experiments`), with any full record stacks. `min_elements` does not apply to methods.
-- **Article processing (Hot topic).** The no-mismatch check uses the visible readings of the Hot topic Probe.
-- **Peer review.** A researcher can be dealt, and vote on, their own manuscript. Every allocation card a researcher receives gives one vote, so a researcher dealt two cards for the same manuscript votes twice. Votes on a manuscript that has not yet reached `[min_reviews_for_decision]` votes stay with it into later rounds.
+- **Running experiments (citing methods).** A method can only be cited for an experiment that specifies the method's input parameter.
+- **Formulating predictions and preregistration (Crisis).** The preregistration limit applies in the Crisis period too, so there a researcher makes at most as many predictions as they have staff on data collection.
+- **Article processing (Hot topic).** The check uses the visible readings of the Hot topic Probe: the theory has no mismatching input state, and at least one of its input states matches a visible reading (blank rows alone do not make a hot topic publication).
+- **Article processing (Crisis fast-track).** It applies when a manuscript enters the Accept area during the Crisis period; manuscripts already in the Accept area when the Crisis starts keep their tokens.
+- **Peer review.** A researcher can be dealt, and vote on, their own manuscript. Every allocation card a researcher receives gives one compulsory vote, so a researcher dealt two cards for the same manuscript votes twice. Votes on a manuscript that has not yet reached `[min_reviews_for_decision]` votes stay with it into later rounds.
+- **Research grants (publications).** The publications counted are the theories and methods the researcher published in this round's Clean-up phase.
 - **Research grants (staff used).** The number of Grants staff counted as used is the admin requirement of the position held before that round's grant check moves the marker.
 - **Crisis (missed Probes).** A Probe whose only predictions were pruned counts as a Probe where no one made a prediction.
 - **Revealing input parameters (rebuilding the Probe deck).** When the Probe deck is exhausted and the discard pile holds fewer than `[probe_deck_min_rebuild_stacks]` complete Probe stacks, the full Probe deck is rebuilt and reshuffled instead. Likewise, when an Input Parameter Deck is exhausted and its discard pile is empty (every card is held in records or manuscripts), a fresh full Input Parameter Deck is built and shuffled.
-- **Academic credit rules (at 0 academic credit).** A researcher at 0 academic credit cannot fire a postdoc other than the un-fundable ones the rulebook makes them fire, must use every staff member that can still be used, and cannot reveal a non-preregistered prediction that failed.
+- **Academic credit rules (at 0 academic credit).** A researcher at 0 academic credit cannot fire a postdoc other than the un-fundable ones the rulebook makes them fire, must use every staff member that can still be used at the steps where staff are used (experiments and sensors, prediction reveal, development, write-up; they need not make predictions, and their staff allocation is not restricted), and cannot reveal a non-preregistered prediction that failed.
 
 ## 6. Multiplayer server (`nv_server`)
 
@@ -328,7 +332,7 @@ It is built entirely from the full event log and the World Table, so it can also
 | Sabotage | revealed predictions that failed although the predictor's own experiments showed the theory would fail there; whose theory it hit and its Nobel counter at the time | yes |
 | Fabrication | number of fabricated records, how many published papers relied on them, and those papers' true accuracy | no, totals only |
 | File drawer | predictions made but never revealed, and their success rate compared with revealed ones | no, totals only |
-| Peer review | acceptance rate by tier; papers accepted with fabricated or mismatched support | no, totals only |
+| Peer review | acceptance rate by tier; papers accepted with fabricated (mixed) experiment records | no, totals only |
 | Over time | academic credit per researcher by round, and the Nobel counters of leading theories | yes |
 
 Sabotage is inferred, not certain: the debrief labels it "failed despite contrary evidence the predictor held". AI seats' notes and reasons can be shown alongside, which helps explain their play.
