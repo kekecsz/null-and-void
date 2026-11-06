@@ -9,20 +9,54 @@ from nv_core.engine import IllegalAction, apply, legal_actions, new_game
 from nv_core.record import GameRecord
 from nv_core.settings import Settings
 from nv_core.state import GameState, Prediction
-from nv_core.views import player_view
+from nv_core.views import player_view, visible_events
 from nv_core.world_data import WorldData
 from nv_sim import invariants
 from nv_sim.bots import BOTS
 
 MAX_REFUSALS = 20  # a bot whose choices are refused this often in a row commits or passes instead
+RECENT_EVENTS = 25  # public events shown to an AI player with each decision
 
 
-def make_players(seat_types: list[str], seed: int) -> list:
+@dataclass
+class AIContext:
+    """What AI seats need: software settings, the spending ledger and a provider factory."""
+
+    software: Any
+    ledger: Any
+    make_provider: Any  # () -> Provider
+
+
+def check_seat_types(seat_types: list[str]) -> None:
+    from nv_ai.prompt import PERSONAS
+
+    for kind in seat_types:
+        base, _, persona = kind.partition(":")
+        if base == "ai":
+            if persona and persona not in PERSONAS:
+                raise ValueError(f"unknown persona {persona!r} (available: {', '.join(PERSONAS)})")
+        elif kind not in BOTS:
+            raise ValueError(f"unknown seat type {kind!r} (available: {', '.join(BOTS)}, ai, ai:<persona>)")
+
+
+def make_players(seat_types: list[str], seed: int, world: WorldData | None = None, ai: AIContext | None = None) -> list:
+    check_seat_types(seat_types)
     players = []
     for seat, kind in enumerate(seat_types):
-        if kind not in BOTS:
-            raise ValueError(f"unknown seat type {kind!r} (available: {', '.join(BOTS)}; AI seats come in milestone 4)")
-        players.append(BOTS[kind](f"{seed}/seat{seat}"))
+        base, _, persona = kind.partition(":")
+        if base == "ai":
+            if ai is None or world is None:
+                raise ValueError("AI seats need the AI settings (nv_ai)")
+            from nv_ai.player import AIPlayer
+
+            players.append(
+                AIPlayer(
+                    ai.make_provider(), ai.software, ai.ledger, world.story, persona or "neutral",
+                    game=str(seed), name=f"{kind}{seat + 1}", fallback_seed=f"{seed}/seat{seat}/fallback",
+                )
+            )
+        else:
+            players.append(BOTS[kind](f"{seed}/seat{seat}"))
     return players
 
 
@@ -47,6 +81,7 @@ class GameReport:
     predictions: list[dict[str, Any]] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     record: GameRecord | None = None
+    ai_decisions: list[dict[str, Any]] = field(default_factory=list)
 
 
 class _Collector:
@@ -178,9 +213,13 @@ def play_game(
     max_actions: int = 20000,
     keep_record: bool = False,
     check_invariants: bool = True,
+    ai: AIContext | None = None,
+    on_action=None,
 ) -> GameReport:
-    players = make_players(seat_types, seed)
+    """``on_action(state, seat, action, events)`` is called after every accepted action."""
+    players = make_players(seat_types, seed, world, ai)
     names = [f"{kind}{seat + 1}" for seat, kind in enumerate(seat_types)]
+    all_events: list = []
     state = new_game(world, settings, seed, names)
     collector = _Collector(state)
     actions: list = []
@@ -194,19 +233,21 @@ def play_game(
             seat = state.current if state.current is not None else state.waiting[0]
             player = players[seat]
             options = legal_actions(state, seat)
-            view = (
-                player_view(state, seat)
-                if player.needs_view
-                else {"round": state.round, "phase": state.phase.value, "seat": seat}
-            )
+            if player.needs_view:
+                view = player_view(state, seat)
+                view["recent_events"] = [e.text for e in visible_events(all_events, seat)[-RECENT_EVENTS:]]
+            else:
+                view = {"round": state.round, "phase": state.phase.value, "seat": seat}
             result = None
             for _ in range(MAX_REFUSALS):
                 action = player.choose(view, options)
                 try:
                     result = apply(state, action)
                     break
-                except IllegalAction:
+                except IllegalAction as exc:
                     refused += 1
+                    if hasattr(player, "refused"):
+                        player.refused(action, str(exc))
             if result is None:  # fall back to committing or passing
                 for option in options:
                     if option.type in ("commit", "pass"):
@@ -218,6 +259,9 @@ def play_game(
                 break
             state, events = result
             actions.append(action)
+            all_events += events
+            if on_action:
+                on_action(state, seat, action, events)
             collector.events(state, events)
             collector.after(state)
             if check_invariants:
@@ -247,7 +291,7 @@ def play_game(
         "nobel_theory": result.theory if result else None,
         "actions": len(actions),
         "refused_actions": refused,
-        "ai_cost": 0.0,
+        "ai_cost": round(sum(getattr(p, "cost", 0.0) for p in players), 6),
         "error": " | ".join(errors).replace("\n", " ") if errors else "",
     }
     for seat, r in enumerate(state.researchers):
@@ -262,4 +306,5 @@ def play_game(
         predictions=collector.predictions,
         errors=errors,
         record=record,
+        ai_decisions=[d for p in players for d in getattr(p, "decisions", [])],
     )

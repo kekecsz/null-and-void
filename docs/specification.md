@@ -255,7 +255,7 @@ In simultaneous phases, AI seats decide in parallel in the background while huma
 
 ### 8.2 Memory
 
-The API is stateless, so each AI seat keeps a private notes field in the game state (plans, which theories it is working towards, what it has learned from experiments). The model can update its notes as part of any decision, within a set length. The notes are hidden from other players and shown in spectator mode and the debrief.
+The API is stateless, so each AI seat keeps a private notes field in the game state (plans, which theories it is working towards, what it has learned from experiments). The model can update its notes as part of any decision, within a set length. The notes are hidden from other players and shown in spectator mode and the debrief. Until the server stores games (milestone 5), the notes are kept by the AI player and written to the decision log, so a game resumed from its record starts with empty notes.
 
 ### 8.3 Personas
 

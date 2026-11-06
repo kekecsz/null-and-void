@@ -20,7 +20,8 @@ true world.
 | 1 | World generator and report | done |
 | 2 | Rules engine and text client | done |
 | 3 | Random bot and simulator | done |
-| 4–7 | AI player, server and web UI, spectator mode and debrief, deployment | planned |
+| 4 | AI player | in progress |
+| 5–7 | Server and web UI, spectator mode and debrief, deployment | planned |
 
 The milestones and their acceptance criteria are in the specification, section 13.
 
@@ -90,6 +91,24 @@ Type `help` in the game for the commands. The client shows the screen of the res
 `as NAME` switches to another researcher (in steps where everyone decides in secret, each researcher enters
 their choices and then `commit`).
 
+## AI players
+
+Seats can be played by an AI model (specification, section 8); the provider, model, budget and prices are
+in [`settings/software.yaml`](settings/software.yaml). Put your API key in `settings/api_keys.env` (copy
+[`settings/api_keys.env.example`](settings/api_keys.env.example); git ignores the real file). Every AI call is
+added to `settings/ai_spending.csv`, and no calls are made once `ai_total_budget` is spent.
+
+```sh
+# Watch an AI play against two random bots (the game plays itself; costs are printed)
+.venv/Scripts/nv-play new scenarios/venus_expedition/worlds/world_seed1.json --players Ada,Bot1,Bot2 --seat Ada=ai --seat Bot1=random --seat Bot2=random
+
+# Play yourself against an AI (seat types: random, ai, ai:cooperative, ai:selfish)
+.venv/Scripts/nv-play new scenarios/venus_expedition/worlds/world_seed1.json --players Zoltan,Ada --seat Ada=ai
+
+# Simulate games with AI seats (asks before starting; --max-cost caps this run)
+.venv/Scripts/nv-sim run --players 3 --seats ai,random,random --games 2 --max-cost 1.00 --out results/ai01
+```
+
 ## Simulating games
 
 The simulator plays many games with automated players and writes CSV files for analysis in R or Python
@@ -120,7 +139,8 @@ reported as an error.
 | `nv_world/` | World generator: scenario reader, World Table generation, screening, world files, `nv-world` command |
 | `nv_server/` | The `nv-play` text client (the multiplayer server comes in milestone 5) |
 | `nv_sim/` | Simulator: random bot, invariant checks, the `nv-sim` command |
-| `nv_ai/`, `web/` | AI player and browser client (later milestones) |
+| `nv_ai/` | AI player: prompt and tools, model provider, costs and the spending ledger |
+| `web/` | Browser client (milestone 5) |
 | `scenarios/` | One folder per scenario, with its scenario file and generated worlds |
 | `docs/` | The rulebook, parameter file, specification and open questions |
 | `tests/` | pytest tests, named after the document sections they check |

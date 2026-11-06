@@ -10,6 +10,7 @@ requires-python = ">=3.14"
 dependencies = [
     "pydantic>=2.11",
     "pyyaml>=6.0",
+    "openai>=3.46",  # AI players (nv_ai); the rules engine does not need it
 ]
 
 [project.scripts]

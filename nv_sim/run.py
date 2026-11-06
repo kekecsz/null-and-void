@@ -27,14 +27,34 @@ import yaml
 
 from nv_core.paths import SCENARIOS_DIR
 from nv_core.settings import SettingsError, load_settings
-from nv_sim.game import GameReport, make_players, play_game
+from nv_sim.game import AIContext, GameReport, check_seat_types, play_game
 from nv_world.cli import world_summary
 from nv_world.game import world_data
 from nv_world.generate import GenerationFailed, generate_world
 from nv_world.scenario import load_scenario
 from nv_world.worldfile import load_world
 
-CSV_FILES = ("games.csv", "rounds.csv", "theories.csv", "predictions.csv", "worlds.csv")
+CSV_FILES = ("games.csv", "rounds.csv", "theories.csv", "predictions.csv", "worlds.csv", "ai_decisions.csv")
+
+
+def has_ai(seats: list[str]) -> bool:
+    return any(s.split(":")[0] == "ai" for s in seats)
+
+
+def ai_context() -> AIContext:
+    """Settings, ledger and provider for AI seats; raises ValueError when the key is missing."""
+    from nv_ai.config import SPENDING_LEDGER, load_software_settings, require_api_key
+    from nv_ai.costs import Ledger
+    from nv_ai.provider import make_provider
+
+    software = load_software_settings()
+    require_api_key(software.ai_provider)
+    ledger = Ledger(SPENDING_LEDGER, software.ai_total_budget)
+    return AIContext(
+        software,
+        ledger,
+        lambda: make_provider(software.ai_provider, software.ai_default_model, software.ai_reasoning_effort),
+    )
 
 
 # Configuration -------------------------------------------------------------------------------
@@ -81,7 +101,13 @@ def _job(job: dict[str, Any]) -> dict[str, Any]:
             return {"index": job["index"], "error": f"world generation failed: {exc}"}
         world = world_data(scenario, world_file, f"generated_seed{job['seed']}")
         world_row = world_summary(scenario, world_file, world_file.screening)
-    report: GameReport = play_game(world, settings, job["seed"], job["seats"], max_actions=job["max_actions"])
+    ai = job.get("ai_context") or (ai_context() if has_ai(job["seats"]) else None)
+    report: GameReport = play_game(
+        world, settings, job["seed"], job["seats"], max_actions=job["max_actions"], ai=ai, keep_record=ai is not None
+    )
+    if report.record is not None and job.get("records_dir"):
+        report.record.save(Path(job["records_dir"]) / f"game{job['index'] + 1}.json")
+        report.record = None
     return {"index": job["index"], "report": report, "world_row": world_row}
 
 
@@ -130,8 +156,11 @@ def _run(args: argparse.Namespace) -> int:
     if len(seats) != args.players:
         print(f"error: {len(seats)} seat types for {args.players} players", file=sys.stderr)
         return 2
+    ai = None
     try:
-        make_players(seats, 0)
+        check_seat_types(seats)
+        if has_ai(seats):
+            ai = ai_context()
         combinations = _combinations(args.set or [], args.sweep or [])
         for overrides in combinations:
             settings = load_settings({**scenario.parameter_overrides, **overrides})
@@ -142,6 +171,19 @@ def _run(args: argparse.Namespace) -> int:
         return 2
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    max_cost = None
+    if ai is not None:
+        max_cost = min(args.max_cost, ai.ledger.remaining) if args.max_cost is not None else ai.ledger.remaining
+        n_ai = sum(1 for s in seats if s.split(":")[0] == "ai")
+        print(
+            f"AI seats: {n_ai} per game, model {ai.software.ai_default_model}. Spent so far: "
+            f"{ai.ledger.total:.2f} of {ai.software.ai_total_budget:.2f} USD (ai_total_budget). "
+            f"This run stops once it has spent {max_cost:.2f} USD; at most "
+            f"{ai.software.ai_max_cost_per_decision:.2f} USD per decision."
+        )
+        if not args.yes and input("Start? [y/N] ").strip().lower() not in ("y", "yes"):
+            print("Not started.")
+            return 2
 
     jobs = []
     for c, overrides in enumerate(combinations):
@@ -156,6 +198,7 @@ def _run(args: argparse.Namespace) -> int:
                     "scenario": str(scenario_path),
                     "world": args.world,
                     "max_actions": args.max_actions,
+                    "records_dir": str(out / "records") if ai is not None else None,
                 }
             )
     config = {
@@ -173,19 +216,27 @@ def _run(args: argparse.Namespace) -> int:
 
     started = time.time()
     results: list[dict[str, Any]] = [None] * len(jobs)  # type: ignore[list-item]
-    jobs_count = args.jobs or os.cpu_count() or 1
+    jobs_count = 1 if ai is not None else (args.jobs or os.cpu_count() or 1)  # one ledger: AI games run in turn
     print(f"Running {len(jobs)} game(s) on {jobs_count} process(es)...", flush=True)
     if jobs_count == 1:
+        run_start = ai.ledger.total if ai is not None else 0.0
         for done, job in enumerate(jobs, start=1):
-            results[job["index"]] = _job(job)
+            if ai is not None and (ai.ledger.total - run_start >= max_cost or ai.ledger.remaining <= 0):
+                print(f"Stopped before game {job['index'] + 1}: the cost limit is reached.")
+                jobs, results = jobs[: done - 1], results[: done - 1]
+                break
+            results[job["index"]] = _job({**job, "ai_context": ai})
             _progress(done, len(jobs))
+            if ai is not None:
+                print(f"    game {job['index'] + 1}: AI cost {results[job['index']]['report'].game['ai_cost']:.4f} USD; "
+                      f"total spent {ai.ledger.total:.4f} USD", flush=True)
     else:
         with ProcessPoolExecutor(max_workers=jobs_count) as pool:
             for done, result in enumerate(pool.map(_job, jobs, chunksize=1), start=1):
                 results[result["index"]] = result
                 _progress(done, len(jobs))
 
-    games, rounds, theories, predictions, worlds = [], [], [], [], []
+    games, rounds, theories, predictions, worlds, decisions = [], [], [], [], [], []
     world_rows: dict[str, list] = {}
     if args.world:
         world_file = load_world(Path(args.world))
@@ -208,18 +259,25 @@ def _run(args: argparse.Namespace) -> int:
         rounds += [{**base, **row} for row in report.rounds]
         theories += [{**base, **row} for row in report.theories]
         predictions += [{**base, **row} for row in report.predictions]
+        decisions += [{**base, **{k: (";".join(v) if isinstance(v, list) else v) for k, v in row.items()}}
+                      for row in report.ai_decisions]
         if result["world_row"] is not None:
             header, row = result["world_row"]
             world_rows[report.game["world"]] = [report.game["world"], *row]
             worlds_header = ["world", *header]
     for row in world_rows.values():
         worlds.append(dict(zip(worlds_header, row)))
-    for name, rows in zip(CSV_FILES, (games, rounds, theories, predictions, worlds)):
-        _write_csv(out / name, rows)
+    for name, rows in zip(CSV_FILES, (games, rounds, theories, predictions, worlds, decisions)):
+        if rows or name != "ai_decisions.csv":
+            _write_csv(out / name, rows)
 
     print()
     print(summary_text(games))
     print(f"{len(games)} game(s) in {time.time() - started:.0f} s; {errors} with errors. CSV files in {out}")
+    if ai is not None:
+        total = sum(g.get("ai_cost", 0.0) or 0.0 for g in games)
+        print(f"AI cost of this run: {total:.4f} USD ({len(decisions)} decisions); "
+              f"total spent: {ai.ledger.total:.4f} of {ai.software.ai_total_budget:.2f} USD")
     return 1 if errors else 0
 
 
@@ -236,6 +294,17 @@ def _record(args: argparse.Namespace) -> int:
     if entry is None:
         print(f"error: the run has no game {args.game}", file=sys.stderr)
         return 2
+    saved = out / "records" / f"game{args.game}.json"
+    if has_ai(config["seats"]):  # model replies cannot be replayed from a seed: use the saved actions
+        if not saved.exists():
+            print(f"error: no saved record {saved}", file=sys.stderr)
+            return 2
+        save = Path(args.save) if args.save else Path("games") / f"{out.name}_game{args.game}.json"
+        save.parent.mkdir(parents=True, exist_ok=True)
+        save.write_bytes(saved.read_bytes())
+        print(f"Game {args.game} copied to {save}")
+        print(f"Replay it with: nv-play load {save}")
+        return 0
     scenario = load_scenario(Path(config["scenario"]))
     overrides = config["combinations"][entry["combination"]]
     settings = load_settings({**scenario.parameter_overrides, **overrides})
@@ -257,7 +326,7 @@ def main(argv: list[str] | None = None) -> int:
     run = commands.add_parser("run", help="play a batch of games and write CSV files")
     run.add_argument("--scenario", default="venus_expedition", help="scenario id or scenario file")
     run.add_argument("--players", type=int, default=4)
-    run.add_argument("--seats", help="comma-separated seat types (default: all random)")
+    run.add_argument("--seats", help="comma-separated seat types: random, ai or ai:<persona> (default: all random)")
     run.add_argument("--games", type=int, default=100, help="games per settings combination")
     run.add_argument("--seed", type=int, default=1)
     run.add_argument("--world", help="play every game on this world file (default: a fresh world per game)")
@@ -266,6 +335,8 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--out", required=True, help="folder for the CSV files")
     run.add_argument("--jobs", type=int, help="parallel processes (default: one per CPU)")
     run.add_argument("--max-actions", type=int, default=20000, help="a game with more actions counts as stalled")
+    run.add_argument("--max-cost", type=float, help="with AI seats: stop the run once it has spent this many USD")
+    run.add_argument("--yes", action="store_true", help="with AI seats: start without asking")
     record = commands.add_parser("record", help="rebuild one game of a run for the text client")
     record.add_argument("run", help="the run's output folder")
     record.add_argument("game", type=int, help="game number (from games.csv)")

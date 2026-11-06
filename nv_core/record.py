@@ -26,6 +26,8 @@ class GameRecord(BaseModel):
     seed: int
     players: list[str]
     actions: list[Action] = Field(default_factory=list)
+    # Seat types for the text client: "human" (the default), "random", "ai" or "ai:<persona>"
+    seats: list[str] = Field(default_factory=list)
 
     def replay(self) -> GameState:
         return replay(self.world, self.settings, self.seed, self.players, self.actions)

@@ -168,9 +168,9 @@ def test_nv_sim_run_writes_csvs_and_record_rebuilds_a_game(tmp_path, capsys):
     assert state.result.ending == games[1]["ending"] and str(state.round) == games[1]["rounds"]
 
 
-def test_nv_sim_refuses_ai_seats_for_now(tmp_path, capsys):
-    assert main(["run", "--players", "2", "--seats", "random,ai:selfish", "--games", "1", "--out", str(tmp_path)]) == 2
-    assert "milestone 4" in capsys.readouterr().err
+def test_nv_sim_rejects_unknown_seat_types(tmp_path, capsys):
+    assert main(["run", "--players", "2", "--seats", "random,wizard", "--games", "1", "--out", str(tmp_path)]) == 2
+    assert "unknown seat type" in capsys.readouterr().err
 
 
 def test_fresh_world_per_game(tmp_path):
