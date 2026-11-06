@@ -229,24 +229,33 @@ def supporting_records(ctx: Ctx, r: Researcher, idea: Idea) -> tuple[list[Observ
     return observations, experiments
 
 
-def find_submission(ctx: Ctx, seat: int) -> Submit | None:
-    """A legal submission for ``seat`` (highest tier first, no APC), or None."""
+def possible_submissions(ctx: Ctx, seat: int) -> list[tuple[Submit, list]]:
+    """Every (manuscript, tier) that ``seat`` can submit now, highest tier first. Each comes as a
+    legal submission with the minimum records (no APC), plus the spare records that would also fit."""
     r = ctx.state.researcher(seat)
-    for idea in r.ideas:
-        observations, experiments = supporting_records(ctx, r, idea)
-        for tier_number in range(len(ctx.settings.journal_tiers) - 1, -1, -1):
-            tier = ctx.settings.journal_tiers[tier_number]
+    found = []
+    for tier_number in range(len(ctx.settings.journal_tiers) - 1, -1, -1):
+        tier = ctx.settings.journal_tiers[tier_number]
+        for idea in r.ideas:
+            observations, experiments = supporting_records(ctx, r, idea)
             if len(observations) < tier.min_observations or len(experiments) < tier.min_experiments:
                 continue
             records: list = observations[: tier.min_observations] + experiments[: tier.min_experiments]
             rest = observations[tier.min_observations :] + experiments[tier.min_experiments :]
-            records += rest[: max(0, tier.min_records - len(records))]
+            needed = max(0, tier.min_records - len(records))
+            records += rest[:needed]
             try:
                 check_submission(ctx, r, idea, tier_number, build_records(ctx, r, records), False)
             except IllegalAction:
                 continue
-            return Submit(seat=seat, manuscript=idea.id, tier=tier_number, records=records)
-    return None
+            found.append((Submit(seat=seat, manuscript=idea.id, tier=tier_number, records=records), rest[needed:]))
+    return found
+
+
+def find_submission(ctx: Ctx, seat: int) -> Submit | None:
+    """A legal submission for ``seat`` (highest tier first, no APC), or None."""
+    found = possible_submissions(ctx, seat)
+    return found[0][0] if found else None
 
 
 def check_commit_submission(ctx: Ctx, seat: int) -> None:

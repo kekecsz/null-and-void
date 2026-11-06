@@ -105,6 +105,7 @@ def make_prediction(ctx: Ctx, action: MakePrediction) -> None:
     preregister = action.preregister or state.period == "crisis"
     prediction = Prediction(
         id=state.new_id(),
+        round=state.round,
         seat=seat,
         probe=action.probe,
         theory=paper.id,
@@ -207,6 +208,8 @@ def finish_prediction(ctx: Ctx) -> None:
         probe.outcomes_revealed = True
         shown = ", ".join(f"{k}={c.state}" for k, c in probe.outcomes.items())
         ctx.log("outcomes", f"P{probe.index + 1} outcomes: {shown}", probe=probe.index)
+    for prediction in state.predictions:
+        prediction.success = _success(ctx, prediction)  # hidden ones too, for the debrief
 
 
 # Outcome and Prediction Reveal -------------------------------------------------------------------

@@ -156,7 +156,7 @@ def render_text(view: dict[str, Any]) -> str:
         out("PREDICTIONS")
         for p in view["predictions"]:
             status = p["status"]
-            if p["success"] is not None:
+            if p["status"] == "scored":
                 status = "success" if p["success"] else "failed"
             flags = " preregistered" if p["preregistered"] else ""
             if p.get("chosen_to_reveal") and p["status"] == "hidden" and not p["preregistered"]:

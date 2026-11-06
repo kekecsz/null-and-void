@@ -20,7 +20,7 @@ from nv_core.settings import Settings
 from nv_core.state import GameState, Phase
 from nv_core.world_data import WorldData
 
-__all__ = ["Event", "IllegalAction", "apply", "new_game", "replay", "validate", "SIMULTANEOUS"]
+__all__ = ["Event", "IllegalAction", "Option", "apply", "legal_actions", "new_game", "replay", "validate", "SIMULTANEOUS"]
 
 
 class _Step:
@@ -186,3 +186,6 @@ def replay(world: WorldData, settings: Settings, seed: int, players: list[str], 
     for action in actions:
         state, _ = apply(state, action)
     return state
+
+
+from nv_core.engine.legal import Option, legal_actions  # noqa: E402  (legal imports the step modules above)

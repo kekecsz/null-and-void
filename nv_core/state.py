@@ -61,6 +61,9 @@ class Card(_Model):
     origin: Literal["supply", "input_deck", "probe"]
     stack: int | None = None
 
+    def __deepcopy__(self, memo=None) -> "Card":
+        return self  # frozen, so copies of the game state can share it (much faster)
+
 
 class StaffCount(_Model):
     postdocs: int = 0
@@ -207,6 +210,7 @@ class Probe(_Model):
 
 class Prediction(_Model):
     id: int
+    round: int = 0
     seat: int
     probe: int
     theory: int  # the published theory the researcher copied
@@ -217,7 +221,7 @@ class Prediction(_Model):
     reveal_step: int | None = None  # 1 = Preregistration pruning, 2 = Prediction Reveal
     cited: int | None = None  # the theory cited after the identical-theory preference
     status: Literal["hidden", "revealed", "pruned", "scored", "discarded"] = "hidden"
-    success: bool | None = None
+    success: bool | None = None  # set for every prediction once outcomes are revealed
 
 
 class GameResult(_Model):
