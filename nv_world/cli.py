@@ -97,20 +97,24 @@ def write_csvs(scenario: Scenario, world: World, report: ScreeningReport, scores
             for s in report.nobel_grade
         ],
     )
+    header, row = world_summary(scenario, world, report)
+    write("summary.csv", header, [row])
+
+
+def world_summary(scenario: Scenario, world: World, report: ScreeningReport) -> tuple[list[str], list]:
+    """One summary row of a world (also the row shape of the simulator's worlds.csv)."""
     best_columns = [f"best_accuracy_{n}_inputs" for n in report.best_accuracy_by_inputs]
     rate_columns = [f"base_rate_{o.id}_{state}" for o in scenario.world_outcomes for state in o.states]
-    write(
-        "summary.csv",
-        ["scenario_id", "requested_seed", "seed", "tries", "passed", *rate_columns, *best_columns,
-         "nobel_theories", "nobel_input_patterns", "nobel_maximal_theories"],
-        [[
-            world.scenario_id, world.requested_seed, world.seed, world.tries, report.passed,
-            *(float(report.base_rates[o.id][state]) for o in scenario.world_outcomes for state in o.states),
-            *(float(a) for a in report.best_accuracy_by_inputs.values()),
-            report.nobel_counts["theories"], report.nobel_counts["input_patterns"],
-            report.nobel_counts["maximal_theories"],
-        ]],
-    )
+    header = ["scenario_id", "requested_seed", "seed", "tries", "passed", *rate_columns, *best_columns,
+              "nobel_theories", "nobel_input_patterns", "nobel_maximal_theories"]
+    row = [
+        world.scenario_id, world.requested_seed, world.seed, world.tries, report.passed,
+        *(float(report.base_rates[o.id][state]) for o in scenario.world_outcomes for state in o.states),
+        *(float(a) for a in report.best_accuracy_by_inputs.values()),
+        report.nobel_counts["theories"], report.nobel_counts["input_patterns"],
+        report.nobel_counts["maximal_theories"],
+    ]
+    return header, row
 
 
 def _generate(args: argparse.Namespace) -> int:

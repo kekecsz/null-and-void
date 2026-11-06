@@ -295,7 +295,7 @@ nv-sim run --scenario venus_expedition --players 4 \
 
 - `--world` fixes one world; without it, each game generates and screens a fresh world, so results average over worlds.
 - `--sweep nobel_condition=4,5,6` runs every combination of the listed settings.
-- Games run in parallel processes; each game's seed is recorded, so any single game can be replayed in the text client or in spectator mode.
+- Games run in parallel processes; each game's seed is recorded, so any single game can be replayed in the text client or in spectator mode (`nv-sim record <run folder> <game>` rebuilds it as a game record that `nv-play load` opens).
 - **AI cost guard:** before a batch with AI seats starts, the simulator estimates its cost from a short pilot and asks for confirmation; `--max-cost` stops the batch when reached.
 
 ### 9.3 Output files
@@ -307,6 +307,8 @@ nv-sim run --scenario venus_expedition --players 4 \
 | `theories.csv` | published theory | author, tier, true accuracy, coverage, successes, failures, highest Nobel counter, retracted |
 | `predictions.csv` | prediction | theory, Probe, preregistered, revealed, success, whether the predictor had experiment knowledge of failure |
 | `worlds.csv` | world | base rates, best theory accuracy by number of inputs, count of Nobel-grade theories |
+
+In `predictions.csv`, the predictor "had experiment knowledge of failure" when one of their own experiments, that round or earlier, matched every input state of the theory and every visible reading of the Probe, and showed an outcome that contradicts the theory.
 
 A short text summary prints at the end: the share of each ending with 95% confidence intervals, and the median game length.
 

@@ -15,6 +15,7 @@ dependencies = [
 [project.scripts]
 nv-world = "nv_world.cli:main"
 nv-play = "nv_server.text_client:main"
+nv-sim = "nv_sim.run:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

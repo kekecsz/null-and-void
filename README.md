@@ -19,7 +19,8 @@ true world.
 | --- | --- | --- |
 | 1 | World generator and report | done |
 | 2 | Rules engine and text client | done |
-| 3–7 | Simulator, AI player, server and web UI, spectator mode and debrief, deployment | planned |
+| 3 | Random bot and simulator | done |
+| 4–7 | AI player, server and web UI, spectator mode and debrief, deployment | planned |
 
 The milestones and their acceptance criteria are in the specification, section 13.
 
@@ -89,6 +90,28 @@ Type `help` in the game for the commands. The client shows the screen of the res
 `as NAME` switches to another researcher (in steps where everyone decides in secret, each researcher enters
 their choices and then `commit`).
 
+## Simulating games
+
+The simulator plays many games with automated players and writes CSV files for analysis in R or Python
+(specification, section 9). For now the players are random bots; AI players come with milestone 4.
+
+```sh
+# 100 games with 4 random bots, each on a freshly generated world
+.venv/Scripts/nv-sim run --players 4 --games 100 --seed 42 --out results/run01
+
+# All games on one world, comparing three values of a setting
+.venv/Scripts/nv-sim run --world scenarios/venus_expedition/worlds/world_seed1.json --sweep nobel_condition=4,5,6 --games 100 --out results/run02
+
+# Rebuild game 17 of a run and step through it in the text client
+.venv/Scripts/nv-sim record results/run01 17
+.venv/Scripts/nv-play load games/run01_game17.json
+```
+
+A run writes `games.csv`, `rounds.csv`, `theories.csv`, `predictions.csv` and `worlds.csv`, and prints the
+share of each ending with 95% confidence intervals. Every action is checked against the game's invariants
+(no negative staff or money, counters in range, every card accounted for); a game that breaks one is
+reported as an error.
+
 ## Repository layout
 
 | Path | Contents |
@@ -96,7 +119,8 @@ their choices and then `commit`).
 | `nv_core/` | Rules engine: settings, game state, actions, the phases of a round, player views and text rendering, game records |
 | `nv_world/` | World generator: scenario reader, World Table generation, screening, world files, `nv-world` command |
 | `nv_server/` | The `nv-play` text client (the multiplayer server comes in milestone 5) |
-| `nv_ai/`, `nv_sim/`, `web/` | AI player, simulator and browser client (later milestones) |
+| `nv_sim/` | Simulator: random bot, invariant checks, the `nv-sim` command |
+| `nv_ai/`, `web/` | AI player and browser client (later milestones) |
 | `scenarios/` | One folder per scenario, with its scenario file and generated worlds |
 | `docs/` | The rulebook, parameter file, specification and open questions |
 | `tests/` | pytest tests, named after the document sections they check |
