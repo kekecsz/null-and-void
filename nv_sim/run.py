@@ -102,13 +102,41 @@ def _job(job: dict[str, Any]) -> dict[str, Any]:
         world = world_data(scenario, world_file, f"generated_seed{job['seed']}")
         world_row = world_summary(scenario, world_file, world_file.screening)
     ai = job.get("ai_context") or (ai_context() if has_ai(job["seats"]) else None)
+    progress = _round_progress(job["index"] + 1, ai) if job.get("progress") else None
     report: GameReport = play_game(
-        world, settings, job["seed"], job["seats"], max_actions=job["max_actions"], ai=ai, keep_record=ai is not None
+        world, settings, job["seed"], job["seats"], max_actions=job["max_actions"], ai=ai,
+        keep_record=ai is not None, on_action=progress,
     )
     if report.record is not None and job.get("records_dir"):
         report.record.save(Path(job["records_dir"]) / f"game{job['index'] + 1}.json")
         report.record = None
     return {"index": job["index"], "report": report, "world_row": world_row}
+
+
+def _round_progress(game: int, ai: AIContext | None):
+    """A callback printing one line per round: staff, Game Period Deck, Crisis, AI cost so far."""
+    start = {"cost": ai.ledger.total if ai else 0.0}
+
+    def report(state, seat, action, events) -> None:
+        for event in events:
+            if event.kind == "period_deck":
+                staff = ", ".join(f"{r.name} {r.postdocs + r.students}" for r in state.researchers)
+                left = len(state.period_deck)
+                status = ""
+                if state.period == "crisis":
+                    status = (f" | CRISIS round {state.rounds_in_crisis} of {state.settings.crisis_length}, "
+                              f"unsuccessful predictions {state.unsuccessful_predictions} of {state.settings.crisis_condition}")
+                elif state.warning_revealed:
+                    status = " | Warning shot revealed"
+                cost = f" | AI cost {ai.ledger.total - start['cost']:.4f} USD" if ai else ""
+                print(f"    game {game}, round {state.round}: staff {staff}; Game Period Deck {left} left{status}{cost}",
+                      flush=True)
+            elif event.kind in ("crisis_miss", "crisis_crash", "nobel", "game_over") or (
+                event.kind == "scored" and state.period == "crisis"
+            ):
+                print(f"    game {game}, round {event.round}: {event.text}", flush=True)
+
+    return report
 
 
 # Output --------------------------------------------------------------------------------------
@@ -201,6 +229,7 @@ def _run(args: argparse.Namespace) -> int:
                     "world": args.world,
                     "max_actions": args.max_actions,
                     "records_dir": str(out / "records") if ai is not None else None,
+                    "progress": args.progress or (ai is not None and not args.quiet),
                 }
             )
     config = {
@@ -339,6 +368,8 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--max-actions", type=int, default=20000, help="a game with more actions counts as stalled")
     run.add_argument("--max-cost", type=float, help="with AI seats: stop the run once it has spent this many USD")
     run.add_argument("--yes", action="store_true", help="with AI seats: start without asking")
+    run.add_argument("--progress", action="store_true", help="print a line per round (always on with AI seats)")
+    run.add_argument("--quiet", action="store_true", help="with AI seats: no line per round")
     record = commands.add_parser("record", help="rebuild one game of a run for the text client")
     record.add_argument("run", help="the run's output folder")
     record.add_argument("game", type=int, help="game number (from games.csv)")
