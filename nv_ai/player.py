@@ -16,6 +16,7 @@ from nv_sim.bots import RandomBot
 
 MIN_OUTPUT_TOKENS = 2_000  # below this a reply (with reasoning) is pointless: fall back instead
 MAX_ACTIONS_PER_STEP = 30  # then commit or pass, so a model cannot stall a step
+MAX_API_ERRORS = 3  # in a row: then no more calls in this game (e.g. an expired API key)
 CHARS_PER_TOKEN = 3.0  # a cautious estimate, for the per-decision cost limit only
 
 
@@ -64,6 +65,8 @@ class AIPlayer:
         self._step: tuple | None = None
         self._step_actions = 0
         self._fixed_chars = len(self.instructions) + len(json.dumps(self.tools))
+        self._api_errors = 0
+        self._disabled = ""
 
     # ------------------------------------------------------------------------------------
     def refused(self, action: BaseModel, reason: str) -> None:
@@ -89,6 +92,8 @@ class AIPlayer:
         while True:
             if self._attempts > self.software.ai_retry_limit:
                 return self._fall_back(view, options, f"{self._attempts} attempts refused")
+            if self._disabled:
+                return self._fall_back(view, options, self._disabled)
             if self.ledger.remaining <= 0:
                 return self._fall_back(view, options, "the AI budget is used up (ai_total_budget)")
             max_output = self._output_limit()
@@ -97,7 +102,12 @@ class AIPlayer:
             try:
                 reply = self.provider.respond(self.instructions, self.tools, self._items, max_output)
             except Exception as exc:  # any API failure: the seat takes the safe default
-                return self._fall_back(view, options, f"API error: {type(exc).__name__}: {exc}"[:300])
+                self._api_errors += 1
+                why = f"API error: {type(exc).__name__}: {exc}"[:300]
+                if self._api_errors >= MAX_API_ERRORS:
+                    self._disabled = f"no more AI calls after {MAX_API_ERRORS} API errors in a row ({why})"
+                return self._fall_back(view, options, why)
+            self._api_errors = 0
             self._attempts += 1
             self._account(reply)
             action, problem = self._action(reply, view["seat"])

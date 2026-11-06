@@ -222,6 +222,19 @@ def test_safe_fallback(venus, software, script, why):
     assert len(provider.calls) <= software.ai_retry_limit + 1
 
 
+def test_repeated_api_errors_stop_further_calls(venus, software):
+    """E.g. an expired API key: after MAX_API_ERRORS failures in a row the game goes on without calls."""
+    from nv_ai.player import MAX_API_ERRORS
+
+    provider = FakeProvider(["raise"] * 100)
+    player = _player(provider, software)
+    _, view, options = _first_decision(venus, player)
+    for _ in range(MAX_API_ERRORS + 5):
+        player.choose(view, options)
+    assert len(provider.calls) == MAX_API_ERRORS
+    assert "no more AI calls" in player.decisions[-1]["fallback"]
+
+
 def test_budget_and_per_decision_limit_stop_calls(venus, software):
     spent = Ledger(None, budget=1.0)
     spent.add("g", "s", "m", Usage(), 1.0)
