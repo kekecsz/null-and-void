@@ -79,8 +79,18 @@ def to_phase(state: GameState, phase: Phase, allocations: dict[int, dict[str, in
     In the Hiring phase each researcher gets ``money`` and the postdoc allocation in
     ``allocations`` (no students, so no dice); experiments are passed, Probe time takes the
     first free Probe, and every other step is committed without choices.
+
+    The engine skips the prediction step when nobody can predict (no usable published theory),
+    so to reach it placeholder theories are published first if there are none: one for each state
+    of the last input parameter (so one always fits a Probe, even in the Crisis when every input
+    is revealed) -> the first world outcome's last state, by researcher 0.
     """
     allocations = allocations or {}
+    if phase == Phase.PREDICTION and not any(p.kind == "theory" for p in state.published):
+        state = state.clone()
+        last_input, first_outcome = state.world.input_parameters[-1], state.world.world_outcomes[0]
+        for value in last_input.states:
+            publish(state, 0, inputs={last_input.id: value}, outcomes={first_outcome.id: first_outcome.states[-1]})
     for _ in range(500):
         if state.phase == phase or state.result:
             return state
