@@ -129,7 +129,7 @@ def test_rounds_in_processing_reductions_and_floor():
     assert rounds_in_processing(ctx, lots) == 1  # never below 1 through these reductions
     set_readings(state, state.hot_topic, {"IP1": "a"})
     assert rounds_in_processing(ctx, one_more) == max(1, expected - 2)  # hot topic too
-    # Specification 5.7: only blank rows under the theory's inputs is not a hot topic publication.
+    # Article processing: blank rows alone under the theory's inputs are not a hot topic publication.
     blank_only = _manuscript(state, tier_number, records=tier.min_records + 1, inputs={"IP3": "p"})
     set_readings(state, state.hot_topic, {"IP3": None})
     assert rounds_in_processing(ctx, blank_only) == max(1, expected - 1)

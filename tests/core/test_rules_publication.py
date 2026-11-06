@@ -298,7 +298,7 @@ def test_rounds_in_processing_reductions(inputs, records, open_access, expected)
     ],
 )
 def test_hot_topic_publication_uses_visible_readings_of_the_hot_topic_probe(hot, others, expected):
-    """Article processing (and specification 5.7): a theory with no mismatching input parameter from the
+    """Article processing: a theory with no mismatching input parameter from the
     visible readings of the Hot topic Probe is shortened by 1 (tier 1 here: 2 rounds)."""
     state = _processing_state(hot=hot, others=others)
     m = _manuscript(971, author=0, area="accept", tier=1, records=1)

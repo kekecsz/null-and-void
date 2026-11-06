@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.06. 18:12
+Last updated: 2026.11.06. 19:39
 
 # Summary
 
@@ -211,7 +211,7 @@ Experiments mimic Probes, with the difference that the researcher has some contr
 
 Experiments are conducted in secret behind the player’s lab shield. Researchers are not allowed to show their experiments to each other. They are allowed to talk about their experiments with others, but they don’t have to tell the truth.
 
-For each experiment, the researcher can specify \[experiment\_free\_input\_parameters\] Input Parameter states for free, plus one for each published method they cite. If they cite multiple methods for the same experiment, the methods need to be specific to different Input Parameters (that is, a cited method lets the researcher specify its own input parameter).
+For each experiment, the researcher can specify \[experiment\_free\_input\_parameters\] Input Parameter states for free, plus one for each published method they cite. If they cite multiple methods for the same experiment, the methods need to be specific to different Input Parameters. A method can only be cited for an experiment that specifies the method's own input parameter.
 
 Methods with the Fresh out of print marker can only be used by their authors.
 
@@ -225,7 +225,7 @@ The world outcome is determined and revealed to the researcher immediately after
 
 ## Recording experimental findings
 
-Following the experiments, researchers can take the cards from the experiments, and place them in the Fresh records area on the player mat. Records can later be used to form experiment record stacks that will support  manuscript submissions. 
+Following the experiments, researchers place the cards from the experiments in the Fresh records area on the player mat. Records can later be used to form experiment record stacks that will support  manuscript submissions. 
 
 ## Sensor installation and upgrade
 
@@ -299,13 +299,13 @@ Once a prediction is formulated, it is turned face down (the researcher can chec
 
 During the Calm period, Researchers can choose to make some of their predictions public before world outcomes are revealed. This is called a Preregistered prediction. At most as many predictions can be Preregistered by the researcher as many research staff they allocated to data collection. Researchers who have the research staff capacity to Preregister can secretly choose whether and which of their predictions they would like to Preregister, by turning these predictions face up (but for now still behind the lab shield).
 
-During the Crisis period all Predictions must be preregistered. Hidden predictions are no longer allowed.
+During the Crisis period all Predictions must be preregistered. Hidden predictions are no longer allowed. So during the Crisis period a researcher can make at most as many predictions as research staff they allocated to data collection.
 
 ## Preregistration pruning
 
 Once everyone is finished with Formulating predictions and preregistration assignment, the lab shields are removed to reveal the predictions (Preregistered predictions are shown face up, non-preregistered predictions are hidden face down).
 
-There cannot be two revealed predictions that are based on the same theory (no matter which Probe they are predicting). If two predictions that are Preregistered are based on the same theory, the one belonging to the researcher who is earlier in turn order stays in the game. The other predictions are discarded and \[citation\_reward\] academic credits are awarded for the researcher who published the cited theory. If the same player has multiple predictions revealed citing the same theory, they must discard all but one of them.
+There cannot be two revealed predictions that are based on the same theory (no matter which Probe they are predicting). If two predictions that are Preregistered are based on the same theory, the one belonging to the researcher who is earlier in turn order stays in the game. The other predictions are discarded and \[citation\_reward\] academic credits are awarded for each discarded prediction to the researcher who published the cited theory. If the same player has multiple predictions revealed citing the same theory, they must discard all but one of them.
 
 When there are multiple identical theories matching the prediction, the cited theory is determined based on this preference order: 1\. the researcher’s own theory, 2\. the theory with the lowest value on its Nobel Prize counter (to prevent another researcher from getting the Nobel Prize), 3\. the theory of the researcher with the lowest academic credit (to reduce the lead of the leading player), 4\. the earlier published theory gets the citation.
 
@@ -315,7 +315,7 @@ Once Preregistration pruning is concluded, world outcomes are revealed.
 
 Next, a Prediction Reveal allocation starts. Researchers can decide to reveal any of their predictions, but only up to the number of research staff they have allocated to data collection, and only predictions that are not based on the same theory as any Preregistered prediction. They choose simultaneously and in secret, by turning predictions they want to reveal face up behind their lab shields. The lab shields are removed once everyone is finished, to show the revealed predictions. (Preregistered predictions stay revealed automatically, whether they were successful or not. This means that if a researcher already has as many Preregistered predictions as the number of research staff they allocated to data collection, they can not reveal any of their secret predictions.) 
 
-As stated above, there cannot be two revealed predictions that are based on the same theory (no matter which Probe they are predicting). If two predictions are revealed that are based on the same theory, the one belonging to the researcher who is earlier in turn order stays in the game. The other prediction is discarded and \[citation\_reward\] academic credits are awarded for the author of the cited theory. If the same player has multiple predictions revealed citing the same theory, they must discard all but one of them.
+As stated above, there cannot be two revealed predictions that are based on the same theory (no matter which Probe they are predicting). If two predictions are revealed that are based on the same theory, the one belonging to the researcher who is earlier in turn order stays in the game. The other prediction is discarded and \[citation\_reward\] academic credits are awarded for each discarded prediction to the researcher who published the cited theory. If the same player has multiple predictions revealed citing the same theory, they must discard all but one of them.
 
 (Designer’s note: Mind-games can occur during prediction selection, preregistration allocation, and prediction reveal allocation, to avoid duplicating predictions.)
 
@@ -375,7 +375,7 @@ Self-citation is possible, and it yields the same reward (or penalty) as being c
 
 ## Recording observations
 
-At the end of the Observation and prediction phase, the researcher who has Probe time for a given Probe can take all cards from the Probe, resembling that they record the observations. This observational record can be used to support a theory when it is submitted to a journal (see journal tiers). Since Probe readings are taken directly as observations, and Probe readings can be inaccurate, the observations carry these inaccuracies with them.
+At the end of the Observation and prediction phase, the researcher who has Probe time for a given Probe takes all cards from the Probe, resembling that they record the observations. This observational record can be used to support a theory when it is submitted to a journal (see journal tiers). Since Probe readings are taken directly as observations, and Probe readings can be inaccurate, the observations carry these inaccuracies with them.
 
 Records are put in the Fresh records area on the player mat.
 
@@ -443,7 +443,7 @@ Theories and Methods need to be submitted to one of the journal tiers, and once 
 
 ## Supporting observational and experimental records
 
-If the journal tier requires observational or experimental support for the theory, recorded observations or experimental findings need to be included in the submission as well. The supporting records can be taken from the Fresh records or the Stale records areas. Each supporting record takes one card per slot from the player's pool (each card can be used only once). The supporting records must not have any mismatching elements (input parameters or world outcomes) with the theory they support. 
+If the journal tier requires observational or experimental support for the theory, recorded observations or experimental findings need to be included in the submission as well. The supporting records can be taken from the Fresh records or the Stale records areas. Each supporting record takes one card per slot from the player's pool (each card can be used only once). The supporting records must not have any mismatching elements (input parameters or world outcomes) with the theory they support. (A blank card never mismatches.) 
 
 Submissions can include supporting records that are not necessary for the journal tier (this may be useful to make a submission stack look like it is going for a high tier journal). Note that method submissions can have any supporting record attached. These records are submitted as part of the manuscript submission, and they travel as part of the card stack of the manuscript during the peer review and article processing. Once the theory or method is published, the supporting records are discarded.
 
@@ -468,7 +468,7 @@ The Peer review allocation deck should be set up in the following way:
 
 This deck is then shuffled and dealt to the researchers, one for each of their staff members allocated to peer review. 
 
-Researchers reveal the cards they got. If they got “0”, that means that that staff member got another irrelevant manuscript to review and they don’t get to evaluate any player manuscripts. For each card that shows a manuscript position, the researcher gets one pair of Peer review voting cards (one “accept”, one “revise”). For each manuscript they were allocated to review, they can secretly peek at the manuscript, then secretly choose one of the voting cards to evaluate the manuscript, placing the card next to the manuscript face down (discarding its voting card pair).
+Researchers reveal the cards they got. If they got “0”, that means that that staff member got another irrelevant manuscript to review and they don’t get to evaluate any player manuscripts. For each card that shows a manuscript position, the researcher gets one pair of Peer review voting cards (one “accept”, one “revise”). For each manuscript they were allocated to review, they can secretly peek at the manuscript (including its supporting records), then must secretly choose one of the voting cards to evaluate the manuscript, placing the card next to the manuscript face down (discarding its voting card pair).
 
 \[peer\_review\_random\_draws\] of the remaining Peer review allocation deck cards are revealed. The manuscripts that are on the (non “0”) indicated positions get one “accept” decision each. \[Designer note: this resembles that the peer review process trundles along slowly even without the top researchers ever peer reviewing anything.\]
 
@@ -487,9 +487,9 @@ X rounds in processing means how many rounds are required for the manuscript to 
 - one more observation/experiment than required for that journal tier (can stack multiple times)  
 - one more element (input or outcome) in the theory than required for that journal tier  (can stack multiple times)  
 - pay article processing charge (APC), \[apc\] amount of money into the bank. If you do so, submit your manuscript openly (face-up).  
-- hot topic publication: the theory does not have a mismatching input parameter from the Probe that is the Hot topic this round (note that a theory including only a single input parameter, one that matches one of the input parameters of the hot topic Probe, can be considered a hot topic publication)
+- hot topic publication: at least one input parameter state of the theory matches a visible reading of the Probe that is the Hot topic this round, and none mismatches (blank readings neither match nor mismatch)(note that a theory including only a single input parameter, one that matches one of the input parameters of the hot topic Probe, can be considered a hot topic publication)
 
-Crisis fast-track: Publishing during the time of Crisis reduces rounds in processing by 1 additional round, which can reduce it to 0 (but not below 0).
+Crisis fast-track: a manuscript that enters the Accept area during the Crisis period gets 1 additional round of reduction, which can reduce it to 0 (but not below 0). Manuscripts already in the Accept area when the Crisis starts are not affected.
 
 A method publication can only benefit from the APC and the Crisis fast-track time-reduction bonuses.
 
@@ -522,6 +522,8 @@ Admin indicates how many staff members need to be allocated to Grants to maintai
 Expected to maintain indicates the minimal number of publications required in the given round to maintain the position.
 
 Expected to increase indicates the minimal number of publications required to advance to the next level of funding.
+
+Publications are the theories and methods the researcher published in this round's Clean-up phase.
 
 Each round in the Clean-up phase the Grant funding track requirements are checked and position is adjusted. If either of the two maintenance requirements (admin staff or expected to maintain) are not met, the researcher’s marker is moved one position down on the track. If (and only if) the maintenance requirements are met, the number of publications by the researcher this round are checked against expected to increase for their current track position. If it is met, the researcher’s marker is advanced to the next track position.
 

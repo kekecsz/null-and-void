@@ -273,7 +273,7 @@ def rounds_in_processing(ctx: Ctx, manuscript: Manuscript) -> int:
         reduction += max(0, _elements(idea) - tier.min_elements)
         hot = ctx.state.probes[ctx.state.hot_topic].readings
         matches = any(var in hot and hot[var].state == value for var, value in idea.inputs.items())
-        if matches and not mismatch(idea.inputs, hot):  # specification 5.7
+        if matches and not mismatch(idea.inputs, hot):  # hot topic publication
             reduction += 1
     value = max(min(base, 1), base - reduction)
     if ctx.state.period == "crisis":

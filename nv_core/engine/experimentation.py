@@ -119,7 +119,7 @@ def run_experiment(ctx: Ctx, action: RunExperiment) -> None:
             cited=list(action.cited_methods),
         )
     )
-    # Recording experimental findings is automatic (specification 5.7).
+    # Recording experimental findings
     r.fresh.cards += [ExperimentCard(experiment=experiment_id, card=c) for c in cards]
     cited = f" citing {', '.join(f'M{m.id}' for m in methods)}" if methods else ""
     ctx.log("experiment", f"{ctx.name(seat)} runs an experiment{cited}", seat=seat, cited=action.cited_methods)

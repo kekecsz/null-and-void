@@ -1,5 +1,5 @@
 """Rulebook "Probe time", "Observation and prediction phase": "Revealing input parameters" and
-"Recording observations"; specification 5.7 (automatic recording, rebuilding the decks)."""
+"Recording observations"; specification 5.7 (rebuilding the decks)."""
 
 from collections import Counter
 
@@ -51,7 +51,7 @@ def test_an_occupied_probe_cannot_be_claimed():
 
 # Recording observations ------------------------------------------------------------------
 def test_probe_time_holder_records_the_full_visible_column():
-    """Recording observations (and specification 5.7): the researcher with Probe time always records
+    """Recording observations: the researcher with Probe time always records
     the Probe; the record is the full column as shown, blanks and noise included, put in Fresh."""
     state = game()
     allocation = {"data_collection": 1, "development": 1}
