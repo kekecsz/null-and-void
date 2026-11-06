@@ -24,3 +24,8 @@ results/
 
 # Saved text-client games
 games/
+
+# API keys and the local AI spending ledger: never commit
+settings/api_keys.env
+settings/ai_spending.csv
+.env

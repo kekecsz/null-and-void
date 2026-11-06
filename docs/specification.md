@@ -47,7 +47,7 @@ Every path runs through `nv_core`: the server, the AI player and the simulator n
 | `nv_core` | Rules engine: settings loading, state, actions, phases, scoring, views, text rendering; builds the Probe deck, Input Parameter Decks and sensor noise from a world file | no other project package; Pydantic and PyYAML only (no network, clock or database) |
 | `nv_world` | Scenario loading, World Table generation, screening, world files | `nv_core` data types and settings |
 | `nv_server` | FastAPI app: lobby, joining, WebSocket updates, persistence, host controls | `nv_core`, `nv_ai` |
-| `nv_ai` | AI player: prompt building, tool-call action choice, token and cost tracking | `nv_core`, Anthropic SDK |
+| `nv_ai` | AI player: prompt building, tool-call action choice, token and cost tracking | `nv_core`, the model provider's SDK (OpenAI first, Anthropic later) |
 | `nv_sim` | Headless batch simulator and random bot | `nv_core`, `nv_world`, `nv_ai` |
 | `web/` | Browser client: plain HTML/JS, renders views, sends actions | server API only |
 | `scenarios/` | One folder per scenario: its scenario.md and generated world files | — |
@@ -200,7 +200,7 @@ The server is a stateless FastAPI app on Google Cloud Run: every request rebuild
 ### 6.5 Security and data
 
 - Hidden information never leaves the server except in the view of the player entitled to it.
-- The Anthropic API key lives in Google Secret Manager and is used only server-side.
+- The model provider's API key lives in Google Secret Manager and is used only server-side. For local runs it is read from `settings/api_keys.env`, which git ignores and is never committed.
 - No accounts and no personal data beyond nicknames. If logged games are ever used as research data, consent and ethics approval are needed first; that is outside this spec.
 
 ## 7. Clients
@@ -239,15 +239,15 @@ Plain and functional, desktop-first, English only. One page with these areas:
 
 ## 8. AI opponents (`nv_ai`)
 
-An AI seat is a Claude model that reads the same text view a human could and answers each decision with a tool call naming one legal action. It never sees hidden information it isn't entitled to.
+An AI seat is a language model that reads the same text view a human could and answers each decision with a tool call naming one legal action. It never sees hidden information it isn't entitled to. The provider and model are settings (section 11): the first version uses OpenAI's GPT-6 Luna, which is cheap enough for testing; Claude models can be added through the same interface.
 
 ### 8.1 One decision
 
 1. The engine signals that an AI seat must act (a sequential turn, or its commit in a simultaneous phase).
 2. `nv_ai` builds the request:
-   - **System prompt** (cached): a condensed rules summary kept as a file in the repo, the scenario story, and the seat's persona (section 8.3).
-   - **Context:** the seat's `render_text` view, the recent public event log, and the seat's own notes (8.2).
-   - **Tools:** one tool per action type that is legal now, with JSON schemas generated from the action models.
+   - **Tools** (cached): the full, fixed list of action types, one tool each, with JSON schemas generated from the action models and a short description naming the rulebook section. The list never changes between decisions, because the tools come first in a request and any change would invalidate the cache for everything after them.
+   - **System prompt** (cached): the rulebook itself (`docs/rules.md` with its Markdown escapes removed, leaving out the sections a player does not need, such as Pieces and the designer's tabletop notes), then the scenario story, then the seat's persona (section 8.3). The rulebook stays the only rules document; no separate summary is maintained. The rulebook comes before the persona, so every AI seat shares the same cached prefix.
+   - **Context:** the seat's `render_text` view, the actions legal now (from `legal_actions`: complete actions, or templates with their limits), the recent public event log, and the seat's own notes (8.2).
 3. The model replies with a tool call and a one-line reason. The engine validates it; if it is refused, the error goes back to the model for up to `ai_retry_limit` attempts.
 4. If the model still fails, goes over its token limit, or the API errors, the seat takes a safe default action (pass, or commit with no further choices), and the log records why.
 
@@ -263,10 +263,11 @@ Each AI seat can be given a persona in the lobby: **neutral** (default: play to 
 
 ### 8.4 Token limits and cost display
 
-- **Per-decision limits:** `ai_max_output_tokens` caps each reply; `ai_max_input_tokens` caps the context, trimming the oldest log entries first.
+- **Per-decision limits:** `ai_max_cost_per_decision` caps what one decision may cost, reasoning included: the reply's output-token limit is set from it and the input already sent. `ai_max_input_tokens` caps the context, trimming the oldest log entries first.
+- **Total budget:** every AI call is added to a local spending ledger; once `ai_total_budget` is reached, no further AI calls are made (the seat takes the safe default action, and the simulator stops).
 - **Cost tracking:** token counts come from each API response's usage report and are multiplied by a price table in the settings file (per model, per million input, output and cached tokens). The table is editable, because prices change.
 - **Display:** the status bar shows the running cost per AI seat and in total; the host can open a per-decision breakdown. The debrief and the simulator report the total too.
-- There is no hard cost cap per game, as agreed; the simulator has one (section 9).
+- There is no separate cost cap per game; the total budget and the simulator's `--max-cost` (section 9) cover it.
 
 ### 8.5 Table talk
 
@@ -344,12 +345,15 @@ The software's own settings live in `settings/software.yaml`:
 
 | Setting | Default |
 | --- | --- |
-| `ai_default_model` | a mid-priced Claude model, chosen per seat in the lobby |
-| `ai_max_output_tokens` | 2,000 per decision |
+| `ai_provider` | `openai` (Anthropic later) |
+| `ai_default_model` | `gpt-6-luna`, chosen per seat in the lobby |
+| `ai_reasoning_effort` | the model's default (`medium` for GPT-6 Luna) |
+| `ai_max_cost_per_decision` | 0.50 USD, reasoning included |
+| `ai_total_budget` | 5.00 USD for all AI calls, across runs |
 | `ai_max_input_tokens` | 30,000 per decision |
 | `ai_retry_limit` | 2 |
 | `ai_notes_max_chars` | 2,000 |
-| `ai_price_table` | per model: input, output and cached-input price per million tokens |
+| `ai_price_table` | per model: input, cached-input, cache-write and output price per million tokens |
 | `snapshot_every` | each round |
 | `max_instances` (Cloud Run) | 1 |
 
@@ -359,7 +363,6 @@ The AI defaults are starting points to tune with the simulator, not tested value
 
 All earlier rule questions are settled in rulebook v4; these items remain open.
 
-- [ ] **Condensed rules summary for AI players.** Written at the end of the project from the final rulebook, so only one rules document needs maintaining until then.
 - [ ] **Balance check:** whether `[nobel_condition]` consecutive successes fit within the Calm period (about 15 rounds). To be tested with the simulator.
 
 ## 13. Milestones and acceptance criteria
