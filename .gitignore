@@ -21,3 +21,6 @@ Thumbs.db
 
 # Simulator output
 results/
+
+# Saved text-client games
+games/

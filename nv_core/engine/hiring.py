@@ -88,6 +88,7 @@ def finish(ctx: Ctx) -> None:
         )
         if a.fire_postdocs:
             ctx.credit(seat, s.fired_postdoc_penalty * a.fire_postdocs, "fired postdocs")
+        state.pending[seat].allocation = None
     reveal_period_cards(ctx)
 
 
@@ -125,7 +126,7 @@ def start_last_chance(ctx: Ctx) -> None:
 
 def finish_last_chance(ctx: Ctx) -> None:
     state = ctx.state
-    if state.last_chance_done:
+    if state.last_chance_done or not state.warning_revealed:
         return
     for seat in state.turn_order():
         for partner in state.pending[seat].leave_alliances:
