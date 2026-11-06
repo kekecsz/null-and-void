@@ -23,8 +23,7 @@ def check_allocation(ctx: Ctx, r: Researcher, a: AllocateStaff) -> None:
     if a.fire_postdocs > r.postdocs:
         raise IllegalAction(f"you have only {r.postdocs} postdoc(s) to fire")
     if a.fire_postdocs and r.credit == 0:
-        # Provisional (docs/open_questions.md, E8): firing is forced, not willing, when the
-        # researcher cannot afford the postdocs they have; only that many may be fired.
+        # Specification 5.7: only the postdocs the researcher cannot afford (a forced firing).
         affordable = r.money // s.cost_of_postdoc if s.cost_of_postdoc else r.postdocs
         if a.hire_postdocs or a.fire_postdocs > max(0, r.postdocs - affordable):
             raise IllegalAction(

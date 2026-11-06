@@ -24,7 +24,8 @@ def cleanup(ctx: Ctx) -> None:
     state, s = ctx.state, ctx.settings
     order = state.turn_order()
 
-    # Pay the postdocs. (Unpaid postdocs leave later: see E1 in docs/open_questions.md.)
+    # Pay the postdocs. Unpaid postdocs leave after the grant check and the unused-staff
+    # penalty (Zoltan's answer E1, waiting for the next rulebook export).
     for seat in order:
         r = state.researcher(seat)
         paid = r.postdocs if s.cost_of_postdoc == 0 else min(r.postdocs, r.money // s.cost_of_postdoc)

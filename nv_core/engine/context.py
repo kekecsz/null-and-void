@@ -86,8 +86,7 @@ class Ctx:
         if not deck:
             discard = self.state.input_discards[parameter]
             if not discard:
-                # Every card of this deck is held in records or manuscripts. The rulebook has no
-                # rule for this; see docs/open_questions.md (E8). A fresh deck is built.
+                # Every card of this deck is held in records or manuscripts (specification 5.7).
                 deck.extend(build_input_deck(self, parameter))
                 self.log("deck", f"Input Parameter Deck {parameter} rebuilt (all cards in use)")
             else:
