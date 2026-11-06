@@ -18,7 +18,7 @@ true world.
 | Milestone | | |
 | --- | --- | --- |
 | 1 | World generator and report | done |
-| 2 | Rules engine and text client | next |
+| 2 | Rules engine and text client | in progress: built, waiting for a full game played by hand |
 | 3–7 | Simulator, AI player, server and web UI, spectator mode and debrief, deployment | planned |
 
 The milestones and their acceptance criteria are in the specification, section 13.
@@ -72,13 +72,31 @@ acceptance criteria, retrying until a world passes (specification, section 4).
 The same scenario and seed always give the same world. Worlds for seeds 1–5 are already in
 [`scenarios/venus_expedition/worlds/`](scenarios/venus_expedition/worlds/).
 
+## Playing in the terminal
+
+The text client runs a whole game on one computer, with every seat at the same keyboard (specification,
+section 7.1). It saves the game after every action, so you can stop at any time and resume later.
+
+```sh
+# Start a game on world 1 with three researchers (the save goes to games/)
+.venv/Scripts/nv-play new scenarios/venus_expedition/worlds/world_seed1.json --players Anna,Ben,Cleo
+
+# Resume a saved game
+.venv/Scripts/nv-play load games/world_seed1_game123456.json
+```
+
+Type `help` in the game for the commands. The client shows the screen of the researcher who must act next;
+`as NAME` switches to another researcher (in steps where everyone decides in secret, each researcher enters
+their choices and then `commit`).
+
 ## Repository layout
 
 | Path | Contents |
 | --- | --- |
-| `nv_core/` | Rules engine (settings loading so far) |
+| `nv_core/` | Rules engine: settings, game state, actions, the phases of a round, player views and text rendering, game records |
 | `nv_world/` | World generator: scenario reader, World Table generation, screening, world files, `nv-world` command |
-| `nv_server/`, `nv_ai/`, `nv_sim/`, `web/` | Server, AI player, simulator and browser client (later milestones) |
+| `nv_server/` | The `nv-play` text client (the multiplayer server comes in milestone 5) |
+| `nv_ai/`, `nv_sim/`, `web/` | AI player, simulator and browser client (later milestones) |
 | `scenarios/` | One folder per scenario, with its scenario file and generated worlds |
 | `docs/` | The rulebook, parameter file, specification and open questions |
 | `tests/` | pytest tests, named after the document sections they check |
