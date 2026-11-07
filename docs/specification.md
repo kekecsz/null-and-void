@@ -247,7 +247,7 @@ An AI seat is a language model that reads the same text view a human could and a
 2. `nv_ai` builds the request:
    - **Tools** (cached): the full, fixed list of action types, one tool each, with JSON schemas generated from the action models and a short description naming the rulebook section. The list never changes between decisions, because the tools come first in a request and any change would invalidate the cache for everything after them.
    - **System prompt** (cached): the rulebook itself (`docs/rules.md` with its Markdown escapes removed, leaving out the sections a player does not need, such as Pieces and the designer's tabletop notes), then the scenario story, then the seat's persona (section 8.3). The rulebook stays the only rules document; no separate summary is maintained. The rulebook comes before the persona, so every AI seat shares the same cached prefix.
-   - **Context:** the seat's `render_text` view, the actions legal now (from `legal_actions`: complete actions, or templates with their limits), the recent public event log, and the seat's own notes (8.2).
+   - **Context:** the seat's `render_text` view, the actions legal now (from `legal_actions`: complete actions, or templates with their limits), the recent public event log, the seat's own notes (8.2), and the choices the engine has already accepted from it in the current step, with a reminder to commit when they are final (each decision is a fresh conversation, so without them a model repeats its choice instead of committing).
 3. The model replies with a tool call and a one-line reason. The engine validates it; if it is refused, the error goes back to the model for up to `ai_retry_limit` attempts.
 4. If the model still fails, goes over its token limit, or the API errors, the seat takes a safe default action (pass, or commit with no further choices), and the log records why.
 
@@ -284,7 +284,7 @@ Every automated player implements one method, `choose(view, legal_actions) -> ac
 - **Random bot** (default): picks uniformly among legal actions, sampling sensibly where the option space is large (e.g. a random valid theory or record), and always commits eventually. Optional weights (e.g. how often to pass) keep games from stalling.
 - **AI player:** the same `nv_ai` player used in live games, with its persona.
 
-Strategic rule-based bots can be added later through the same interface, without changing anything else.
+- **Scripted strategy bots** (9.4): rule-based players with a fixed strategy, free to run in large numbers.
 
 ### 9.2 Running batches
 
@@ -312,6 +312,41 @@ nv-sim run --scenario venus_expedition --players 4 \
 In `predictions.csv`, the predictor "had experiment knowledge of failure" when one of their own experiments, that round or earlier, matched every input state of the theory and every visible reading of the Probe, and showed an outcome that contradicts the theory.
 
 A short text summary prints at the end: the share of each ending with 95% confidence intervals, and the median game length.
+
+### 9.4 Scripted strategy bots
+
+Scripted bots test the designer's intuitions about strategies cheaply, over hundreds of games: does waiting pay, does a field of selfish players crash more often than a cooperative one, and how do rule changes shift that. They only play the strategies written here; discovering new ones is the AI players' job.
+
+There are two motives, **selfish** and **cooperative**, and an optional **patient** modifier, giving the seat types `selfish`, `cooperative`, `patient-selfish` and `patient-cooperative`.
+
+**What every scripted bot knows.** A bot uses only its player view, like a human player: every Probe's visible readings and world outcomes, its own experiments, the published literature and prediction results. It remembers everything it has seen (but see memory below).
+
+**Tally and confidence.** The bot keeps a tally for every possible theory of the scenario (every combination of input and outcome states, blanks included, with at least one input and one outcome). A *case* is a Probe whose visible readings have no mismatch with the theory's inputs (so a prediction with it would have been allowed there) or one of the bot's own experiments that matches the theory's inputs; the case is a *success* when the world outcomes match the theory's outcomes. The bot is **confident** in a theory when the lower bound of the 95% Wilson interval of its success rate is at least `bot_confidence_threshold`. Because cases come from visible readings, sensor noise is already included: the tally estimates the success rate that predictions with the theory will actually get.
+
+**Expected value.** A prediction is worth making when its expected credit is positive: the tally's success rate times the reward for a success, minus the failure rate times the penalty, both from the rulebook's Scoring predictions and Failed predictions sections and the current settings.
+
+**Memory.** Every round, each remembered Probe reading is replaced by a random state of its row with probability `bot_memory_corruption`, so older memories are noisier (intact after *a* rounds with probability (1 − rate)^*a*). At 0, memory is perfect. Records are cards and are never affected.
+
+**Patient modifier.** While waiting, the bot hires no staff, takes Probe time when the rules give it a turn, and keeps its tally. It wakes up when it is confident in any theory, or when the Warning shot is revealed, whichever comes first, and from then on plays its motive.
+
+**Each phase**
+
+| Phase | Selfish | Cooperative |
+| --- | --- | --- |
+| Hiring and task allocation | Plans the round's tasks, then hires to fill them within its money and student cap, leaving no staff without a use: Development for an idea it is ready to formulate, Write-up for ready manuscripts and revisions, Data collection for the predictions it expects to make (from last round), Grants for the admin requirement, the rest to Experimentation. One peer-review student when rivals have manuscripts awaiting review. | The same planning, plus Peer-review staff in proportion to the manuscripts awaiting review. |
+| Student task check | Students leave from the least needed tasks first (Experimentation, Peer-review, Data collection, Write-up, Grants). | The same. |
+| Experimentation | Confirmatory experiments: specifies the inputs of the theory it plans to publish; keeps the records that fit and ignores the rest. Installs or upgrades sensors when a method allows it, for the credit and the Probe time. | Discriminating experiments: specifies the inputs where its most likely theories disagree most about the outcome. Installs and upgrades sensors, preferring the Hot topic and the Probes with the most hidden rows. |
+| Probe time | The Probe whose readings best support the theory it plans to publish. | The Probe whose readings it has seen least of (most informative). |
+| Prediction and preregistration | Predicts with every eligible theory of positive expected value, its own first. Preregisters only confident predictions, and never one with its own theory that is close to the Nobel Prize (a failure would reset the counter). Avoids rivals' theories within `bot_nobel_guard` successes of the Nobel Prize. | Always preregisters, up to its Data collection staff. Divides its predictions between confirming theories it is confident in and refuting published theories its tally shows failing (a preregistered failure costs `failed_prereg_pred_ac` in the Calm period). Uses the best theory, whoever wrote it. |
+| Outcome and Prediction Reveal | Reveals only hidden predictions that succeeded (selective reporting). | Nothing to reveal: it does not make hidden predictions. |
+| Development | Formulates the confident theory with the most elements its records still support (more elements give higher tiers and more credit per prediction). | Methods first, for the input parameters that most Probes do not show, while few are published; then the smallest theory it is confident in. |
+| Submission and revisions | The highest tier its records reach, choosing any records without a mismatch and mixing experiment cards across experiments where that helps (allowed by the rulebook's Supporting observational and experimental records). Pays the article processing charge when money is spare. Revises its manuscripts in the Revise area. | The tier that publishes soonest (higher tier on ties), with records from single experiments only. Pays the article processing charge when affordable. Revises its manuscripts. |
+| Peer review | Accepts its own manuscripts, votes revise on everyone else's. | Accepts unless its tally shows the theory failing more often than succeeding. |
+| Grants | Keeps or climbs a position while it expects to publish enough to hold it. | The same. |
+| Alliances | Proposes to, and accepts, only the current credit leader; at the last chance to leave, leaves allies behind it in credit. | Proposes once to everyone and accepts every proposal; never leaves. |
+| Crisis | Predicts only where the expected value is positive (failed predictions cost `failed_prereg_pred_ac_crisis`), so it may leave Probes without a prediction. | Keeps enough Data collection staff and published theories to predict on every Probe, with the best eligible theory each. |
+
+Where the table leaves a choice open (several equally good theories, records or Probes), the bot chooses at random with its seeded generator, so games stay reproducible.
 
 ## 10. End-of-game debrief
 
@@ -354,6 +389,9 @@ The software's own settings live in `settings/software.yaml`:
 | `ai_retry_limit` | 2 |
 | `ai_notes_max_chars` | 2,000 |
 | `ai_price_table` | per model: input, cached-input, cache-write and output price per million tokens |
+| `bot_confidence_threshold` | 0.7 (scripted bots, 9.4: lower bound of the success rate) |
+| `bot_nobel_guard` | 2 successes (scripted selfish bots avoid rivals' theories this close to the Nobel Prize) |
+| `bot_memory_corruption` | 0 (scripted bots: chance per round that a remembered reading changes) |
 | `snapshot_every` | each round |
 | `max_instances` (Cloud Run) | 1 |
 
