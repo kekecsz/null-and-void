@@ -166,6 +166,7 @@ function render() {
   $("world-panel").style.display = spectator ? "" : "none";
   $("notes-panel").style.display = spectator && Object.keys(msg.ai_notes || {}).length ? "" : "none";
   const v = view();
+  if (spectator || !v) actionsShown = null;  // the actions panel shows something else now
   if (!v) {
     for (const id of ["actions", "grid", "literature", "portal", "predictions", "lab", "tracks"]) $(id).innerHTML = "";
     $("actions").append(h("p", { class: "muted" }, msg.status === "lobby"
@@ -186,7 +187,7 @@ function renderStatus() {
   const v = view();
   const parts = [];
   if (v) {
-    parts.push(h("b", {}, `Round ${v.round}`), ` \u00b7 ${v.phase} \u00b7 ${v.period === "crisis" ? "CRISIS" : "Calm period"} \u00b7 `);
+    parts.push(h("b", {}, `Round ${v.round}`), ` \u00b7 ${v.phase} \u00b7 `, periodStatus(v), " \u00b7 ");
     const waiting = v.current !== null && v.current !== undefined ? [v.current] : v.waiting;
     if (v.result) parts.push("game over");
     else if (msg.status !== "running") parts.push(`game ${msg.status}`);
@@ -202,6 +203,18 @@ function renderStatus() {
   $("status").innerHTML = "";
   $("status").append(...parts);
   $("actions-panel").classList.toggle("act", mustAct());
+}
+
+// The Game Period Deck and the Warning shot or Crisis, always in view in the top row.
+function periodStatus(v) {
+  const deck = ` (Game Period Deck: ${v.period_deck} left)`;
+  if (v.crisis) {
+    const c = v.crisis;
+    return h("span", { class: "bad" }, h("b", {}, "CRISIS"),
+      ` round ${c.rounds_in_crisis} of ${c.crisis_length}, unsuccessful predictions ${c.unsuccessful} of ${c.crisis_condition}${deck}`);
+  }
+  if (v.warning_revealed) return h("span", { class: "warn-shot" }, h("b", {}, "Warning shot revealed"), deck);
+  return h("span", {}, `Calm period${deck}`);
 }
 
 function renderBanner() {
@@ -412,12 +425,8 @@ function renderTracks() {
     v.alliances.filter((pair) => pair.includes(r.seat)).map((pair) => nameOf(pair[0] === r.seat ? pair[1] : pair[0])).join(", "),
     r.committed ? "ready" : "",
   ]);
-  const crisis = v.crisis
-    ? `Crisis: round ${v.crisis.rounds_in_crisis} of ${v.crisis.crisis_length}, unsuccessful predictions ${v.crisis.unsuccessful} of ${v.crisis.crisis_condition}`
-    : (v.warning_revealed ? "The Warning shot has been revealed." : "Calm period.");
   fill($("tracks"),
     table(["Researcher", "Credit", "Money", "Grant", "Talent", "Staff", "Patents", "Allies", ""], rows),
-    h("p", {}, `Game Period Deck: ${v.period_deck} card(s) left. ${crisis}`),
     v.proposals.length ? h("p", { class: "small" }, "Alliance proposals: " + v.proposals.map(([a, b]) => `${nameOf(a)} -> ${nameOf(b)}`).join(", ")) : null,
   );
 }
@@ -564,11 +573,11 @@ function leavingForm(t) {
 function experimentForm(t) {
   const selects = Object.entries(t.states).map(([param, states]) =>
     [param, h("select", {}, h("option", { value: "" }, "drawn at random"), states.map((s) => h("option", { value: s }, s)))]);
-  const methods = t.methods.map((m) => [m, h("input", { type: "checkbox" })]);
+  const methods = sortMethods(t.methods, (m) => m.id).map((m) => [m, h("input", { type: "checkbox" })]);
   return [
     h("p", { class: "small" }, `Specify up to ${t.free_input_parameters} input states for free, plus one per cited method (${t.rule}).`),
     table(["Input parameter", "State"], selects.map(([p, s]) => [p, s])),
-    methods.length ? h("div", { class: "form-row" }, "Cite methods: ", methods.map(([m, box]) => h("label", {}, box, ` M${m.id} (${m.parameter}) `))) : null,
+    methods.length ? h("div", { class: "form-row" }, "Cite methods: ", methods.map(([m, box]) => h("label", {}, box, ` ${methodLabel(m.id)} `))) : null,
     h("button", { onclick: () => {
       const specified = {};
       for (const [param, select] of selects) if (select.value) specified[param] = select.value;
@@ -577,11 +586,22 @@ function experimentForm(t) {
   ];
 }
 
+// Methods to cite: "M3 (IP1; name)" or "M3 (IP1; name, your own)", my own first.
+function methodLabel(id) {
+  const paper = view().published.find((p) => p.id === id);
+  if (!paper) return `M${id}`;
+  return `M${id} (${paper.parameter}; ${nameOf(paper.author)}${paper.author === msg.you ? ", your own" : ""})`;
+}
+function sortMethods(list, idOf) {
+  const own = (x) => { const p = view().published.find((q) => q.id === idOf(x)); return p && p.author === msg.you ? 0 : 1; };
+  return [...list].sort((a, b) => own(a) - own(b) || idOf(a) - idOf(b));
+}
+
 function sensorForm(t) {
   return t.choices.map((c) => {
-    const boxes = c.methods.map((id) => [id, h("input", { type: "checkbox" })]);
+    const boxes = sortMethods(c.methods, (id) => id).map((id) => [id, h("input", { type: "checkbox" })]);
     return h("div", { class: "form-row" }, `P${c.probe + 1} ${c.parameter}: cite ${c.methods_needed} method(s) `,
-      boxes.map(([id, box]) => h("label", {}, box, ` M${id} `)),
+      boxes.map(([id, box]) => h("label", {}, box, ` ${methodLabel(id)} `)),
       h("button", { onclick: () => send({ type: "install_sensor", probe: c.probe, parameter: c.parameter,
         cited_methods: boxes.filter(([, b]) => b.checked).map(([id]) => id) }) }, "Install / upgrade sensor"));
   });
@@ -628,7 +648,23 @@ function theoryForm(t) {
     }
   };
   for (const [, select] of [...inputs, ...outcomes]) select.addEventListener("change", check);
-  return [table(["Row", "State"], [...inputs, ...outcomes].map(([v, s]) => [v, s])), note, button];
+  // One click copies a record's cards into the slots (blank cards and missing rows become blank).
+  const lab = view().lab;
+  const records = ["fresh", "stale"].flatMap((area) => [
+    ...lab[area].observations.map((o) => [`O${o.id} (P${o.probe + 1}, round ${o.round}, ${area})`, o.cards]),
+    ...lab[area].experiments.map((e) => [`E${e.id} (experiment, ${area})`, e.cards]),
+  ]);
+  const use = (cards) => {
+    for (const [v, select] of [...inputs, ...outcomes]) {
+      const state = cards[v];
+      select.value = state && [...select.options].some((o) => o.value === state) ? state : "";
+    }
+    check();
+  };
+  const copy = records.length ? h("details", { open: true }, h("summary", { class: "small" }, "Fill the slots from one of your records"),
+    records.map(([label, cards]) => h("div", { class: "small" },
+      h("button", { onclick: () => use(cards) }, "use"), ` ${label}: ${values(cards)}`))) : null;
+  return [copy, table(["Row", "State"], [...inputs, ...outcomes].map(([v, s]) => [v, s])), note, button];
 }
 
 function recordText(r) {
@@ -682,8 +718,21 @@ const TITLES = {
   stay_in_alliance: "Stay in an alliance", commit: "Done?",
 };
 
+// The server sends a new state after every player's action, also another player's. Rebuilding the
+// forms then would throw away what this player has typed but not sent yet, so they are rebuilt
+// only when something they show has changed: the choices, the step, this lab, the literature.
+let actionsShown = null;
+function actionsKey() {
+  const v = view();
+  return JSON.stringify([msg.status, msg.you, msg.seats[msg.you] && msg.seats[msg.you].kind, Boolean(v.result), v.round, v.phase,
+    msg.options, v.lab, myReviewCards(), v.published.map((p) => p.id), v.manuscripts.map((m) => [m.id, m.area, m.position])]);
+}
+
 function renderActions() {
   const box = $("actions");
+  const shown = actionsKey();
+  if (shown === actionsShown && box.childElementCount) return;
+  actionsShown = shown;
   box.innerHTML = "";
   if (view().result || msg.status !== "running") { box.append(h("p", { class: "muted" }, "Nothing to do.")); return; }
   if (!msg.options.length) {
