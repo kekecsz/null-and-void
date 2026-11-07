@@ -51,6 +51,8 @@ main { display: grid; grid-template-columns: minmax(420px, 1.2fr) minmax(380px, 
 .grid td.hidden { color: var(--muted); }
 .legend span { padding: 0 4px; border-radius: 3px; }
 .grid th.hot { background: #ffe3c2; }
+tr.past td { color: #8a8a85; }
+tr.current td { font-weight: 700; }
 .chip { display: inline-block; padding: 0 6px; border-radius: 9px; font-size: 12px; color: #fff; }
 .form-row { margin: 4px 0; }
 .option { border-top: 1px dashed var(--line); padding: 6px 0; }

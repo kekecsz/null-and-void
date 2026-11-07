@@ -230,6 +230,28 @@ function renderGrid() {
       h("span", { class: "unsensed" }, "no sensor"), " shows blank: a sensor can go here"));
 }
 
+// The engine's steps in round order (nv_core.state.Phase), and the steps where each staff task
+// works. Talent development and Grants work after the last step (Talent development and
+// Clean-up phases), so they are never "past" within a round.
+const STEP_ORDER = ["Hiring and task allocation phase", "Alliance: last chance to leave", "Student task check phase",
+  "Experimentation and equipment phase", "Probe time", "Formulating predictions and preregistration",
+  "Outcome and Prediction Reveal", "Scoring predictions: order", "Development phase",
+  "Publication: submission and revisions", "Publication: peer review"];
+const TASK_STEPS = {
+  experimentation: ["Experimentation and equipment phase"],
+  data_collection: ["Formulating predictions and preregistration", "Outcome and Prediction Reveal", "Scoring predictions: order"],
+  development: ["Development phase"],
+  write_up: ["Publication: submission and revisions"],
+  peer_review: ["Publication: peer review"],
+};
+const TASK_WHEN = {
+  experimentation: "Experimentation", data_collection: "Observation and prediction", development: "Development",
+  write_up: "Publication: submission", peer_review: "Publication: peer review",
+  talent_development: "Talent development", grants: "Clean-up (grants)",
+};
+const TASK_ORDER = ["experimentation", "data_collection", "development", "write_up", "peer_review", "talent_development", "grants"];
+const taskOrder = (t) => (TASK_ORDER.includes(t) ? TASK_ORDER.indexOf(t) : TASK_ORDER.length);
+
 function renderLab() {
   const v = view();
   const me = v.researchers[msg.you];
@@ -238,10 +260,19 @@ function renderLab() {
   box.innerHTML = "";
   box.append(h("p", {}, `Academic credit ${me.credit} \u00b7 money ${me.money} \u00b7 Grant position ${me.grant_position} \u00b7 `
     + `Talent ${me.talent_position} \u00b7 ${me.postdocs} postdoc(s), ${me.students} student(s) \u00b7 ${me.patents} patent(s)`));
-  const staff = Object.entries(me.staff).filter(([, c]) => c.postdocs + c.students);
+  const staff = Object.entries(me.staff).filter(([, c]) => c.postdocs + c.students)
+    .sort(([a], [b]) => taskOrder(a) - taskOrder(b));
   if (staff.length) {
-    box.append(h("h3", {}, "Staff this round"),
-      table(["Task", "Postdocs", "Students", "Used"], staff.map(([t, c]) => [t, c.postdocs, c.students, c.used])));
+    const now = STEP_ORDER.indexOf(v.phase);
+    box.append(h("h3", {}, "Staff this round"), h("table", {},
+      h("tr", {}, ["Task", "When", "Postdocs", "Students", "Used"].map((x) => h("th", {}, x))),
+      staff.map(([t, c]) => {
+        const steps = TASK_STEPS[t] || [];
+        const first = Math.min(...steps.map((p) => STEP_ORDER.indexOf(p)));
+        const last = Math.max(...steps.map((p) => STEP_ORDER.indexOf(p)));
+        const cls = now < 0 || !steps.length ? "" : now > last ? "past" : now >= first ? "current" : "";
+        return h("tr", { class: cls }, [t.replace("_", " "), TASK_WHEN[t] || "", c.postdocs, c.students, c.used].map((x) => h("td", {}, x)));
+      })));
   }
   if (lab.leaving_students) box.append(h("p", { class: "bad" }, `${lab.leaving_students} student(s) must leave.`));
   if (lab.ideas.length) {
