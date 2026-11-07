@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from nv_core.engine import Option
+from nv_core.state import GameState
 from nv_server.app import create_app
 from nv_server.storage import SQLiteStorage
 from nv_sim.bots import RandomBot
@@ -326,3 +327,36 @@ def test_the_debrief_opens_for_players_when_the_game_is_over_and_again_later(db)
         assert csv_text.splitlines()[0].startswith("theory,author,tier")
     with TestClient(create_app(db=db)) as client:  # reopened after a server restart
         assert client.post(f"/api/games/{game}/debrief", json={"seat_token": token}).json() == debrief
+
+
+def test_a_game_begun_before_the_bookkeeping_gets_a_complete_debrief_by_replaying_it(db):
+    # A game begun before milestone 6 was loaded from a snapshot without the hidden bookkeeping:
+    # it has it only from that round on. The debrief replays the game from its first action.
+    with TestClient(create_app(db=db)) as client:
+        game, host, _ = _finished_game(client)
+        complete = client.post(f"/api/games/{game}/debrief", json={"host_token": host}).json()
+    assert complete["bookkeeping_recorded"]
+    storage = SQLiteStorage(db)
+    seq, state = storage.latest_snapshot(game)
+    old = GameState.model_validate_json(state)
+    old.prediction_log, old.paper_log, old.review_log, old.round_log = [], [], [], []
+    storage.save_snapshot(game, seq, old.model_dump_json())
+    storage.close()
+    with TestClient(create_app(db=db)) as client:
+        assert client.post(f"/api/games/{game}/debrief", json={"host_token": host}).json() == complete
+
+
+def test_a_game_that_does_not_replay_the_same_keeps_its_incomplete_debrief(db):
+    with TestClient(create_app(db=db)) as client:
+        game, host, _ = _finished_game(client)
+    storage = SQLiteStorage(db)
+    seq, state = storage.latest_snapshot(game)
+    old = GameState.model_validate_json(state)
+    old.prediction_log, old.paper_log, old.review_log, old.round_log = [], [], [], []
+    storage.save_snapshot(game, seq, old.model_dump_json())
+    # As if the rules had changed since: a stored action gave other events than it gives now.
+    storage._db.execute("UPDATE actions SET events = '[]' WHERE game_id = ? AND seq = "
+                        "(SELECT MIN(seq) FROM actions WHERE game_id = ? AND events != '[]')", (game, game))
+    storage.close()
+    with TestClient(create_app(db=db)) as client:
+        assert not client.post(f"/api/games/{game}/debrief", json={"host_token": host}).json()["bookkeeping_recorded"]

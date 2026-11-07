@@ -212,9 +212,33 @@ class GameSession:
     def debrief(self) -> dict[str, Any]:
         if self._debrief is None or self._debrief[0] != self.seq:
             notes = {int(s): text for s, text in self.meta.get("ai_notes", {}).items()}
-            data = build_debrief(self.state, self.events, _low_chance(), self.world_model(), notes)
+            data = build_debrief(self._bookkept_state(), self.events, _low_chance(), self.world_model(), notes)
             self._debrief = (self.seq, to_jsonable_python(data))
         return self._debrief[1]
+
+    def _bookkept_state(self) -> GameState:
+        """The current state with the debrief's hidden bookkeeping (5.1) from round 1. A game begun
+        before the bookkeeping existed (milestone 6) only has it from the round it was last loaded
+        in; it is then replayed from its first action with today's engine, which records all of it.
+        The replay is used only if it gives every stored event exactly, i.e. the same game;
+        otherwise the stored state is used and the debrief says its history is incomplete."""
+        state = self.state
+        if state is None or (state.round_log and state.round_log[0].round == 1) or (not state.round_log and state.round == 1):
+            return state
+        stored = self.storage.actions(self.id)
+        if len(stored) != self.seq:
+            return state
+        snapshot = self.storage.snapshot_before(self.id, 0)
+        rebuilt = (GameState.model_validate_json(snapshot[1]) if snapshot
+                   else new_game(self.world, self.settings, self.meta["seed"], self.meta["players"]))
+        for action, events in stored:
+            try:
+                rebuilt, new_events = apply(rebuilt, ACTION_ADAPTER.validate_python(action))
+            except Exception:  # played under older rules
+                return state
+            if [e.text for e in new_events] != [e["text"] for e in events]:
+                return state
+        return rebuilt
 
     def replay(self, at: int) -> dict[str, Any]:
         """The spectator view after ``at`` actions (specification 7.3): from the latest snapshot

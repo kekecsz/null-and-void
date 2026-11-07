@@ -360,7 +360,7 @@ Where the table leaves a choice open (several equally good theories, records or 
 
 When a game ends, every player sees a debrief that reveals the hidden world and shows how the published literature compared with the truth; this is the main teaching moment.
 
-It is built entirely from the final game state (with its hidden bookkeeping, 5.1), the full event log and the World Table, so it can also be opened later for any finished game, and exported as a printable page plus CSV (one file per table). Players can open it once the game is over (a game with a join password asks for it); spectators can open it at any time.
+It is built entirely from the final game state (with its hidden bookkeeping, 5.1), the full event log and the World Table, so it can also be opened later for any finished game, and exported as a printable page plus CSV (one file per table). A game begun before the hidden bookkeeping existed is replayed from its first action with the current engine to recover it; if the replay does not give exactly the stored events, the debrief uses what was recorded and says the history is incomplete. Players can open it once the game is over (a game with a join password asks for it); spectators can open it at any time.
 
 | Panel | What it shows | Linked to players? |
 | --- | --- | --- |
