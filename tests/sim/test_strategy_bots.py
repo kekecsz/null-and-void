@@ -1,6 +1,8 @@
 """Specification 9.4 (scripted strategy bots) and section 13 (milestone 4: every bot type finishes
 games without errors or broken invariants)."""
 
+import random
+
 import pytest
 
 from nv_core import actions as a
@@ -148,6 +150,46 @@ def test_memory_corruption_changes_remembered_readings(venus):
             bot._forget()
     assert all(r == readings for r, _ in sharp.memory)
     assert any(r != readings for r, _ in fuzzy.memory)
+
+
+def _bot_with_evidence(venus, kind):
+    """A bot that has seen 24 Probes where the first outcome copies the first input and the rest is
+    noise: every theory 'IP1=x -> WO1=x' holds, with or without more inputs."""
+    world, settings = venus
+    bot = StrategyBot(1, kind, world, settings, BotSettings.load())
+    (ip1, states), *others = bot.inputs.items()
+    wo1 = next(iter(bot.outcomes))
+    noise = random.Random(0)
+    for k in range(24):
+        readings = {ip1: states[k % 2], **{v: noise.choice(s) for v, s in others}}
+        outcomes = {v: noise.choice(s) for v, s in bot.outcomes.items()}
+        outcomes[wo1] = bot.outcomes[wo1][states.index(readings[ip1]) % len(bot.outcomes[wo1])]
+        bot.memory.append((readings, outcomes))
+    return bot, ip1, states
+
+
+def _empty_view(published=()):
+    return {"seat": 0, "published": list(published), "lab": {"ideas": []}, "manuscripts": [], "warning_revealed": False}
+
+
+@pytest.mark.parametrize("kind", ["selfish", "cooperative"])
+def test_bots_formulate_broad_promising_theories(venus, kind):
+    """Specification 9.4 (Development): of the promising theories, the one worth the most per Probe;
+    every extra input cuts how often a theory can be used, so one input wins here."""
+    bot, ip1, _ = _bot_with_evidence(venus, kind)
+    inputs, outcomes = bot._theory_to_formulate(_empty_view())
+    assert list(inputs) == [ip1]
+
+
+def test_cooperative_bots_formulate_for_probes_no_theory_fits_yet(venus):
+    """Specification 9.4 (Development): the cooperative bot prefers new ground, so with a theory for
+    one state of IP1 published, it formulates one for the other state."""
+    bot, ip1, states = _bot_with_evidence(venus, "cooperative")
+    wo1 = next(iter(bot.outcomes))
+    published = {"kind": "theory", "id": 5, "author": 1, "fresh": False, "nobel": 0,
+                 "inputs": {ip1: states[0]}, "outcomes": {wo1: bot.outcomes[wo1][0]}}
+    inputs, _ = bot._theory_to_formulate(_empty_view([published]))
+    assert inputs.get(ip1) != states[0]
 
 
 def test_seat_types_are_accepted_by_nv_sim(tmp_path):

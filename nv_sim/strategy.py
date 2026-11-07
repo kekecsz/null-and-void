@@ -35,6 +35,9 @@ LEAVE_ORDER = [Task.EXPERIMENTATION, Task.PEER_REVIEW, Task.DATA_COLLECTION, Tas
 # Spare postdocs and students are given tasks in this order once the planned needs are met.
 FILL_ORDER = [Task.GRANTS, Task.WRITE_UP, Task.DATA_COLLECTION, Task.PEER_REVIEW, Task.EXPERIMENTATION]
 TOP_THEORIES = 30  # theories compared when choosing a discriminating experiment
+MAX_UNPUBLISHED_THEORIES = 2  # a bot formulates no new theory while this many wait in its lab
+NEAR_BEST = 0.9  # theories scoring at least this share of the best are all candidates to formulate
+UNDO_TYPES =("withdraw_submission", "cancel_prediction", "cancel_development")  # take back a choice
 
 
 @dataclass(frozen=True)
@@ -42,6 +45,7 @@ class BotSettings:
     """The scripted bots' settings (specification 11; values in settings/software.yaml)."""
 
     confidence_threshold: float
+    formulate_threshold: float
     rival_citation_factor: float
     kill_counter: int
     memory_corruption: float
@@ -55,6 +59,7 @@ class BotSettings:
         s = load_software_settings()
         return cls(
             confidence_threshold=s.bot_confidence_threshold,
+            formulate_threshold=s.bot_formulate_threshold,
             rival_citation_factor=s.bot_rival_citation_factor,
             kill_counter=s.bot_kill_counter,
             memory_corruption=s.bot_memory_corruption,
@@ -177,8 +182,8 @@ class StrategyBot:
             return by_type["commit"].actions[0]
         if "pass" in by_type:
             return by_type["pass"].actions[0]
-        for option in options:
-            if option.actions:
+        for option in options:  # never an undo: it would make room for the same choice again, forever
+            if option.actions and option.type not in UNDO_TYPES:
                 return option.actions[0]
         raise ValueError("no complete action among the options")
 
@@ -211,27 +216,68 @@ class StrategyBot:
                 keys.append(theory_key(m["content"]["inputs"], m["content"]["outcomes"]))
         return keys
 
+    def _state_shares(self) -> dict[str, dict[str, float]]:
+        """How often each input state shows among the visible readings seen so far (an unseen row:
+        every state equally often)."""
+        shares = {}
+        for v, states in self.inputs.items():
+            seen = [readings[v] for readings, _ in self.memory if readings.get(v) is not None]
+            shares[v] = {x: (seen.count(x) / len(seen) if seen else 1 / len(states)) for x in states}
+        return shares
+
+    def _reach(self, inputs: dict[str, str], shares: dict[str, dict[str, float]]) -> float:
+        """The share of Probes a theory fits once its rows are visible: the product of how often
+        each of its input states occurs. (Blank rows fit any theory, but sensors fill them in, so
+        a specific theory that fits today's blanks would rarely be usable later.)"""
+        value = 1.0
+        for v, x in inputs.items():
+            value *= shares[v].get(x, 0.0)
+        return value
+
     def _theory_to_formulate(self, view, exclude: list | None = None) -> tuple[dict, dict] | None:
+        """The promising theory (Wilson lower bound at least ``formulate_threshold``) worth the most
+        per Probe, counting on the lower bound as its success rate. Selfish: reach x rate x (credit
+        for a success + its citation). Each input a theory specifies cuts its reach, so broad
+        theories of one or two inputs usually win: they can be used often, which brings citations
+        and Nobel Prize progress. Cooperative: rate x the new ground it covers (combinations of input
+        states weighted by how often they occur, divided by 1 + the theories that fit them already)."""
         known = self._known_keys(view) + (exclude or [])
-        confident = [
-            (i, o, low) for i, o, low in self.tally.confident(self.bot.confidence_threshold)
-            if theory_key(i, o) not in known
-        ]
-        if not confident:
-            if self.motive == "cooperative" and view["warning_revealed"]:
-                return self._coverage_theory(view, known)
-            return None
-        if self.motive == "selfish":  # the most elements (more credit), then the strongest evidence
-            best = max(len(i) + len(o) for i, o, _ in confident)
-            pool = [c for c in confident if len(c[0]) + len(c[1]) == best]
-            top = max(c[2] for c in pool)
-        else:  # the smallest theory, then the strongest evidence
-            best = min(len(i) + len(o) for i, o, _ in confident)
-            pool = [c for c in confident if len(c[0]) + len(c[1]) == best]
-            top = max(c[2] for c in pool)
-        pool = [c for c in pool if c[2] == top]
-        inputs, outcomes, _ = self.rng.choice(pool)
-        return inputs, outcomes
+        citation = self.settings.citation_reward
+        shares = self._state_shares()
+        if self.motive == "cooperative":
+            # Each combination of input states, by how often it occurs, and how many theories of the
+            # field (published, or in its lab and manuscripts) already fit it.
+            field = [
+                *self._theories(view), *[i for i in view["lab"]["ideas"] if i["kind"] == "theory"],
+                *[m["content"] for m in view["manuscripts"]
+                  if m["author"] == view["seat"] and m["content"] and m["content"]["kind"] == "theory"],
+            ]
+            distinct = list({theory_key(t["inputs"], t["outcomes"]): t["inputs"] for t in field}.values())
+            combos = []
+            for states in product(*self.inputs.values()):
+                combo = dict(zip(self.inputs, states))
+                weight = math.prod(shares[v][x] for v, x in combo.items())
+                covered = sum(all(combo[v] == x for v, x in t.items()) for t in distinct)
+                combos.append((combo, weight / (1 + covered)))
+        scored = []
+        for inputs, outcomes, wins, n in self.tally.theories():
+            rate = wilson_lower(wins, n)  # the success rate it can count on, so thin evidence loses
+            if rate < self.bot.formulate_threshold or theory_key(inputs, outcomes) in known:
+                continue
+            if self.motive == "selfish":
+                score = self._reach(inputs, shares) * rate * (len(inputs) * len(outcomes) + citation)
+            else:  # new ground first: Probes that no theory of the field fits yet
+                score = rate * sum(w for combo, w in combos if all(combo[v] == x for v, x in inputs.items()))
+            if score > 0:
+                scored.append((score, inputs, outcomes))
+        if scored:
+            # Any near-best theory, so bots seeing the same evidence do not all pick the same one.
+            top = max(s for s, _, _ in scored)
+            inputs, outcomes = self.rng.choice([(i, o) for s, i, o in scored if s >= NEAR_BEST * top])
+            return inputs, outcomes
+        if self.motive == "cooperative" and view["warning_revealed"]:
+            return self._coverage_theory(view, known)
+        return None
 
     def _coverage_theory(self, view, known: list) -> tuple[dict, dict] | None:
         """Cooperative, from the Warning shot on: in the Crisis a Probe without a prediction counts
@@ -288,7 +334,10 @@ class StrategyBot:
 
     def _development_plan(self, view) -> list[BaseModel]:
         seat, plan, made = view["seat"], [], []
-        theory = self._theory_to_formulate(view)
+        waiting = sum(1 for i in view["lab"]["ideas"] if i["kind"] == "theory")
+        # No new theory while enough wait to be published: their Development postdocs would cost
+        # the money that submission fees need.
+        theory = self._theory_to_formulate(view) if waiting < MAX_UNPUBLISHED_THEORIES else None
         if theory:
             plan.append(a.FormulateTheory(seat=seat, inputs=theory[0], outcomes=theory[1]))
             made.append(theory_key(*theory))
@@ -520,7 +569,10 @@ class StrategyBot:
             )
         t = by_type["run_experiment"].template
         free = t["free_input_parameters"]
-        target = self._target(view) if self.motive == "selfish" else None
+        if self.motive == "selfish":
+            target = self._target(view)
+        else:  # confirm a theory waiting in its lab: a fitting record lets it reach a journal tier
+            target = next(((i["inputs"], i["outcomes"]) for i in view["lab"]["ideas"] if i["kind"] == "theory"), None)
         if target:
             wanted = list(target[0])
             specified = {v: target[0][v] for v in wanted[:free]}
