@@ -74,6 +74,27 @@ acceptance criteria, retrying until a world passes (specification, section 4).
 The same scenario and seed always give the same world. Worlds for seeds 1–5 are already in
 [`scenarios/venus_expedition/worlds/`](scenarios/venus_expedition/worlds/).
 
+## Playing in the browser
+
+The server (specification, section 6) runs games in the browser, with any mix of people, scripted bots and
+AI players. Games are saved after every action in `games/nv_games.sqlite`, so they survive a restart.
+
+```sh
+.venv/Scripts/nv-server                  # then open http://127.0.0.1:8000/
+.venv/Scripts/nv-server --host 0.0.0.0   # also lets other devices on the same Wi-Fi join (it prints the address)
+```
+
+1. On the start page, choose a world and the seats: `human` for a person, or an automated player (the scripted
+   bots, the random bot, or an AI model).
+2. Create the game. You get a **join link** for the players and a **host link** (keep it private: it starts,
+   pauses and ends the game, and can hand a seat to an automated player and back).
+3. Each person opens the join link, picks a seat and a nickname. The host starts the game once every
+   person's seat is taken.
+
+A browser remembers its seat, so a refresh rejoins it. To play the same seat from another device, open the game
+link with `#seat=<token>`; on your first device the token is in the browser's local storage under
+`nv:<game>:seat`. With `--host 0.0.0.0`, Windows may ask once whether to allow Python through the firewall.
+
 ## Playing in the terminal
 
 The text client runs a whole game on one computer, with every seat at the same keyboard (specification,
@@ -143,10 +164,10 @@ reported as an error.
 | --- | --- |
 | `nv_core/` | Rules engine: settings, game state, actions, the phases of a round, player views and text rendering, game records |
 | `nv_world/` | World generator: scenario reader, World Table generation, screening, world files, `nv-world` command |
-| `nv_server/` | The `nv-play` text client (the multiplayer server comes in milestone 5) |
+| `nv_server/` | The multiplayer server (`nv-server`: lobby, storage, live games) and the `nv-play` text client |
 | `nv_sim/` | Simulator: random bot, scripted strategy bots, invariant checks, the `nv-sim` command |
 | `nv_ai/` | AI player: prompt and tools, model provider, costs and the spending ledger |
-| `web/` | Browser client (milestone 5) |
+| `web/` | Browser client: lobby and game page (plain HTML, CSS and JavaScript) |
 | `scenarios/` | One folder per scenario, with its scenario file and generated worlds |
 | `docs/` | The rulebook, parameter file, specification and open questions |
 | `tests/` | pytest tests, named after the document sections they check |

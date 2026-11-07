@@ -174,13 +174,14 @@ The server is a stateless FastAPI app: every request rebuilds the game from stor
 ### 6.1 Persistence
 
 - **One storage interface, two backends:** a local SQLite file (milestone 5) and Firestore (milestone 7) store the same data, so the server does not care which one it runs on.
-- **Layout** (Firestore paths; the SQLite tables mirror them): `games/{id}` holds metadata (scenario, world, settings, seed, seats, status, hashed join and spectator passwords); `games/{id}/actions/{seq}` holds the ordered action log; `games/{id}/snapshots/{seq}` holds a state snapshot at the start of each round, so loading never replays a whole game.
+- **Layout** (Firestore paths; the SQLite tables mirror them): `games/{id}` holds metadata (scenario, world, settings, seed, seats, status, hashed join and spectator passwords); `games/{id}/actions/{seq}` holds the ordered action log, each action with the events it produced; `games/{id}/snapshots/{seq}` holds a state snapshot at the start of each round; `games/{id}/ai_decisions/{n}` holds the AI decision log. Loading starts from the latest snapshot and applies the actions after it; the stored events give the event log and the scripted bots' memory, so loading never replays a whole game. Metadata also holds the AI seats' notes and costs.
 - **Writes:** an action is accepted only if its sequence number is the next one, checked in a transaction. Two players acting at once can never corrupt the log; the loser simply retries against the new state.
 - **Saving is automatic.** Every action is stored the moment it is accepted, so a game can stop at any point and resume days later from the host's link.
 
 ### 6.2 Live updates
 
-- Each browser holds a WebSocket. After every accepted action, the server sends each connection its own filtered view (player, spectator or lobby).
+- Each browser holds a WebSocket. After every accepted action, the server sends each connection its own filtered view (player, spectator or lobby), numbered with the action's sequence number; the browser that acted also gets an `accepted` message with that number, so it knows which views are newer than its own action. A refused action gets an `error` message with the engine's reason.
+- Each automated seat (scripted bot, random bot or AI) has a background worker that acts whenever the seat must decide; AI seats think in a separate thread, so they never hold up anyone else.
 - Cloud Run closes WebSockets after its request timeout (up to 60 minutes); the client reconnects automatically and receives the current view, so this is invisible to players.
 - The first version runs with a maximum of one Cloud Run instance, which is plenty for a few concurrent games and keeps live updates simple. If more instances are ever needed, each instance subscribes to Firestore changes for the games it serves.
 
@@ -188,7 +189,7 @@ The server is a stateless FastAPI app: every request rebuilds the game from stor
 
 1. The host opens the lobby, chooses a scenario and world (or generates a new one), a settings preset, and the seats (within the player limits in parameter\_defaults.yaml), each marked human, AI (with its model and persona) or scripted bot (9.4).
 2. The host gets a **join link** and an optional password, and a separate **spectator password**.
-3. A player opens the link, enters a nickname and picks a free seat and colour. The browser keeps a seat token, so a refresh or a dropped connection rejoins the same seat.
+3. A player opens the link, enters a nickname and picks a free seat and a colour from a fixed list. The browser keeps a seat token, so a refresh or a dropped connection rejoins the same seat; a link with the token (`#seat=...`) takes the seat to another device.
 4. The host starts the game when all human seats are filled. Settings are locked from then on.
 
 ### 6.4 Host controls
@@ -229,7 +230,7 @@ Plain and functional, desktop-first, English only. One page with these areas:
 | Event log | public events in order, filterable | — |
 
 - Theories, predictions and records are built by picking a state per row from dropdowns that mirror the card layout (a blank option for unspecified rows).
-- Each panel has a "show as text" toggle that displays the same `render_text` output the AI sees.
+- A "show as text" toggle replaces the board with the same `render_text` output the AI sees.
 - Each player uses their own device, so their lab is always open on their screen and never sent to anyone else's. Players at the same table are trusted not to look at each other's screens, as with a physical lab shield.
 
 ### 7.3 Spectator mode
