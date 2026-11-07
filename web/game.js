@@ -207,11 +207,14 @@ function renderGrid() {
       let text = "";
       let cls = "";
       if (variable.kind === "input") {
+        // Before the Probe stacks are dealt, say what each slot will show: Specialty (always
+        // revealed), a sensor of some level (revealed, with noise), or nothing (a blank card).
         const sensor = p.sensors[variable.id];
-        if (p.specialty.includes(variable.id)) cls = "specialty";
-        text = p.readings ? (p.readings[variable.id] ?? "blank") : "";
-        if (sensor) text += ` (sensor ${sensor})`;
-        if (!p.readings) cls += " hidden";
+        const specialty = p.specialty.includes(variable.id);
+        cls = specialty ? "specialty" : sensor ? "sensor" : "unsensed";
+        const status = specialty ? "revealed" : sensor ? `sensor L${sensor}` : "no sensor";
+        if (p.readings) text = (p.readings[variable.id] ?? "blank") + (sensor ? ` (sensor L${sensor})` : "");
+        else text = status;
       } else {
         text = p.outcomes ? p.outcomes[variable.id] : "hidden";
         if (!p.outcomes) cls = "hidden";
@@ -221,7 +224,10 @@ function renderGrid() {
     return h("tr", {}, cells);
   });
   fill($("grid"), h("table", { class: "grid" }, h("tr", {}, head), rows),
-    h("p", { class: "muted small" }, "Bold rows are each Probe's Specialty Input Parameters (always revealed and true)."));
+    h("p", { class: "muted small legend" },
+      h("span", { class: "specialty" }, "Specialty"), " always revealed and true · ",
+      h("span", { class: "sensor" }, "sensor L1-L3"), " revealed, may be noise · ",
+      h("span", { class: "unsensed" }, "no sensor"), " shows blank: a sensor can go here"));
 }
 
 function renderLab() {

@@ -45,8 +45,11 @@ main { display: grid; grid-template-columns: minmax(420px, 1.2fr) minmax(380px, 
 .panel.act { border-color: #e0b400; box-shadow: 0 0 0 2px var(--act); }
 .panel .toggle { font-weight: normal; font-size: 12px; }
 
-.grid td.specialty { font-weight: 600; }
+.grid td.specialty, .legend .specialty { font-weight: 600; background: #dff0df; }
+.grid td.sensor, .legend .sensor { background: #e0eaf8; }
+.grid td.unsensed, .legend .unsensed { color: var(--muted); font-style: italic; }
 .grid td.hidden { color: var(--muted); }
+.legend span { padding: 0 4px; border-radius: 3px; }
 .grid th.hot { background: #ffe3c2; }
 .chip { display: inline-block; padding: 0 6px; border-radius: 9px; font-size: 12px; color: #fff; }
 .form-row { margin: 4px 0; }
