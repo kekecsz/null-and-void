@@ -153,8 +153,8 @@ class RandomBot:
     # ----------------------------------------------------------------------------------
     @staticmethod
     def _any_action(options: list[Option]) -> BaseModel:
-        for option in options:
-            if option.actions:
+        for option in options:  # never an undo (withdraw, cancel): it can loop with the choice it undoes
+            if option.actions and not option.type.startswith(("withdraw_", "cancel_")):
                 return option.actions[0]
         raise ValueError("no complete action among the options")
 
