@@ -22,6 +22,7 @@ ai_price_table:
     output: 0.50
 
 # Scripted strategy bots (specification section 9.4)
+debrief_low_chance: 0.5             # debrief, Luck panel: successes with a true chance below this are lucky
 bot_confidence_threshold: 0.7        # lower bound of the 95% interval of a theory's success rate
 bot_formulate_threshold: 0.5        # the same lower bound for formulating a theory ("promising")
 bot_rival_citation_factor: 2.0       # selfish bots cite a rival's theory only if worth this many times their best own

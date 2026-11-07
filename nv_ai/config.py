@@ -41,6 +41,7 @@ class SoftwareSettings(BaseModel):
     ai_notes_max_chars: int
     ai_price_table: dict[str, Prices]
     # Scripted strategy bots (specification 9.4)
+    debrief_low_chance: float
     bot_confidence_threshold: float
     bot_formulate_threshold: float
     bot_rival_citation_factor: float

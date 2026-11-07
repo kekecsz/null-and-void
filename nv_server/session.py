@@ -20,13 +20,16 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic_core import to_jsonable_python
 
+from functools import cache
+
 from nv_core.actions import ACTION_ADAPTER
+from nv_core.debrief import build_debrief
 from nv_core.engine import IllegalAction, apply, legal_actions, new_game
 from nv_core.engine.context import Event
 from nv_core.settings import Settings
 from nv_core.state import GameState
 from nv_core.text import render_text
-from nv_core.views import player_view, visible_events
+from nv_core.views import player_view, spectator_view, visible_events
 from nv_core.world_data import WorldData
 from nv_server.storage import Storage
 from nv_sim.game import RECENT_EVENTS, check_seat_types, make_player
@@ -71,11 +74,12 @@ def password_ok(password: str, stored: str | None) -> bool:
 # Connections ------------------------------------------------------------------------------------
 @dataclass(eq=False)
 class Connection:
-    """One browser: ``seat`` is None for a host or onlooker without a seat."""
+    """One browser: ``seat`` is None for a spectator (specification 7.3)."""
 
     socket: Any  # has async send_json(data)
     seat: int | None
     host: bool
+    spectator: bool = False
 
 
 @dataclass
@@ -101,6 +105,7 @@ class GameSession:
         self.connections: list[Connection] = []
         self.workers: dict[int, _SeatWorker] = {}
         self.closed = False
+        self._debrief: tuple[int, dict[str, Any]] | None = None  # (seq, debrief) cache
 
     # Setup and loading --------------------------------------------------------------------------
     @property
@@ -169,6 +174,80 @@ class GameSession:
 
     def is_host(self, token: str | None) -> bool:
         return bool(token) and hmac.compare_digest(self.meta["host_token"], token_hash(token))
+
+    def can_spectate(self, host_token: str | None, password: str | None) -> bool:
+        """Specification 7.3: the host always; others with the spectator password, if one is set."""
+        if self.is_host(host_token):
+            return True
+        stored = self.meta.get("spectator_password")
+        return bool(stored and password and password_ok(password, stored))
+
+    def debrief_allowed(self, seat_token: str | None, host_token: str | None, spectator_password: str | None,
+                        join_password: str | None) -> bool:
+        """Specification 10: every player once the game is over (anyone who could join it);
+        spectators at any time."""
+        if self.can_spectate(host_token, spectator_password):
+            return True
+        if self.status not in ("finished", "ended") or self.state is None:
+            return False
+        if self.seat_for_token(seat_token) is not None:
+            return True
+        stored = self.meta.get("join_password")
+        return not stored or bool(join_password and password_ok(join_password, stored))
+
+    def world_model(self) -> dict[str, Any] | None:
+        """The world file's effects, interactions and row probabilities: kept with games created
+        since milestone 6; for older games, from the world file of the same name, if there is one."""
+        if self.meta.get("world_model") is not None:
+            return self.meta["world_model"]
+        from nv_core.paths import SCENARIOS_DIR
+        from nv_world.worldfile import load_world, world_to_json
+
+        path = SCENARIOS_DIR / self.world.scenario_id / "worlds" / f"{self.meta['world_id']}.json"
+        try:
+            return world_to_json(load_world(path))
+        except (OSError, ValueError, KeyError):
+            return None
+
+    def debrief(self) -> dict[str, Any]:
+        if self._debrief is None or self._debrief[0] != self.seq:
+            notes = {int(s): text for s, text in self.meta.get("ai_notes", {}).items()}
+            data = build_debrief(self.state, self.events, _low_chance(), self.world_model(), notes)
+            self._debrief = (self.seq, to_jsonable_python(data))
+        return self._debrief[1]
+
+    def replay(self, at: int) -> dict[str, Any]:
+        """The spectator view after ``at`` actions (specification 7.3): from the latest snapshot
+        before it, then the actions after that snapshot."""
+        stored = self.storage.actions(self.id)
+        at = max(0, min(at, len(stored)))
+        snapshot = self.storage.snapshot_before(self.id, at)
+        if snapshot:
+            start, state = snapshot[0], GameState.model_validate_json(snapshot[1])
+        else:
+            start, state = 0, new_game(self.world, self.settings, self.meta["seed"], self.meta["players"])
+        problem = ""
+        for i in range(start, at):
+            try:
+                state, _ = apply(state, ACTION_ADAPTER.validate_python(stored[i][0]))
+            except Exception as exc:  # a game played under older rules
+                problem = f"action {i + 1} cannot be replayed with the current rules ({exc}); showing action {i}"
+                at = i
+                break
+        rounds = [{"round": 1, "seq": 0}]
+        for i, (_, events) in enumerate(stored):
+            rounds += [{"round": e["round"], "seq": i + 1} for e in events if e["kind"] == "round"]
+        view = spectator_view(state)
+        return {
+            "type": "replay",
+            "at": at,
+            "total": len(stored),
+            "rounds": rounds,
+            "problem": problem,
+            "view": to_jsonable_python(view),
+            "text": render_text(view),
+            "events": [e["text"] for _, events in stored[:at] for e in events][-EVENTS_SENT:],
+        }
 
     def public_seats(self) -> list[dict[str, Any]]:
         connected = {c.seat for c in self.connections if c.seat is not None}
@@ -385,6 +464,7 @@ class GameSession:
             "title": self.meta["title"],
             "you": seat,
             "host": conn.host,
+            "spectator": conn.spectator,
             "seats": self.public_seats(),
             "ai_cost": self.meta["ai_cost"],
             "view": None,
@@ -399,8 +479,12 @@ class GameSession:
             if self.status == "running" and self.meta["seats"][seat] == HUMAN:
                 data["options"] = [o.model_dump(mode="json") for o in legal_actions(self.state, seat)]
             data["events"] = [e.text for e in visible_events(self.events, seat)[-EVENTS_SENT:]]
-        elif self.state is not None:  # host without a seat: public information only
-            data["events"] = [e.text for e in self.events if e.visible_to is None][-EVENTS_SENT:]
+        elif self.state is not None and conn.spectator:  # everything (specification 7.3)
+            view = spectator_view(self.state)
+            data["view"] = to_jsonable_python(view)
+            data["text"] = render_text(view)
+            data["events"] = [e.text for e in self.events][-EVENTS_SENT:]
+            data["ai_notes"] = {self.meta["players"][int(s)]: text for s, text in self.meta.get("ai_notes", {}).items() if text}
         return data
 
     async def connect(self, conn: Connection) -> None:
@@ -422,6 +506,13 @@ class GameSession:
 
 
 # The games of one server ------------------------------------------------------------------------
+@cache
+def _low_chance() -> float:
+    from nv_ai.config import load_software_settings
+
+    return load_software_settings().debrief_low_chance
+
+
 @dataclass
 class GameSetup:
     """What the host chooses in the lobby (specification 6.3)."""
@@ -433,6 +524,7 @@ class GameSetup:
     title: str
     join_password: str = ""
     spectator_password: str = ""
+    world_model: dict[str, Any] | None = None  # the world file's effects and probabilities (debrief)
 
 
 @dataclass
@@ -472,6 +564,7 @@ class GameManager:
             "title": setup.title,
             "world_id": setup.world.world_id,
             "world": setup.world.model_dump(mode="json"),
+            "world_model": setup.world_model,
             "settings": setup.settings.model_dump(mode="json"),
             "seed": setup.seed,
             "players": names,

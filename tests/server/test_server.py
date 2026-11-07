@@ -155,8 +155,8 @@ def test_a_player_sees_only_their_own_lab(db):
         assert "world_table" not in text and "probe_truth" not in text and "main_effects" not in text
         assert all(p["outcomes"] is None for p in view["probes"])  # not revealed yet in the Hiring phase
         with client.websocket_connect(f"/ws/{game}?host_token={host}") as ws:
-            hosted = ws.receive_json()
-        assert hosted["host"] and hosted["you"] is None and hosted["view"] is None
+            hosted = ws.receive_json()  # specification 7.3: the host link spectates
+        assert hosted["host"] and hosted["spectator"] and hosted["you"] is None and "world_table" in hosted["view"]
 
 
 def test_a_refreshed_browser_rejoins_its_seat_and_strangers_are_turned_away(db):
@@ -251,3 +251,78 @@ def test_a_human_finishes_a_game_against_an_ai_seat(db):
         meta = client.app.state.manager.storage.get_meta(game)
         assert meta["ai_cost"]["1"] > 0
         assert client.app.state.manager.storage.ai_decisions(game)
+
+
+# Spectator mode, replay and debrief (specification 7.3 and 10; milestone 6) ------------------------
+def _finished_game(client, **extra):
+    """A finished game: a human seat played by the random bot, against two scripted bots."""
+    game, host = _create(client, [{"kind": "human"}, {"kind": "selfish"}, {"kind": "cooperative"}], **extra)
+    token = _join(client, game, 0, "Ann", extra.get("join_password", ""))
+    _host(client, game, host, "start")
+    with client.websocket_connect(f"/ws/{game}?seat_token={token}") as ws:
+        _play(ws)
+    return game, host, token
+
+
+def test_spectators_see_the_hidden_world_only_with_the_password_or_the_host_link(db):
+    with TestClient(create_app(db=db)) as client:
+        game, host = _create(client, [{"kind": "human"}, {"kind": "selfish"}], spectator_password="watch")
+        token = _join(client, game, 0, "Ann")
+        _host(client, game, host, "start")
+        with client.websocket_connect(f"/ws/{game}?spectate=1&spectator_password=watch") as ws:
+            watched = ws.receive_json()
+        assert watched["spectator"] and watched["view"]["world_table"] and len(watched["view"]["labs"]) == 2
+        with client.websocket_connect(f"/ws/{game}?spectate=1&spectator_password=wrong") as ws:
+            assert ws.receive_json()["type"] == "error"
+        # A player may not spectate without the password; a host who also plays may switch.
+        with client.websocket_connect(f"/ws/{game}?seat_token={token}&spectate=1") as ws:
+            assert not ws.receive_json()["spectator"]
+        with client.websocket_connect(f"/ws/{game}?seat_token={token}&host_token={host}&spectate=1") as ws:
+            switched = ws.receive_json()
+            assert switched["spectator"] and switched["you"] is None
+            ws.send_json({"type": "action", "action": {"type": "commit"}})
+            assert ws.receive_json()["type"] == "error"  # spectators do not play
+
+
+def test_without_a_spectator_password_only_the_host_spectates(db):
+    with TestClient(create_app(db=db)) as client:
+        game, host = _create(client, [{"kind": "human"}, {"kind": "selfish"}])
+        with client.websocket_connect(f"/ws/{game}?spectate=1&spectator_password=") as ws:
+            assert ws.receive_json()["type"] == "error"
+        assert client.post(f"/api/games/{game}/replay", json={"at": 0}).status_code == 403
+
+
+def test_replay_steps_to_any_action_and_lists_the_rounds(db):
+    with TestClient(create_app(db=db)) as client:
+        game, host, _ = _finished_game(client)
+        first = client.post(f"/api/games/{game}/replay", json={"host_token": host, "at": 0}).json()
+        assert first["at"] == 0 and first["view"]["round"] == 1 and first["total"] > 0
+        rounds = first["rounds"]
+        assert rounds[0] == {"round": 1, "seq": 0} and [r["round"] for r in rounds] == list(range(1, len(rounds) + 1))
+        second = rounds[1]
+        at_round = client.post(f"/api/games/{game}/replay", json={"host_token": host, "at": second["seq"]}).json()
+        assert at_round["view"]["round"] == 2 and at_round["problem"] == ""
+        last = client.post(f"/api/games/{game}/replay", json={"host_token": host, "at": 10**6}).json()
+        assert last["at"] == first["total"] and last["view"]["result"] is not None
+        middle = client.post(f"/api/games/{game}/replay", json={"host_token": host, "at": second["seq"] + 3}).json()
+        assert middle["at"] == second["seq"] + 3 and len(middle["events"]) >= len(at_round["events"])
+
+
+def test_the_debrief_opens_for_players_when_the_game_is_over_and_again_later(db):
+    with TestClient(create_app(db=db)) as client:
+        game, host = _create(client, [{"kind": "human"}, {"kind": "selfish"}], join_password="pw")
+        token = _join(client, game, 0, "Ann", "pw")
+        _host(client, game, host, "start")
+        assert client.post(f"/api/games/{game}/debrief", json={"seat_token": token}).status_code == 403  # not over yet
+        assert client.post(f"/api/games/{game}/debrief", json={"host_token": host}).status_code == 200  # spectators may
+        with client.websocket_connect(f"/ws/{game}?seat_token={token}") as ws:
+            _play(ws)
+        debrief = client.post(f"/api/games/{game}/debrief", json={"seat_token": token}).json()
+        assert debrief["ending"]["ending"] in ("nobel", "crisis_crash", "credit")
+        assert debrief["real_world"]["main_effects"]  # the world file's effects, kept with the game
+        assert client.post(f"/api/games/{game}/debrief", json={}).status_code == 403  # the join password
+        assert client.post(f"/api/games/{game}/debrief", json={"password": "pw"}).status_code == 200
+        csv_text = client.post(f"/api/games/{game}/debrief.csv", json={"seat_token": token, "table": "literature"}).text
+        assert csv_text.splitlines()[0].startswith("theory,author,tier")
+    with TestClient(create_app(db=db)) as client:  # reopened after a server restart
+        assert client.post(f"/api/games/{game}/debrief", json={"seat_token": token}).json() == debrief

@@ -30,6 +30,7 @@ class Storage(Protocol):
     def actions(self, game_id: str) -> list[tuple[dict[str, Any], list[dict[str, Any]]]]: ...
     def save_snapshot(self, game_id: str, seq: int, state: str) -> None: ...
     def latest_snapshot(self, game_id: str) -> tuple[int, str] | None: ...
+    def snapshot_before(self, game_id: str, seq: int) -> tuple[int, str] | None: ...
     def add_ai_decision(self, game_id: str, decision: dict[str, Any]) -> None: ...
     def ai_decisions(self, game_id: str) -> list[dict[str, Any]]: ...
 
@@ -122,6 +123,13 @@ class SQLiteStorage:
         with self._lock:
             return self._db.execute(
                 "SELECT seq, state FROM snapshots WHERE game_id = ? ORDER BY seq DESC LIMIT 1", (game_id,)
+            ).fetchone()
+
+    def snapshot_before(self, game_id: str, seq: int) -> tuple[int, str] | None:
+        """The latest snapshot taken after at most ``seq`` actions (for replays)."""
+        with self._lock:
+            return self._db.execute(
+                "SELECT seq, state FROM snapshots WHERE game_id = ? AND seq <= ? ORDER BY seq DESC LIMIT 1", (game_id, seq)
             ).fetchone()
 
     # AI decisions -------------------------------------------------------------------------------

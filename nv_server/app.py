@@ -9,6 +9,8 @@ Games are stored in a SQLite file (default ``games/nv_games.sqlite``) and surviv
 
 import argparse
 import asyncio
+import csv
+import io
 import random
 import socket
 from contextlib import asynccontextmanager
@@ -17,11 +19,12 @@ from typing import Any
 
 import yaml
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError
 
 from nv_core.actions import ACTION_ADAPTER
+from nv_core.debrief import csv_tables
 from nv_core.paths import REPO_ROOT, SCENARIOS_DIR
 from nv_core.settings import Settings
 from nv_server.session import COLOURS, HUMAN, Connection, GameError, GameManager, GameSetup
@@ -60,6 +63,17 @@ class HostCommand(BaseModel):
     kind: str | None = None
 
 
+class Access(BaseModel):
+    """Who asks for a replay or a debrief: any one of these may open it."""
+
+    seat_token: str = ""
+    host_token: str = ""
+    spectator_password: str = ""
+    password: str = ""  # the join password
+    at: int = 0  # replay: after this many actions
+    table: str = ""  # debrief CSV: which table
+
+
 def _worlds() -> list[dict[str, Any]]:
     import json
 
@@ -79,23 +93,28 @@ def _scenarios() -> list[str]:
 
 
 def _setup(request: CreateGame):
-    """The world and settings the host chose (runs in a thread: generating a world takes a moment)."""
+    """The world, settings and world model (effects, row probabilities: for the debrief) the host
+    chose. Runs in a thread: generating a world takes a moment."""
     from nv_world.game import load_game_world, world_data
     from nv_world.generate import GenerationFailed, generate_world
     from nv_world.scenario import load_scenario
+    from nv_world.worldfile import load_world, world_to_json
 
     if request.world:
         path = (SCENARIOS_DIR / request.world).resolve()
         if SCENARIOS_DIR.resolve() not in path.parents or not path.is_file():
             raise GameError("no such world file")
         world, settings, _ = load_game_world(path)
+        model = world_to_json(load_world(path))
     elif request.scenario:
         if request.scenario not in _scenarios():
             raise GameError("no such scenario")
         scenario = load_scenario(SCENARIOS_DIR / request.scenario / "scenario.md")
         seed = request.world_seed if request.world_seed is not None else random.SystemRandom().randrange(1_000_000)
         try:
-            world = world_data(scenario, generate_world(scenario, seed), f"generated_seed{seed}")
+            generated = generate_world(scenario, seed)
+            world = world_data(scenario, generated, f"generated_seed{seed}")
+            model = world_to_json(generated)
         except GenerationFailed as exc:
             raise GameError(f"no acceptable world found: {exc}") from None
         settings = scenario.settings
@@ -115,7 +134,7 @@ def _setup(request: CreateGame):
             settings = Settings.model_validate({**settings.model_dump(), **overrides})
         except ValidationError as exc:
             raise GameError("; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()[:5])) from None
-    return world, settings
+    return world, settings, model
 
 
 def _cached_ai_context():
@@ -159,6 +178,10 @@ def create_app(storage: Storage | None = None, ai_context=None, db: Path | str =
     async def game_page(game_id: str):
         return FileResponse(WEB_DIR / "game.html")
 
+    @app.get("/game/{game_id}/debrief")
+    async def debrief_page(game_id: str):
+        return FileResponse(WEB_DIR / "debrief.html")
+
     # Lobby API ------------------------------------------------------------------------------
     @app.get("/api/options")
     async def lobby_options():
@@ -183,10 +206,10 @@ def create_app(storage: Storage | None = None, ai_context=None, db: Path | str =
     @app.post("/api/games")
     async def create_game(request: CreateGame):
         try:
-            world, settings = await asyncio.to_thread(_setup, request)
+            world, settings, model = await asyncio.to_thread(_setup, request)
             seed = request.seed if request.seed is not None else random.SystemRandom().randrange(1_000_000_000)
             setup = GameSetup(world, settings, [s.model_dump() for s in request.seats], seed, world.title,
-                              request.join_password, request.spectator_password)
+                              request.join_password, request.spectator_password, model)
             game_id, host_token = manager.create(setup)
         except GameError as exc:
             raise HTTPException(400, str(exc)) from None
@@ -218,9 +241,45 @@ def create_app(storage: Storage | None = None, ai_context=None, db: Path | str =
             raise HTTPException(400, str(exc)) from None
         return {"status": s.status}
 
+    # Spectator replay and debrief (specification 7.3 and 10) ------------------------------------
+    @app.post("/api/games/{game_id}/replay")
+    async def replay(game_id: str, request: Access):
+        s = await session(game_id)
+        if not s.can_spectate(request.host_token, request.spectator_password):
+            raise HTTPException(403, "replays are for spectators (host link or spectator password)")
+        return await asyncio.to_thread(s.replay, request.at)
+
+    async def _debrief_session(game_id: str, request: "Access"):
+        s = await session(game_id)
+        if not s.debrief_allowed(request.seat_token, request.host_token, request.spectator_password, request.password):
+            if s.status not in ("finished", "ended"):
+                raise HTTPException(403, "the debrief opens when the game is over")
+            raise HTTPException(403, "this game has a join password")
+        return s
+
+    @app.post("/api/games/{game_id}/debrief")
+    async def debrief(game_id: str, request: Access):
+        s = await _debrief_session(game_id, request)
+        return await asyncio.to_thread(s.debrief)
+
+    @app.post("/api/games/{game_id}/debrief.csv")
+    async def debrief_csv(game_id: str, request: Access):
+        s = await _debrief_session(game_id, request)
+        tables = csv_tables(await asyncio.to_thread(s.debrief))
+        if request.table not in tables:
+            raise HTTPException(400, f"tables: {', '.join(tables)}")
+        rows = tables[request.table]
+        out = io.StringIO()
+        writer = csv.DictWriter(out, fieldnames=list(dict.fromkeys(k for row in rows for k in row)) or ["empty"])
+        writer.writeheader()
+        writer.writerows(rows)
+        return Response(out.getvalue(), media_type="text/csv",
+                        headers={"Content-Disposition": f'attachment; filename="{game_id}_{request.table}.csv"'})
+
     # Live game ------------------------------------------------------------------------------
     @app.websocket("/ws/{game_id}")
-    async def live(socket_: WebSocket, game_id: str, seat_token: str = "", host_token: str = ""):
+    async def live(socket_: WebSocket, game_id: str, seat_token: str = "", host_token: str = "",
+                   spectate: int = 0, spectator_password: str = ""):
         await socket_.accept()
         try:
             s = await manager.get(game_id)
@@ -230,11 +289,13 @@ def create_app(storage: Storage | None = None, ai_context=None, db: Path | str =
             return
         seat = s.seat_for_token(seat_token)
         host = s.is_host(host_token)
-        if seat is None and not host:
+        # A spectator connection when asked for, or when there is no seat (the host link always may).
+        spectator = (bool(spectate) or seat is None) and s.can_spectate(host_token, spectator_password)
+        if seat is None and not spectator:
             await socket_.send_json({"type": "error", "message": "join a seat first (or open the host link)"})
             await socket_.close()
             return
-        conn = Connection(socket_, seat, host)
+        conn = Connection(socket_, None if spectator else seat, host, spectator)
         await s.connect(conn)
         try:
             while True:
@@ -242,7 +303,8 @@ def create_app(storage: Storage | None = None, ai_context=None, db: Path | str =
                 if message.get("type") != "action":
                     continue
                 if conn.seat is None:
-                    await socket_.send_json({"type": "error", "message": "you have no seat in this game"})
+                    message = "spectators watch; they do not play" if conn.spectator else "you have no seat in this game"
+                    await socket_.send_json({"type": "error", "message": message})
                     continue
                 try:
                     action = ACTION_ADAPTER.validate_python({**message.get("action", {}), "seat": conn.seat})
