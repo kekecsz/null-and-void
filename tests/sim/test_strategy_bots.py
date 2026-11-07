@@ -48,6 +48,16 @@ def test_mixed_tables_with_random_bots_finish(venus):
     assert report.errors == [], report.errors
 
 
+def test_bots_never_withdraw_a_submission(venus):
+    """Specification 9.1 and 9.4: withdrawing (specification 5.2) is for people who change their
+    mind; the scripted and random bots never do it."""
+    for seed, seats in ((5, ["selfish", "cooperative", "random"]), (6, ["random", "random", "selfish", "cooperative"])):
+        report, seen = _watch(venus, seats, seed)
+        assert report.errors == [], report.errors
+        assert any(isinstance(act, a.Submit) for _, _, act in seen)
+        assert not any(isinstance(act, a.WithdrawSubmission) for _, _, act in seen)
+
+
 def test_same_seed_same_game(venus):
     world, settings = venus
     seats = ["selfish", "cooperative", "patient-cooperative"]

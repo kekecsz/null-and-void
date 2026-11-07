@@ -138,6 +138,7 @@ class StrategyBot:
 
     # Deciding -------------------------------------------------------------------------------
     def choose(self, view: dict[str, Any], options: list[Option]) -> BaseModel:
+        options = [o for o in options if o.type != "withdraw_submission"]  # a bot never takes back a submission
         seat = view["seat"]
         step = (view["round"], view["phase"])
         if step != self._step:

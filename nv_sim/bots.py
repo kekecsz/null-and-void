@@ -55,6 +55,7 @@ class RandomBot:
     # ----------------------------------------------------------------------------------
     def choose(self, view: dict[str, Any] | None, options: list[Option]) -> BaseModel:
         """``view`` needs only "round", "phase" (to tell one step from the next) and "seat"."""
+        options = [o for o in options if o.type != "withdraw_submission"]  # an undo is never worth it for a bot
         by_type = {o.type: o for o in options}
         rng, w = self.rng, self.w
         step = (view["round"], view["phase"])

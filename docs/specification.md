@@ -288,6 +288,8 @@ Every automated player implements one method, `choose(view, legal_actions) -> ac
 
 - **Scripted strategy bots** (9.4): rule-based players with a fixed strategy, free to run in large numbers.
 
+The random bot and the scripted bots never withdraw a submission or revision (5.2): taking back a choice is for people who change their mind, and for a bot it could only loop.
+
 ### 9.2 Running batches
 
 ```
