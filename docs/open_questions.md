@@ -86,3 +86,40 @@ is so strong that a postdoc on Talent development is worth it in every opening r
 
 **Waiting for:** Zoltan to choose and playtest a version, then update the rulebook and `parameter_defaults.yaml`.
 The engine and the bots will follow the rulebook export. Nothing changes in the code until then.
+
+## The Crisis is almost unwinnable with the defaults (balance)
+
+**Document:** `parameter_defaults.yaml` (`crisis_condition: 5`, `crisis_length: 4`); rulebook, Crisis.
+
+**Problem:** with 3 players there are 4 Probes, so a 4-round Crisis has 16 Probe-rounds. Each failed prediction
+and each Probe without a prediction counts as unsuccessful, so surviving the Crisis allows at most 4 of 16. The
+simulator (2026-11-07, scripted bots of specification 9.4, Venus Expedition, 3 players, 100 games per table,
+`crisis_condition` set to 100 so the Crisis always runs its full length) gives these unsuccessful predictions per
+game, cumulative:
+
+| After Crisis round | 3 cooperative | 1 cooperative + 2 selfish | 3 selfish |
+| --- | --- | --- | --- |
+| 1 | 2.3 | 2.7 | 3.0 |
+| 2 | 4.5 | 5.3 | 6.0 |
+| 3 | 6.5 | 8.1 | 9.1 |
+| 4 | 8.5 | 11.1 | 12.3 |
+
+Early on, most of them are Probes nobody predicts on (selfish tables leave about 2.5 of 4 empty in the first
+Crisis round). Failures grow every round. Share of games that would survive the Crisis:
+
+| `crisis_condition` | 5 | 6 | 7 | 8 | 9 | 10 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 4 rounds: 3 cooperative / mixed / 3 selfish | 4% / 1% / 0% | 12% / 1% / 0% | 27% / 3% / 0% | 36% / 10% / 3% | 55% / 22% / 9% | 64% / 33% / 22% |
+| 3 rounds: 3 cooperative / mixed / 3 selfish | 21% / 2% / 1% | 38% / 11% / 3% | 52% / 26% / 10% | 69% / 46% / 29% | 81% / 66% / 42% | 88% / 75% / 70% |
+
+With the defaults, no table has a real chance, so cooperation cannot save the field.
+
+**Suggestion (Zoltan):** `crisis_condition: 8`, or `crisis_length: 3`. The two can also be combined: a 3-round
+Crisis with `crisis_condition` 7 to 8 gives about the same odds as a 4-round Crisis with 9.
+
+**Caveats:** bots, not people; one scenario; 3 players only. With more players there are more Probes, so the best
+value probably depends on the player count, and a condition relative to the number of Probes might hold up better.
+The scripted bots do not play differently as a crash comes closer.
+
+**Waiting for:** Zoltan's choice and a playtest, then `parameter_defaults.yaml`. A sweep with 4 and 5 players can
+check how the value should scale.
