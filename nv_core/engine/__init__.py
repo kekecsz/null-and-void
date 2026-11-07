@@ -138,6 +138,7 @@ HANDLERS: dict[type, tuple[Phase | None, Callable]] = {
     a.CancelDevelopment: (Phase.DEVELOPMENT, development.cancel_development),
     a.Submit: (Phase.SUBMISSION, publication.submit),
     a.Revise: (Phase.SUBMISSION, publication.revise),
+    a.WithdrawSubmission: (Phase.SUBMISSION, publication.withdraw_submission),
     a.ReviewVote: (Phase.PEER_REVIEW, publication.review_vote),
     a.ProposeAlliance: (None, alliances.propose),
     a.AcceptAlliance: (None, alliances.accept),

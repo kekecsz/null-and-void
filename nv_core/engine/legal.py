@@ -200,11 +200,19 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
                     actions=[a.CancelDevelopment(seat=seat, index=i) for i in range(len(pending))],
                 )
             )
-    elif phase == Phase.SUBMISSION and waiting and r.remaining(Task.WRITE_UP) > 0:
+    elif phase == Phase.SUBMISSION and waiting:
         revisable = [m for m in s.manuscripts if m.author == seat and m.area == "revise"]
-        if revisable:
+        room = r.remaining(Task.WRITE_UP) > 0
+        if revisable and room:
             options.append(Option(type="revise", actions=[a.Revise(seat=seat, manuscript=m.id) for m in revisable]))
-        found = possible_submissions(ctx, seat)
+        if s.pending[seat].submissions:
+            options.append(
+                Option(
+                    type="withdraw_submission",
+                    actions=[a.WithdrawSubmission(seat=seat, manuscript=u.manuscript) for u in s.pending[seat].submissions],
+                )
+            )
+        found = possible_submissions(ctx, seat) if room else []
         if found:
             tiers = ctx.settings.journal_tiers
             options.append(

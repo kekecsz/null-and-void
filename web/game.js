@@ -373,6 +373,7 @@ function describe(a) {
     case "develop_method": return `Develop a method for ${a.parameter}`;
     case "cancel_development": return `Drop development choice ${a.index + 1}`;
     case "revise": return `Revise manuscript D${a.manuscript}`;
+    case "withdraw_submission": return `Withdraw D${a.manuscript} (undo this step's submission or revision)`;
     case "review_vote": return `Review ${reviewLabel(a.card)}: ${a.vote}`;
     case "propose_alliance": return `Propose an alliance to ${n(a.partner)}`;
     case "accept_alliance": return `Accept the alliance with ${n(a.partner)}`;
@@ -538,7 +539,7 @@ const TITLES = {
   install_sensor: "Install or upgrade a sensor", pass: "Pass", claim_probe_time: "Probe time", make_prediction: "Make a prediction",
   cancel_prediction: "Withdraw a prediction", set_preregistered: "Preregistration", reveal_prediction: "Reveal predictions",
   order_predictions: "Scoring order", formulate_theory: "Formulate a theory", develop_method: "Develop a method",
-  cancel_development: "Change your development choices", submit: "Submit a manuscript", revise: "Revise a manuscript",
+  cancel_development: "Change your development choices", submit: "Submit a manuscript", revise: "Revise a manuscript", withdraw_submission: "Change your mind",
   review_vote: "Peer review", alliance: "Alliances", leave_alliance: "Last chance to leave an alliance",
   stay_in_alliance: "Stay in an alliance", commit: "Done?",
 };

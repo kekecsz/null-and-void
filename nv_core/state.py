@@ -231,6 +231,17 @@ class GameResult(_Model):
     theory: int | None = None  # the Nobel Prize theory
 
 
+class SubmissionUndo(_Model):
+    """What a submission or revision in this step changed, so it can be withdrawn before the
+    researcher commits (specification 5.2)."""
+
+    manuscript: int
+    cost: int = 0  # submission fee and APC paid
+    index: int = 0  # where the development stack was among the researcher's ideas
+    taken: dict[Literal["fresh", "stale"], RecordArea] = {}  # the supporting records, from their areas
+    before: Manuscript | None = None  # revisions: the manuscript as it was in the Revise area
+
+
 class Pending(_Model):
     """Choices made in a simultaneous step, editable until the researcher commits."""
 
@@ -240,6 +251,7 @@ class Pending(_Model):
     development: list[Idea] = []
     votes: dict[int, Literal["accept", "revise"]] = {}
     scoring_order: list[int] | None = None
+    submissions: list[SubmissionUndo] = []  # Publication: submission and revisions
 
 
 class GameState(_Model):

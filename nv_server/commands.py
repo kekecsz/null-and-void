@@ -44,7 +44,7 @@ O12 observation, E9 experiment, Q4 prediction; state names with _ for spaces, pr
                 method IP3      undo 2   (drop your 2nd choice of this phase)
   Publication   submit D5 tier 2 [records O12 E9 E10:IP1,IP2/E11:IP3,IP4,WO1,WO2] [apc]
                 (a mixed experiment record lists experiment:rows parts joined by /)
-                revise D4
+                revise D4     withdraw D5   (take back this step's submission or revision)
   Peer review   vote 1 accept      (your 1st peer review card)
   Alliances     ally NAME   accept-ally NAME   leave-ally NAME   (any time the rules allow)
                 stay-ally NAME   (withdraw a leave choice in the last chance to leave stage)
@@ -229,6 +229,8 @@ def parse(state: GameState, seat: int, line: str) -> BaseModel:
         )
     if verb == "revise" and len(args) == 1:
         return a.Revise(seat=seat, manuscript=_id(args[0], "D"))
+    if verb == "withdraw" and len(args) == 1:
+        return a.WithdrawSubmission(seat=seat, manuscript=_id(args[0], "D"))
     if verb == "vote" and len(args) == 2 and args[0].isdigit():
         vote = args[1].lower()
         if vote not in ("accept", "revise"):

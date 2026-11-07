@@ -1,9 +1,9 @@
 """Publication: Submission, Supporting records, Revisions, Peer review and Article processing."""
 
-from nv_core.actions import ExperimentRecord, ObservationRecord, ReviewVote, Revise, Submit
+from nv_core.actions import ExperimentRecord, ObservationRecord, ReviewVote, Revise, Submit, WithdrawSubmission
 from nv_core.engine.context import Ctx, IllegalAction
 from nv_core.engine.observation import mismatch
-from nv_core.state import Card, Idea, Manuscript, RecordArea, Researcher, SupportRecord, Task
+from nv_core.state import Card, Idea, Manuscript, RecordArea, Researcher, SubmissionUndo, SupportRecord, Task
 
 
 # Submission ----------------------------------------------------------------------------------
@@ -16,6 +16,8 @@ def start_submission(ctx: Ctx) -> None:
         return r.allocated(Task.WRITE_UP) > 0 and (bool(r.ideas) or revisable)
 
     state.waiting = [seat for seat in state.turn_order() if has_work(seat)]
+    for pending in state.pending:
+        pending.submissions = []
 
 
 def _check_actor(ctx: Ctx, seat: int) -> Researcher:
@@ -97,15 +99,28 @@ def build_records(ctx: Ctx, r: Researcher, specs: list) -> list[SupportRecord]:
     return records
 
 
-def _remove_records(r: Researcher, records: list[SupportRecord], specs: list) -> None:
+def _remove_records(r: Researcher, specs: list) -> dict[str, RecordArea]:
+    """Take the records' cards out of the record areas; return what was taken, by area."""
+    taken = {"fresh": RecordArea(), "stale": RecordArea()}
     for spec in specs:
-        if isinstance(spec, ObservationRecord):
-            for area in (r.fresh, r.stale):
+        for name in ("fresh", "stale"):
+            area = _area(r, name)
+            if isinstance(spec, ObservationRecord):
+                taken[name].observations += [o for o in area.observations if o.id == spec.observation]
                 area.observations = [o for o in area.observations if o.id != spec.observation]
-        else:
-            taken = set(spec.cards)
-            for area in (r.fresh, r.stale):
-                area.cards = [c for c in area.cards if (c.experiment, c.card.var) not in taken]
+            else:
+                cards = set(spec.cards)
+                taken[name].cards += [c for c in area.cards if (c.experiment, c.card.var) in cards]
+                area.cards = [c for c in area.cards if (c.experiment, c.card.var) not in cards]
+    return taken
+
+
+def _return_records(ctx: Ctx, r: Researcher, taken: dict[str, RecordArea]) -> None:
+    order = {v.id: i for i, v in enumerate(ctx.world.variables)}
+    for name, records in taken.items():
+        area = _area(r, name)
+        area.observations = sorted(area.observations + records.observations, key=lambda o: o.id)
+        area.cards = sorted(area.cards + records.cards, key=lambda c: (c.experiment, order[c.card.var]))
 
 
 def _elements(idea: Idea) -> int:
@@ -154,9 +169,11 @@ def submit(ctx: Ctx, action: Submit) -> None:
     records = build_records(ctx, r, action.records)
     cost = check_submission(ctx, r, idea, action.tier, records, action.pay_apc)
     tier = ctx.settings.journal_tiers[action.tier]
+    index = r.ideas.index(idea)
     r.money -= cost
     r.ideas.remove(idea)
-    _remove_records(r, records, action.records)
+    taken = _remove_records(r, action.records)
+    state.pending[seat].submissions.append(SubmissionUndo(manuscript=idea.id, cost=cost, index=index, taken=taken))
     r.used[Task.WRITE_UP] = r.used.get(Task.WRITE_UP, 0) + 1
     manuscript = Manuscript(
         idea=idea,
@@ -192,9 +209,36 @@ def revise(ctx: Ctx, action: Revise) -> None:
         raise IllegalAction(f"there is no manuscript D{action.manuscript}") from None
     if manuscript.author != action.seat or manuscript.area != "revise":
         raise IllegalAction(f"D{action.manuscript} is not one of your manuscripts in the Revise area")
+    ctx.state.pending[action.seat].submissions.append(
+        SubmissionUndo(manuscript=manuscript.id, before=manuscript.model_copy(deep=True))
+    )
     r.used[Task.WRITE_UP] = r.used.get(Task.WRITE_UP, 0) + 1
     ctx.log("revision", f"{ctx.name(action.seat)} revises D{manuscript.id}", seat=action.seat)
     to_accept(ctx, manuscript)
+
+
+def withdraw_submission(ctx: Ctx, action: WithdrawSubmission) -> None:
+    """Undo a submission (fee and APC refunded, development stack and records returned, Portal
+    position freed) or a revision (back to the Revise area); the write-up staff member is free again."""
+    state, seat = ctx.state, action.seat
+    pending = state.pending[seat]
+    undo = next((u for u in pending.submissions if u.manuscript == action.manuscript), None)
+    if undo is None:
+        raise IllegalAction(f"D{action.manuscript} is not a submission or revision you made in this step")
+    r = state.researcher(seat)
+    index = next(i for i, m in enumerate(state.manuscripts) if m.id == action.manuscript)
+    if undo.before is not None:
+        state.manuscripts[index] = undo.before
+        what = "revision"
+    else:
+        manuscript = state.manuscripts.pop(index)
+        r.money += undo.cost
+        r.ideas.insert(undo.index, manuscript.idea)
+        _return_records(ctx, r, undo.taken)
+        what = "submission"
+    pending.submissions.remove(undo)
+    r.used[Task.WRITE_UP] -= 1
+    ctx.log("withdrawal", f"{ctx.name(seat)} withdraws the {what} of D{action.manuscript}", seat=seat)
 
 
 def supporting_records(ctx: Ctx, r: Researcher, idea: Idea) -> tuple[list[ObservationRecord], list[ExperimentRecord]]:
@@ -313,6 +357,8 @@ def describe(idea: Idea) -> str:
 # Peer review --------------------------------------------------------------------------------
 def start_peer_review(ctx: Ctx) -> None:
     state, s = ctx.state, ctx.settings
+    for pending in state.pending:
+        pending.submissions = []  # submissions can no longer be withdrawn
     occupied = sorted(m.position for m in state.manuscripts if m.area == "review")
     reviewers = {seat: state.researcher(seat).allocated(Task.PEER_REVIEW) for seat in state.turn_order()}
     deck = [p for p in occupied for _ in range(s.min_reviews_for_decision)] + [0] * sum(reviewers.values())

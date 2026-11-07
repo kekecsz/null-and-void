@@ -55,7 +55,9 @@ class FakeProvider:
             line = line.strip()
             if line.startswith("{"):
                 data = json.loads(line)
-                if data["type"] not in ("propose_alliance", "leave_alliance", "cancel_prediction", "cancel_development"):
+                if data["type"] not in (
+                    "propose_alliance", "leave_alliance", "cancel_prediction", "cancel_development", "withdraw_submission"
+                ):
                     return {"name": data.pop("type"), "arguments": {**data, "reason": "first listed"}}
         return {"name": "commit", "arguments": {"reason": "nothing else listed"}}
 

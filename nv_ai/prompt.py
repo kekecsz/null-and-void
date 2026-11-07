@@ -45,6 +45,8 @@ DESCRIPTIONS: dict[str, str] = {
     "submit": "Submission: submit a development stack to a journal tier with supporting records "
     "(observation records by id, experiment records as [experiment id, row id] cards, one per row).",
     "revise": "Revisions: move your manuscript from the Revise area to the Accept area.",
+    "withdraw_submission": "Submission: take back a submission or revision you made in this step "
+    "(refunds the fee, returns the records and the staff member).",
     "review_vote": "Peer review: vote on the manuscript of one of your peer review cards (0-based card index).",
     "propose_alliance": "Alliance: propose a formal alliance to another researcher (seat number, 0-based).",
     "accept_alliance": "Alliance: accept a proposed alliance.",

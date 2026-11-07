@@ -14,7 +14,7 @@ from nv_core.engine import IllegalAction, apply, validate
 from nv_core.engine.context import Ctx
 from nv_core.engine.observation import deal_probes
 from nv_core.engine.publication import rounds_in_processing
-from nv_core.state import Card, ExperimentCard, Idea, Manuscript, Observation, Phase, SupportRecord
+from nv_core.state import Card, ExperimentCard, Idea, Manuscript, Observation, Phase, SupportRecord, Task
 from tests.core.engine_helpers import do, game, set_readings, settings, to_phase
 
 S = settings()
@@ -257,6 +257,59 @@ def test_revision_moves_own_revise_area_manuscript_to_accept_with_tokens():
     m = state.manuscript(960)
     assert m.area == "accept" and m.tokens == rounds_in_processing(Ctx(state), m)
     _refused(state, a.Revise(seat=0, manuscript=961))  # the only Write-up staff member is used
+
+
+# Withdrawing (specification 5.2) -------------------------------------------------------------
+def test_withdrawing_a_submission_undoes_it_completely():
+    """Specification 5.2: before committing, a submission can be withdrawn: fee and APC refunded,
+    the development stack and records back in their areas, the staff member free again."""
+    state = _submission(write_up=1)
+    before = state.researcher(0).model_copy(deep=True)
+    records = [_exp_record(803), _obs_record(701)]
+    state = do(state, a.Submit(seat=0, manuscript=901, tier=1, records=records, pay_apc=True))
+    assert state.researcher(0).money < before.money
+    state = do(state, a.WithdrawSubmission(seat=0, manuscript=901))
+    r = state.researcher(0)
+    assert not any(m.id == 901 for m in state.manuscripts)
+    assert r.money == before.money and r.ideas == before.ideas
+    assert r.fresh == before.fresh and r.stale == before.stale
+    assert r.remaining(Task.WRITE_UP) == 1
+    state = do(state, a.Submit(seat=0, manuscript=903, tier=0, records=[]))  # the staff member can be used again
+    assert state.manuscript(903).area == "accept"
+
+
+def test_withdrawing_frees_the_portal_position_for_the_next_submission():
+    """Specification 5.2: a freed position goes to the next submission; others keep theirs."""
+    state = _submission(positions=2)
+    state = do(state, a.Submit(seat=0, manuscript=901, tier=1, records=[_exp_record(801)]))
+    state = do(state, a.Submit(seat=1, manuscript=911, tier=1, records=[_exp_record(811)]))
+    state = do(state, a.WithdrawSubmission(seat=0, manuscript=901))
+    assert state.manuscript(911).position == 2
+    state = do(state, a.Submit(seat=0, manuscript=902, tier=1, records=[_exp_record(802)]))
+    assert state.manuscript(902).position == 1
+
+
+def test_withdrawing_a_revision_puts_the_manuscript_back_in_the_revise_area():
+    """Specification 5.2: a revision can be withdrawn too."""
+    pending = [_manuscript(960, author=0, area="revise", records=1)]
+    state = _submission(write_up=1, manuscripts=pending)
+    before = state.manuscript(960).model_copy(deep=True)
+    state = do(state, a.Revise(seat=0, manuscript=960), a.WithdrawSubmission(seat=0, manuscript=960))
+    assert state.manuscript(960) == before
+    state = do(state, a.Revise(seat=0, manuscript=960))  # the staff member is free again
+    assert state.manuscript(960).area == "accept"
+
+
+def test_only_this_steps_own_submissions_can_be_withdrawn_and_only_before_committing():
+    """Specification 5.2: only your own submissions from this step, until you commit."""
+    earlier = [_manuscript(963, author=0, area="review", position=1, records=1, inputs={"IP2": "x", "IP3": "p"})]
+    state = _submission(manuscripts=earlier)
+    _refused(state, a.WithdrawSubmission(seat=0, manuscript=963))  # submitted in an earlier round
+    state = do(state, a.Submit(seat=1, manuscript=911, tier=1, records=[_exp_record(811)]))
+    _refused(state, a.WithdrawSubmission(seat=0, manuscript=911))  # someone else's
+    state = do(state, a.Submit(seat=0, manuscript=901, tier=1, records=[_exp_record(801)]))
+    state = do(state, a.CommitPhase(seat=0))
+    _refused(state, a.WithdrawSubmission(seat=0, manuscript=901))  # committed
 
 
 # Article processing ------------------------------------------------------------------------

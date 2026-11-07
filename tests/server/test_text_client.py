@@ -33,6 +33,7 @@ def test_parse_commands(state):
     assert submit.records[0] == a.ObservationRecord(observation=12)
     assert submit.records[1] == a.ExperimentRecord(cards=[(9, "IP1"), (9, "IP2"), (9, "IP3"), (9, "WO1")])
     assert submit.records[2] == a.ExperimentRecord(cards=[(10, "IP1"), (10, "IP2"), (11, "IP3"), (11, "WO1")])
+    assert parse(state, 0, "withdraw D5") == a.WithdrawSubmission(seat=0, manuscript=5)
     assert parse(state, 0, "vote 2 revise") == a.ReviewVote(seat=0, card=1, vote="revise")
     assert parse(state, 0, "ally r1") == a.ProposeAlliance(seat=0, partner=1)
     assert parse(state, 0, "done") == a.CommitPhase(seat=0)

@@ -138,6 +138,13 @@ class Revise(_Action):
     manuscript: int
 
 
+class WithdrawSubmission(_Action):
+    """Take back a submission or revision made in this step, before committing (specification 5.2)."""
+
+    type: Literal["withdraw_submission"] = "withdraw_submission"
+    manuscript: int
+
+
 class ReviewVote(_Action):
     type: Literal["review_vote"] = "review_vote"
     card: int  # index into the researcher's Peer review allocation cards
@@ -190,6 +197,7 @@ Action = Annotated[
         CancelDevelopment,
         Submit,
         Revise,
+        WithdrawSubmission,
         ReviewVote,
         ProposeAlliance,
         AcceptAlliance,
