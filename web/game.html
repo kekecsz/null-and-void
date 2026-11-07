@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Null &amp; Void</title>
+  <link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+  <header>
+    <h1><a href="/" style="color:inherit;text-decoration:none">Null &amp; Void</a></h1>
+    <div class="status" id="status">Connecting...</div>
+    <label class="small"><input type="checkbox" id="as-text"> show as text</label>
+  </header>
+  <div class="error-bar" id="error"></div>
+  <div id="banner"></div>
+  <div id="join" class="lobby" style="display:none"></div>
+  <main id="board">
+    <div class="column">
+      <section class="panel" id="actions-panel"><h2>What you can do now</h2><div id="actions"></div></section>
+      <section class="panel"><h2>World Grid</h2><div id="grid"></div></section>
+      <section class="panel"><h2>Literature</h2><div id="literature"></div></section>
+      <section class="panel"><h2>Submission Portal</h2><div id="portal"></div></section>
+      <section class="panel"><h2>Predictions</h2><div id="predictions"></div></section>
+    </div>
+    <div class="column">
+      <section class="panel"><h2>Your lab <span class="muted small">(behind your lab shield)</span></h2><div id="lab"></div></section>
+      <section class="panel"><h2>Tracks</h2><div id="tracks"></div></section>
+      <section class="panel" id="host-panel" style="display:none"><h2>Host controls</h2><div id="host"></div></section>
+      <section class="panel"><h2>Event log <input id="log-filter" placeholder="filter" class="small"></h2><div class="log" id="log"></div></section>
+    </div>
+  </main>
+  <section class="panel" id="text-view" style="display:none;margin:12px"><pre id="text"></pre></section>
+  <script src="/web/game.js"></script>
+</body>
+</html>

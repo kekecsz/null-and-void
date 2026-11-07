@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Null &amp; Void</title>
+  <link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+  <header><h1>Null &amp; Void</h1><span class="muted">a game about the replication crisis</span></header>
+  <div class="error-bar" id="error"></div>
+  <div class="lobby">
+    <section class="panel">
+      <h2>New game</h2>
+      <form id="create">
+        <div class="form-row">
+          World:
+          <select id="world"></select>
+          <span id="world-seed-row" style="display:none">world seed <input type="number" id="world-seed" placeholder="random"></span>
+        </div>
+        <h3>Seats</h3>
+        <div id="seats"></div>
+        <button type="button" id="add-seat">Add seat</button>
+        <button type="button" id="remove-seat">Remove seat</button>
+        <p class="muted small">A <b>human</b> seat is filled by a person who opens the join link. Automated seats:
+          scripted bots (selfish, cooperative, patient-&hellip;), the random bot, or an AI model (ai, ai:cooperative, ai:selfish; uses the API budget).</p>
+        <h3>More</h3>
+        <div class="form-row">Game seed <input type="number" id="seed" placeholder="random"></div>
+        <div class="form-row">Join password <input id="join-password" placeholder="none"> &nbsp;
+          Spectator password <input id="spectator-password" placeholder="none"></div>
+        <div class="form-row">Settings overrides (one <code>setting: value</code> per line; see docs/parameter_defaults.yaml)
+          <textarea id="overrides" rows="3" placeholder="nobel_condition: 5"></textarea></div>
+        <button class="primary" type="submit">Create game</button>
+      </form>
+      <div id="created" style="display:none" class="links">
+        <h3>Game created</h3>
+        <p>Join link for players: <input id="join-link" readonly></p>
+        <p>Host link (keep it private: it controls the game): <input id="host-link" readonly></p>
+        <p><a id="open-game" href="#"><button class="primary" type="button">Open the game</button></a></p>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Games on this server <button type="button" id="refresh">Refresh</button></h2>
+      <div id="games"></div>
+    </section>
+  </div>
+  <script src="/web/lobby.js"></script>
+</body>
+</html>
