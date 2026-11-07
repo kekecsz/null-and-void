@@ -33,3 +33,29 @@ longer offers them. **Waiting for:** the rulebook sentence above to be updated, 
 journal with peer review can include supporting records that are not necessary for the journal tier (...);
 submissions to a journal without peer review cannot." Remove this entry once the rulebook says so.
 
+## One patent per theory
+
+**Document:** rulebook, Observation and prediction phase > Scoring predictions (Successful predictions: Patent),
+and Funding > Patents.
+
+**Text:** "A patent linked to the cited theory is created, and is allocated to the researcher making the
+prediction (not the author of the cited theory)." and "Patents are always attached to a published theory."
+
+**Problem:** nothing limits how many patents a theory can carry, so every successful prediction adds one. In a
+playtest one theory had 5 patents. Zoltan's intention is at most one patent per theory.
+
+**Possible readings once a theory has its patent, when a later successful prediction cites it:**
+
+1. The first patent stays with its owner, and no new patent is created.
+2. The patent moves to the researcher who made the latest successful prediction.
+
+**Related:** Pieces lists 15 patent tokens. The rules don't say what happens when they run out, and the engine
+doesn't count them. With one patent per theory this matters only if more than 15 published theories carry
+patents at once.
+
+**Agreed with Zoltan (2026-11-07):** at most one patent per theory. The engine applies reading 1: the prediction
+still scores credit, citation and the Nobel Prize counter as usual, but no patent is created, and the event log
+says so. A retracted theory loses its patent, as the rulebook already says, so a re-published copy can get a new
+one. **Waiting for:** confirmation of reading 1 (or 2), and the rulebook to say "If the cited theory has no patent
+yet, a patent linked to it is created ..." in Scoring predictions. Remove this entry once the rulebook says so.
+

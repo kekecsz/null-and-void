@@ -185,6 +185,19 @@ def test_success_value_is_inputs_times_outcomes_doubled_if_preregistered(prereg)
     assert state.paper(t.id).patents == [0]
 
 
+def test_a_theory_carries_at_most_one_patent():
+    """docs/open_questions.md (pending rulebook change): a theory is linked to at most one patent; a
+    later successful prediction with it scores as usual but creates no new patent."""
+    state = _at_prediction()
+    t = _theory(state, 1, {"IP1": "a", "IP2": "x"}, {"WO1": "up", "WO2": "big"}, patents=[1])
+    before = _credits(state)
+    state, pid = _predict(state, 0, t.id, 0, prereg=True)
+    state = _finish(state)
+    assert _log(state, pid).success
+    assert state.researcher(0).credit - before[0] == 2 * 2 * 2
+    assert state.paper(t.id).patents == [1]
+
+
 def test_outcome_not_shown_on_the_theory_is_disregarded():
     """Scoring predictions: a theory showing only one world outcome only needs to match that one."""
     state = _at_prediction()

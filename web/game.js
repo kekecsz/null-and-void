@@ -315,7 +315,7 @@ function renderLiterature() {
     `${p.kind === "theory" ? "T" : "M"}${p.id}`, chip(p.author), p.tier + (p.open_access ? " (open access)" : ""),
     theoryText(p), p.kind === "theory" ? `${p.nobel} / ${v.nobel_condition}` : "",
     p.kind === "theory" ? `${p.retraction} / ${v.retraction_threshold}` : "",
-    [p.fresh ? "fresh out of print" : "", p.sideways ? "cited this round" : "", p.patents.length ? `${p.patents.length} patent(s)` : ""].filter(Boolean).join(", "),
+    [p.fresh ? "fresh out of print" : "", p.sideways ? "cited this round" : "", p.patents.length ? `patent: ${p.patents.map(nameOf).join(", ")}` : ""].filter(Boolean).join(", "),
   ]);
   fill($("literature"), rows.length ? table(["Paper", "Author", "Tier", "Content", "Nobel", "Retraction", ""], rows) : h("p", { class: "muted" }, "Nothing published yet."));
 }
