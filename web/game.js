@@ -462,13 +462,13 @@ function allocateForm(t) {
   const postdocs = numberInput(pending ? now + pending.hire_postdocs - pending.fire_postdocs : now, low, high);
   const students = numberInput(pending ? pending.hire_students : 0, 0, t.max_students);
   const inputs = {};
-  const rows = t.tasks.map((task) => {
+  const rows = [...t.tasks].sort((a, b) => taskOrder(a) - taskOrder(b)).map((task) => {
     const current = pending && pending.allocation[task] ? pending.allocation[task] : { postdocs: 0, students: 0 };
     const p = numberInput(current.postdocs, 0, task === "talent_development" ? 1 : null);
     const s = numberInput(current.students, 0, null);
     if (t.postdoc_only.includes(task)) s.disabled = true;
     inputs[task] = [p, s];
-    return [task.replace("_", " "), p, s];
+    return [task.replace("_", " "), TASK_WHEN[task] || "", p, s];
   });
   const button = h("button", { onclick: () => {
     const after = Number(postdocs.value);
@@ -483,17 +483,18 @@ function allocateForm(t) {
   return [
     h("div", { class: "form-row" }, `You have ${now} postdoc(s). Postdocs after hiring/firing: `, postdocs,
       ` (${low} to ${high === null ? "any" : high}) \u00b7 students to hire: `, students, ` (at most ${t.max_students})`),
-    table(["Task", "Postdocs", "Students"], rows),
+    table(["Task", "When", "Postdocs", "Students"], rows),
     h("div", { class: "small muted" }, "Every staff member needs a task; Development and Talent development take postdocs only; at most one on Talent development."),
     button,
   ];
 }
 
 function leavingForm(t) {
-  const inputs = Object.entries(t.students_by_task).map(([task, n]) => [task, numberInput(0, 0, n), n]);
+  const inputs = Object.entries(t.students_by_task).sort(([a], [b]) => taskOrder(a) - taskOrder(b))
+    .map(([task, n]) => [task, numberInput(0, 0, n), n]);
   return [
     h("p", {}, `${t.count} student(s) must leave. Choose from which tasks:`),
-    table(["Task", "Students there", "Leaving"], inputs.map(([task, input, n]) => [task, n, input])),
+    table(["Task", "When", "Students there", "Leaving"], inputs.map(([task, input, n]) => [task.replace("_", " "), TASK_WHEN[task] || "", n, input])),
     h("button", { onclick: () => {
       const by_task = {};
       for (const [task, input] of inputs) if (Number(input.value)) by_task[task] = Number(input.value);
