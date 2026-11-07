@@ -4,7 +4,7 @@ Research grants and Patents, which happen during Clean-up)."""
 from nv_core.engine.context import Ctx
 from nv_core.engine.ending import credit_victory, end_game
 from nv_core.engine.publication import describe
-from nv_core.state import Paper, Task
+from nv_core.state import Paper, PaperLog, RoundLog, Task
 
 
 def talent_development(ctx: Ctx) -> None:
@@ -59,6 +59,12 @@ def cleanup(ctx: Ctx) -> None:
             round=state.round,
         )
         state.published.append(paper)
+        state.paper_log.append(PaperLog(
+            paper=paper.id, manuscript=manuscript.id, idea=paper.idea, author=paper.author, tier=paper.tier,
+            open_access=paper.open_access, round=state.round, records=len(manuscript.records),
+            fabricated=sum(r.fabricated for r in manuscript.records),
+            reviewed=s.journal_tiers[paper.tier].peer_review,
+        ))
         letter = "T" if paper.kind == "theory" else "M"
         ctx.log(
             "published",
@@ -111,6 +117,11 @@ def cleanup(ctx: Ctx) -> None:
         r = state.researcher(seat)
         patents = sum(p.patents.count(seat) for p in state.published)
         r.money = s.grant_track[r.grant_position - 1].funding + patents * s.patent_funding
+
+    state.round_log.append(RoundLog(
+        round=state.round, credit=[r.credit for r in state.researchers],
+        nobel={p.id: p.nobel for p in state.published if p.kind == "theory"},
+    ))
 
     if state.period == "crisis":
         if state.rounds_in_crisis >= s.crisis_length:

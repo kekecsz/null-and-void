@@ -358,7 +358,7 @@ def finish_scoring(ctx: Ctx) -> None:
         for probe in state.probes:
             if not any(p.probe == probe.index and p.status == "scored" for p in state.predictions):
                 state.unsuccessful_predictions += 1
-                ctx.log("crisis_miss", f"No prediction on P{probe.index + 1}: one unsuccessful prediction")
+                ctx.log("crisis_miss", f"No prediction on P{probe.index + 1}: one unsuccessful prediction", probe=probe.index)
                 if check_crisis_crash(ctx):
                     return
     record_observations(ctx)
@@ -413,6 +413,9 @@ def retract(ctx: Ctx, paper: Paper) -> None:
     state.published.remove(paper)
     idea = Idea(id=state.new_id(), kind="theory", inputs=dict(paper.idea.inputs), outcomes=dict(paper.idea.outcomes))
     state.researcher(paper.author).ideas.append(idea)
+    for entry in state.paper_log:
+        if entry.paper == paper.id:
+            entry.retracted_round = state.round
     ctx.log("retraction", f"T{paper.id} is retracted and returned to {ctx.name(paper.author)}", theory=paper.id)
     ctx.credit(paper.author, ctx.settings.retraction_ac_penalty, f"T{paper.id} retracted")
 
@@ -425,6 +428,7 @@ def record_observations(ctx: Ctx) -> None:
     for p in state.predictions:
         if p.status == "hidden":
             p.status = "discarded"
+        p.readings = {v: c.state for v, c in state.probes[p.probe].readings.items()}
     state.prediction_log += state.predictions
     state.predictions = []
 

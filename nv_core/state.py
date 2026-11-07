@@ -222,6 +222,7 @@ class Prediction(_Model):
     cited: int | None = None  # the theory cited after the identical-theory preference
     status: Literal["hidden", "revealed", "pruned", "scored", "discarded"] = "hidden"
     success: bool | None = None  # set for every prediction once outcomes are revealed
+    readings: dict[str, str | None] = {}  # hidden bookkeeping: the Probe's visible readings (debrief)
 
 
 class GameResult(_Model):
@@ -240,6 +241,44 @@ class SubmissionUndo(_Model):
     index: int = 0  # where the development stack was among the researcher's ideas
     taken: dict[Literal["fresh", "stale"], RecordArea] = {}  # the supporting records, from their areas
     before: Manuscript | None = None  # revisions: the manuscript as it was in the Revise area
+
+
+class PaperLog(_Model):
+    """Hidden bookkeeping for the debrief (specification 5.1, section 10): one entry per published
+    paper, kept after its supporting records are discarded and after a retraction."""
+
+    paper: int
+    manuscript: int
+    idea: Idea
+    author: int
+    tier: int
+    open_access: bool
+    round: int
+    records: int
+    fabricated: int  # supporting experiment records mixed from several experiments (specification 5.5)
+    reviewed: bool  # went through peer review
+    retracted_round: int | None = None
+
+
+class ReviewLog(_Model):
+    """Hidden bookkeeping for the debrief: one peer review decision."""
+
+    manuscript: int
+    author: int
+    tier: int
+    round: int
+    accepts: int
+    revises: int
+    accepted: bool
+    fabricated: int
+
+
+class RoundLog(_Model):
+    """Hidden bookkeeping for the debrief: the standings at the end of a round's Clean-up phase."""
+
+    round: int
+    credit: list[int]
+    nobel: dict[int, int]  # published theory -> its Nobel Prize counter
 
 
 class Pending(_Model):
@@ -300,6 +339,9 @@ class GameState(_Model):
     proposals: list[list[int]] = []  # [from, to]
     # Hidden bookkeeping (never in player views)
     prediction_log: list[Prediction] = []
+    paper_log: list[PaperLog] = []
+    review_log: list[ReviewLog] = []
+    round_log: list[RoundLog] = []
     # End
     result: GameResult | None = None
 

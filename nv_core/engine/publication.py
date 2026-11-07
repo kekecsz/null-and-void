@@ -3,7 +3,7 @@
 from nv_core.actions import ExperimentRecord, ObservationRecord, ReviewVote, Revise, Submit, WithdrawSubmission
 from nv_core.engine.context import Ctx, IllegalAction
 from nv_core.engine.observation import mismatch
-from nv_core.state import Card, Idea, Manuscript, RecordArea, Researcher, SubmissionUndo, SupportRecord, Task
+from nv_core.state import Card, Idea, Manuscript, RecordArea, Researcher, ReviewLog, SubmissionUndo, SupportRecord, Task
 
 
 # Submission ----------------------------------------------------------------------------------
@@ -414,6 +414,11 @@ def finish_peer_review(ctx: Ctx) -> None:
             continue
         accepts, revises = votes.count("accept"), votes.count("revise")
         decision = "Revise area" if revises > len(votes) / 2 else "Accept area"
+        state.review_log.append(ReviewLog(
+            manuscript=manuscript.id, author=manuscript.author, tier=manuscript.tier, round=state.round,
+            accepts=accepts, revises=revises, accepted=decision == "Accept area",
+            fabricated=sum(r.fabricated for r in manuscript.records),
+        ))
         ctx.log("review_decision", f"D{manuscript.id} (position {position}): {accepts} accept, {revises} revise -> {decision}")
         if decision == "Revise area":
             manuscript.area = "revise"

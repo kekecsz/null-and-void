@@ -76,11 +76,7 @@ def make_player(
 
 def theory_truth(world: WorldData, inputs: dict[str, str], outcomes: dict[str, str]) -> tuple[float, float]:
     """True (accuracy, coverage) of a theory in the World Table, as in specification 4.3."""
-    covered = [row for row in world.rows if all(row.inputs[k] == v for k, v in inputs.items())]
-    if not covered:
-        return 0.0, 0.0
-    hits = sum(all(row.outcomes[k] == v for k, v in outcomes.items()) for row in covered)
-    return hits / len(covered), len(covered) / len(world.rows)
+    return world.theory_truth(inputs, outcomes)
 
 
 def _text(values: dict[str, str]) -> str:

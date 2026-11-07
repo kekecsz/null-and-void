@@ -53,6 +53,15 @@ class WorldData(_Frozen):
                 return variable
         raise KeyError(variable_id)
 
+    def theory_truth(self, inputs: dict[str, str], outcomes: dict[str, str]) -> tuple[float, float]:
+        """True (accuracy, coverage) of a theory in the World Table (specification 4.3): the share
+        of the rows it covers where its outcomes are right, and the share of rows it covers."""
+        covered = [row for row in self.rows if all(row.inputs[k] == v for k, v in inputs.items())]
+        if not covered:
+            return 0.0, 0.0
+        hits = sum(all(row.outcomes[k] == v for k, v in outcomes.items()) for row in covered)
+        return hits / len(covered), len(covered) / len(self.rows)
+
     def outcomes_for(self, inputs: dict[str, str]) -> dict[str, str]:
         """The realised world outcomes for a complete input combination."""
         for row in self.rows:
