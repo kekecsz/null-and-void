@@ -366,7 +366,7 @@ function describe(a) {
     case "commit": return "Commit: my choices for this step are final";
     case "pass": return "Pass: stop experimenting this round";
     case "claim_probe_time": return `Take Probe time on P${a.probe + 1}`;
-    case "make_prediction": return `Predict with T${a.theory} on P${a.probe + 1}${a.preregister ? " (preregistered)" : ""}`;
+    case "make_prediction": return `Predict with T${a.theory}${paperAuthor(a.theory)} on P${a.probe + 1}${a.preregister ? " (preregistered)" : ""}`;
     case "cancel_prediction": return `Withdraw prediction Q${a.prediction}`;
     case "set_preregistered": return `${a.preregister ? "Preregister" : "Un-preregister"} Q${a.prediction}`;
     case "reveal_prediction": return a.reveal ? `Reveal Q${a.prediction}` : `Keep Q${a.prediction} hidden after all`;
@@ -380,6 +380,12 @@ function describe(a) {
     case "stay_in_alliance": return `Stay in the alliance with ${n(a.partner)}`;
     default: return JSON.stringify(a);
   }
+}
+
+function paperAuthor(id) {  // " (name)" or " (name, your own)" for a published paper
+  const paper = view().published.find((p) => p.id === id);
+  if (!paper) return "";
+  return ` (${nameOf(paper.author)}${paper.author === msg.you ? ", your own" : ""})`;
 }
 
 function predictionContext(a) {  // what a theory says, for prediction choices
