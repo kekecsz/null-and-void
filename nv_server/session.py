@@ -142,7 +142,7 @@ class GameSession:
         return player
 
     def start_workers(self) -> None:
-        if self.state is None or self.closed:
+        if self.state is None or self.closed or self.status in ("finished", "ended"):
             return
         for seat, kind in enumerate(self.meta["seats"]):
             if kind != HUMAN and seat not in self.workers:
@@ -527,6 +527,32 @@ class GameSetup:
     world_model: dict[str, Any] | None = None  # the world file's effects and probabilities (debrief)
 
 
+def new_meta(setup: GameSetup, names: list[str], kinds: list[str], host_token: str, status: str = "lobby") -> dict[str, Any]:
+    """A game's stored metadata (specification 6.1)."""
+    return {
+        "version": META_VERSION,
+        "title": setup.title,
+        "world_id": setup.world.world_id,
+        "world": setup.world.model_dump(mode="json"),
+        "world_model": setup.world_model,
+        "settings": setup.settings.model_dump(mode="json"),
+        "seed": setup.seed,
+        "players": names,
+        "seats": kinds,
+        "original_seats": list(kinds),
+        "colours": COLOURS[: len(kinds)],
+        "status": status,
+        "created": time.time(),
+        "host_token": token_hash(host_token),
+        "join_password": password_hash(setup.join_password) if setup.join_password else None,
+        "spectator_password": password_hash(setup.spectator_password) if setup.spectator_password else None,
+        "seat_tokens": {},
+        "ai_notes": {},
+        "ai_cost": {},
+        "ai_cost_base": {},
+    }
+
+
 @dataclass
 class GameManager:
     storage: Storage
@@ -559,29 +585,7 @@ class GameManager:
             raise GameError("seat names must differ")
         game_id = secrets.token_urlsafe(6)
         host = new_token()
-        meta = {
-            "version": META_VERSION,
-            "title": setup.title,
-            "world_id": setup.world.world_id,
-            "world": setup.world.model_dump(mode="json"),
-            "world_model": setup.world_model,
-            "settings": setup.settings.model_dump(mode="json"),
-            "seed": setup.seed,
-            "players": names,
-            "seats": kinds,
-            "original_seats": list(kinds),
-            "colours": COLOURS[: len(kinds)],
-            "status": "lobby",
-            "created": time.time(),
-            "host_token": token_hash(host),
-            "join_password": password_hash(setup.join_password) if setup.join_password else None,
-            "spectator_password": password_hash(setup.spectator_password) if setup.spectator_password else None,
-            "seat_tokens": {},
-            "ai_notes": {},
-            "ai_cost": {},
-            "ai_cost_base": {},
-        }
-        self.storage.create_game(game_id, meta)
+        self.storage.create_game(game_id, new_meta(setup, names, kinds, host))
         return game_id, host
 
     async def get(self, game_id: str) -> GameSession:

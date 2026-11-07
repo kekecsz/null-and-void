@@ -194,3 +194,29 @@ def test_game_rows_have_the_specified_columns(venus):
         assert {"theory", "probe", "preregistered", "revealed", "success", "experiment_knowledge_of_failure"} <= set(report.predictions[0])
     if report.theories:
         assert {"author", "tier", "true_accuracy", "coverage", "successes", "failures", "highest_nobel", "retracted"} <= set(report.theories[0])
+
+
+def test_nv_sim_import_opens_a_simulated_game_in_the_server(tmp_path, capsys):
+    """Specification 9.2 and 7.3: a simulated game can be imported into the server's database and
+    opened like any finished game (spectator replay, debrief)."""
+    from fastapi.testclient import TestClient
+
+    from nv_server.app import create_app
+
+    out, db = tmp_path / "run", tmp_path / "games.sqlite"
+    assert main(["run", "--players", "3", "--seats", "selfish,cooperative,random", "--games", "1", "--seed", "8",
+                 "--world", WORLD_FILE, "--jobs", "1", "--out", str(out)]) == 0
+    game = _read(out / "games.csv")[0]
+    capsys.readouterr()
+    assert main(["import", str(out), "1", "--db", str(db)]) == 0
+    printed = capsys.readouterr().out
+    link = next(line.strip() for line in printed.splitlines() if "#host=" in line)
+    game_id, host = link.split("/game/")[1].split("#host=")
+    with TestClient(create_app(db=db)) as client:
+        info = client.get(f"/api/games/{game_id}").json()
+        assert info["status"] == "finished" and [s["kind"] for s in info["seats"]] == ["selfish", "cooperative", "random"]
+        debrief = client.post(f"/api/games/{game_id}/debrief", json={}).json()
+        assert debrief["ending"]["ending"] == game["ending"] and debrief["ending"]["round"] == int(game["rounds"])
+        assert debrief["real_world"]["main_effects"]
+        replay = client.post(f"/api/games/{game_id}/replay", json={"host_token": host, "at": 10**6}).json()
+        assert replay["at"] == replay["total"] and replay["problem"] == "" and replay["view"]["result"]["ending"] == game["ending"]

@@ -106,7 +106,7 @@ The `GameState` (Pydantic, serialisable to JSON) contains:
 - **Per researcher:** academic credit, money, Grant funding and Talent development track positions, staff (postdocs and students, each with a task), unpublished theories and methods, experiment card pool, records (Fresh and Stale), predictions, patents owned.
 - **Submission Portal:** awaiting-review positions, Revise area, Accept area with rounds-in-processing tokens.
 - **Published papers:** each theory or method with its author, journal tier, open-access flag, Nobel Prize and Retraction counters, Fresh-out-of-print marker, sideways (cited this round) flag and attached patents.
-- **Hidden bookkeeping for the debrief:** e.g. which records were fabricated, which predictions were made against experiment knowledge. Never shown in player views.
+- **Hidden bookkeeping for the debrief:** every prediction of the game with the visible readings of its Probe (so the debrief can tell which predictions were made against the predictor's own experiment knowledge); every published paper, kept after its supporting records are discarded and after a retraction, with how many of its records were fabricated; every peer review decision; the academic credit and Nobel Prize counters at the end of each round. Never shown in player views.
 
 ### 5.2 Round structure
 
@@ -174,7 +174,7 @@ The server is a stateless FastAPI app: every request rebuilds the game from stor
 ### 6.1 Persistence
 
 - **One storage interface, two backends:** a local SQLite file (milestone 5) and Firestore (milestone 7) store the same data, so the server does not care which one it runs on.
-- **Layout** (Firestore paths; the SQLite tables mirror them): `games/{id}` holds metadata (scenario, world, settings, seed, seats, status, hashed join and spectator passwords); `games/{id}/actions/{seq}` holds the ordered action log, each action with the events it produced; `games/{id}/snapshots/{seq}` holds a state snapshot at the start of each round; `games/{id}/ai_decisions/{n}` holds the AI decision log. Loading starts from the latest snapshot and applies the actions after it; the stored events give the event log and the scripted bots' memory, so loading never replays a whole game. Metadata also holds the AI seats' notes and costs.
+- **Layout** (Firestore paths; the SQLite tables mirror them): `games/{id}` holds metadata (scenario, world, settings, seed, seats, status, hashed join and spectator passwords); `games/{id}/actions/{seq}` holds the ordered action log, each action with the events it produced; `games/{id}/snapshots/{seq}` holds a state snapshot at the start of each round (also used to replay any action: 7.3); `games/{id}/ai_decisions/{n}` holds the AI decision log. Loading starts from the latest snapshot and applies the actions after it; the stored events give the event log and the scripted bots' memory, so loading never replays a whole game. Metadata also holds the AI seats' notes and costs, and the world file's drawn effects, interactions and row probabilities (for the debrief).
 - **Writes:** an action is accepted only if its sequence number is the next one, checked in a transaction. Two players acting at once can never corrupt the log; the loser simply retries against the new state.
 - **Saving is automatic.** Every action is stored the moment it is accepted, so a game can stop at any point and resume days later from the host's link.
 
@@ -188,7 +188,7 @@ The server is a stateless FastAPI app: every request rebuilds the game from stor
 ### 6.3 Creating and joining games
 
 1. The host opens the lobby, chooses a scenario and world (or generates a new one), a settings preset, and the seats (within the player limits in parameter\_defaults.yaml), each marked human, AI (with its model and persona) or scripted bot (9.4).
-2. The host gets a **join link** and an optional password, and a separate **spectator password**.
+2. The host gets a **join link** and an optional password, and an optional **spectator password**. Without a spectator password, only the host link can spectate.
 3. A player opens the link, enters a nickname and picks a free seat and a colour from a fixed list. The browser keeps a seat token, so a refresh or a dropped connection rejoins the same seat; a link with the token (`#seat=...`) takes the seat to another device.
 4. The host starts the game when all human seats are filled. Settings are locked from then on.
 
@@ -198,6 +198,7 @@ The server is a stateless FastAPI app: every request rebuilds the game from stor
 - Hand a disconnected player's seat to an AI and back again.
 - Remove a player or reassign a seat.
 - See who the game is waiting for in each simultaneous phase. There are no turn timers.
+- Spectate at any time (7.3), also while playing a seat in the same browser: the host is trusted, like a facilitator who knows the hidden world.
 
 ### 6.5 Security and data
 
@@ -235,9 +236,10 @@ Plain and functional, desktop-first, English only. One page with these areas:
 
 ### 7.3 Spectator mode
 
-- Opened with the spectator password; read-only.
-- Shows everything: the World Table, true Probe states and outcomes before reveal, every lab, every hidden prediction and record (fabricated ones marked), the effect model behind the table.
-- Intended for the teacher or facilitator, and for replaying finished games step by step (forward, back, jump to a round).
+- Opened with the host link, or by anyone with the spectator password (if the host set one); read-only.
+- Shows everything: the World Table, true Probe states and outcomes before reveal, every lab, every hidden prediction and record (fabricated ones marked), the AI seats' notes. The effect model behind the table is in the debrief.
+- Intended for the teacher or facilitator, and for replaying games step by step: one action forward or back, to the start of any round, or to any action number (out of the total so far), and back to the live game. A replay is rebuilt from the latest round snapshot before that action. A game played under older rules may not replay past the point where the rules changed; the replay then says so and stops there.
+- Simulated games can be opened the same way: `nv-sim import` (9.2) stores one in the server's database as a finished game.
 
 ## 8. AI opponents (`nv_ai`)
 
@@ -300,7 +302,7 @@ nv-sim run --scenario venus_expedition --players 4 \
 
 - `--world` fixes one world; without it, each game generates and screens a fresh world, so results average over worlds.
 - `--sweep nobel_condition=4,5,6` runs every combination of the listed settings.
-- Games run in parallel processes; each game's seed is recorded, so any single game can be replayed in the text client or in spectator mode (`nv-sim record <run folder> <game>` rebuilds it as a game record that `nv-play load` opens).
+- Games run in parallel processes; each game's seed is recorded, so any single game can be replayed in the text client or in spectator mode: `nv-sim record <run folder> <game>` rebuilds it as a game record that `nv-play load` opens, and `nv-sim import <run folder> <game>` stores it in the server's database as a finished game, with a host link for its replay and debrief.
 - **AI cost guard:** before a batch with AI seats starts, the simulator estimates its cost from a short pilot and asks for confirmation; `--max-cost` stops the batch when reached.
 
 ### 9.3 Output files
@@ -358,7 +360,7 @@ Where the table leaves a choice open (several equally good theories, records or 
 
 When a game ends, every player sees a debrief that reveals the hidden world and shows how the published literature compared with the truth; this is the main teaching moment.
 
-It is built entirely from the full event log and the World Table, so it can also be opened later for any finished game, and exported as a printable page plus CSV.
+It is built entirely from the final game state (with its hidden bookkeeping, 5.1), the full event log and the World Table, so it can also be opened later for any finished game, and exported as a printable page plus CSV (one file per table). Players can open it once the game is over (a game with a join password asks for it); spectators can open it at any time.
 
 | Panel | What it shows | Linked to players? |
 | --- | --- | --- |
@@ -372,7 +374,9 @@ It is built entirely from the full event log and the World Table, so it can also
 | Peer review | acceptance rate by tier; papers accepted with fabricated (mixed) experiment records | no, totals only |
 | Over time | academic credit per researcher by round, and the Nobel counters of leading theories | yes |
 
-Sabotage is inferred, not certain: the debrief labels it "failed despite contrary evidence the predictor held". AI seats' notes and reasons can be shown alongside, which helps explain their play.
+Sabotage is inferred, not certain: the debrief labels it "failed despite contrary evidence the predictor held". Contrary evidence: one of the predictor's own experiments, run by then, whose inputs match the theory's inputs and the Probe's visible readings, showed an outcome that contradicts the theory. AI seats' notes are shown alongside, which helps explain their play.
+
+**Luck.** The true chance of a prediction is the true accuracy of its theory: the share of the World Table rows the theory covers where its outcomes are right (as in 4.3). Lucky successes are successful predictions whose true chance is below `debrief_low_chance`; unlucky failures are failed predictions whose true chance is above 1 − `debrief_low_chance`. The chance of a Nobel Prize streak is the theory's true accuracy to the power of the number of successes in the streak.
 
 ## 11. Configuration
 
@@ -395,6 +399,7 @@ The software's own settings live in `settings/software.yaml`:
 | `ai_retry_limit` | 2 |
 | `ai_notes_max_chars` | 2,000 |
 | `ai_price_table` | per model: input, cached-input, cache-write and output price per million tokens |
+| `debrief_low_chance` | 0.5 (debrief, Luck panel, section 10) |
 | `bot_confidence_threshold` | 0.7 (scripted bots, 9.4: lower bound of the success rate) |
 | `bot_formulate_threshold` | 0.5 (scripted bots, 9.4: the same lower bound for a promising theory, to formulate) |
 | `bot_rival_citation_factor` | 2 (scripted selfish bots cite a rival's theory only when it is worth this many times their best own prediction) |

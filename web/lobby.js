@@ -65,7 +65,14 @@ async function loadGames() {
     const link = document.createElement("a");
     link.href = `/game/${g.id}`;
     link.textContent = "open";
-    tr.insertCell().append(link);
+    const cell = tr.insertCell();
+    cell.append(link);
+    if (["finished", "ended"].includes(g.status)) {  // the debrief can be reopened later (specification 10)
+      const debrief = document.createElement("a");
+      debrief.href = `/game/${g.id}/debrief`;
+      debrief.textContent = "debrief";
+      cell.append(" \u00b7 ", debrief);
+    }
   }
   box.innerHTML = "";
   box.append(table);

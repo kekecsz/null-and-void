@@ -21,7 +21,9 @@ true world.
 | 2 | Rules engine and text client | done |
 | 3 | Random bot and simulator | done |
 | 4 | AI player and scripted bots | done |
-| 5–7 | Server and web UI, spectator mode and debrief, deployment | planned |
+| 5 | Server, persistence and web UI | implemented; acceptance playtests in progress |
+| 6 | Spectator mode and debrief | implemented; acceptance playtests in progress |
+| 7 | Deployment | planned |
 
 The milestones and their acceptance criteria are in the specification, section 13.
 
@@ -95,6 +97,16 @@ A browser remembers its seat, so a refresh rejoins it. To play the same seat fro
 link with `#seat=<token>`; on your first device the token is in the browser's local storage under
 `nv:<game>:seat`. With `--host 0.0.0.0`, Windows may ask once whether to allow Python through the firewall.
 
+**Spectating and replay** (specification 7.3). The host link always opens the spectator view: every lab, the true
+Probe states, every hidden prediction, the World Table and the AI players' notes. A host who also plays a seat in
+the same browser can switch with "Watch as spectator" in the host controls. Anyone else can watch with the
+spectator password, if the host set one when creating the game. The replay bar steps through the game one action
+at a time, jumps to the start of a round or to an action number, and returns to the live game.
+
+**Debrief** (specification 10). When a game ends, the banner links to the debrief: how it ended, the published
+literature against the true world, luck, possible sabotage, fabrication and file-drawer totals, scores by round,
+and the hidden world itself. It can be reopened later from the game list, printed, or downloaded as CSV tables.
+
 ## Playing in the terminal
 
 The text client runs a whole game on one computer, with every seat at the same keyboard (specification,
@@ -151,6 +163,9 @@ are in [`settings/software.yaml`](settings/software.yaml).
 # Rebuild game 17 of a run and step through it in the text client
 .venv/Scripts/nv-sim record results/run01 17
 .venv/Scripts/nv-play load games/run01_game17.json
+
+# ... or open it in the browser, with spectator replay and debrief (it prints the link)
+.venv/Scripts/nv-sim import results/run01 17
 ```
 
 A run writes `games.csv`, `rounds.csv`, `theories.csv`, `predictions.csv` and `worlds.csv`, and prints the

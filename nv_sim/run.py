@@ -3,6 +3,7 @@
     nv-sim run --players 4 --games 100 --seed 42 --out results/run01
     nv-sim run --world scenarios/venus_expedition/worlds/world_seed1.json --sweep nobel_condition=4,5,6 ...
     nv-sim record results/run01 17 --save games/run01_game17.json   (then: nv-play load ...)
+    nv-sim import results/run01 17                    (then: open it in nv-server: replay, debrief)
 
 Every game's seed and settings are written to games.csv and run.json, so any game can be rebuilt
 exactly with ``nv-sim record`` and replayed in the text client.
@@ -26,6 +27,7 @@ from typing import Any
 import yaml
 
 from nv_core.paths import SCENARIOS_DIR
+from nv_core.record import GameRecord
 from nv_core.settings import SettingsError, load_settings
 from nv_sim.game import AIContext, GameReport, check_seat_types, play_game
 from nv_world.cli import world_summary
@@ -317,37 +319,72 @@ def _progress(done: int, total: int) -> None:
         print(f"  {done}/{total} games", flush=True)
 
 
+def _rebuild(run: Path, game: int) -> tuple[GameRecord, dict[str, Any] | None, str]:
+    """Rebuild one game of a run exactly: (record, world model for the debrief, description).
+    Raises ValueError with the reason when it cannot."""
+    from nv_world.worldfile import world_to_json
+
+    config = json.loads((run / "run.json").read_text(encoding="utf-8"))
+    entry = next((g for g in config["games"] if g["game"] == game), None)
+    if entry is None:
+        raise ValueError(f"the run has no game {game}")
+    scenario = load_scenario(Path(config["scenario"]))
+    if config["world"]:
+        drawn = load_world(Path(config["world"]))
+        world = world_data(scenario, drawn, Path(config["world"]).stem)
+    else:
+        drawn = generate_world(scenario, entry["seed"])
+        world = world_data(scenario, drawn, f"generated_seed{entry['seed']}")
+    if has_ai(config["seats"]):  # model replies cannot be replayed from a seed: use the saved actions
+        saved = run / "records" / f"game{game}.json"
+        if not saved.exists():
+            raise ValueError(f"no saved record {saved}")
+        record = GameRecord.load(saved)
+        return record, world_to_json(drawn), "saved record"
+    overrides = config["combinations"][entry["combination"]]
+    settings = load_settings({**scenario.parameter_overrides, **overrides})
+    report = play_game(world, settings, entry["seed"], config["seats"], max_actions=config["max_actions"], keep_record=True)
+    return report.record, world_to_json(drawn), f"{report.game['ending']}, {report.game['rounds']} rounds"
+
+
 def _record(args: argparse.Namespace) -> int:
     """Rebuild one game of a run exactly, as a record the text client can load."""
     out = Path(args.run)
-    config = json.loads((out / "run.json").read_text(encoding="utf-8"))
-    entry = next((g for g in config["games"] if g["game"] == args.game), None)
-    if entry is None:
-        print(f"error: the run has no game {args.game}", file=sys.stderr)
+    try:
+        record, _, what = _rebuild(out, args.game)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
         return 2
-    saved = out / "records" / f"game{args.game}.json"
-    if has_ai(config["seats"]):  # model replies cannot be replayed from a seed: use the saved actions
-        if not saved.exists():
-            print(f"error: no saved record {saved}", file=sys.stderr)
-            return 2
-        save = Path(args.save) if args.save else Path("games") / f"{out.name}_game{args.game}.json"
-        save.parent.mkdir(parents=True, exist_ok=True)
-        save.write_bytes(saved.read_bytes())
-        print(f"Game {args.game} copied to {save}")
-        print(f"Replay it with: nv-play load {save}")
-        return 0
-    scenario = load_scenario(Path(config["scenario"]))
-    overrides = config["combinations"][entry["combination"]]
-    settings = load_settings({**scenario.parameter_overrides, **overrides})
-    if config["world"]:
-        world = world_data(scenario, load_world(Path(config["world"])), Path(config["world"]).stem)
-    else:
-        world = world_data(scenario, generate_world(scenario, entry["seed"]), f"generated_seed{entry['seed']}")
-    report = play_game(world, settings, entry["seed"], config["seats"], max_actions=config["max_actions"], keep_record=True)
     save = Path(args.save) if args.save else Path("games") / f"{out.name}_game{args.game}.json"
-    report.record.save(save)
-    print(f"Game {args.game} ({report.game['ending']}, {report.game['rounds']} rounds) saved to {save}")
+    record.save(save)
+    print(f"Game {args.game} ({what}) saved to {save}")
     print(f"Replay it with: nv-play load {save}")
+    return 0
+
+
+def _import(args: argparse.Namespace) -> int:
+    """Store one game of a run in the server's database, to open like any finished game
+    (spectator replay, debrief)."""
+    from nv_server.app import DEFAULT_DB
+    from nv_server.importer import import_record
+    from nv_server.storage import SQLiteStorage
+
+    out = Path(args.run)
+    try:
+        record, model, what = _rebuild(out, args.game)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if not record.seats:  # the seat types, so the server shows who played
+        record.seats = list(json.loads((out / "run.json").read_text(encoding="utf-8"))["seats"])
+    db = Path(args.db) if args.db else DEFAULT_DB
+    db.parent.mkdir(parents=True, exist_ok=True)
+    title = f"{record.world.title} (simulated: {out.name}, game {args.game})"
+    game_id, host = import_record(record, SQLiteStorage(db), title, model)
+    print(f"Game {args.game} ({what}) imported into {db} as game {game_id}.")
+    print("With nv-server running, open (keep this link: it is the host link):")
+    print(f"  http://127.0.0.1:8000/game/{game_id}#host={host}")
+    print(f"  debrief: http://127.0.0.1:8000/game/{game_id}/debrief")
     return 0
 
 
@@ -374,8 +411,12 @@ def main(argv: list[str] | None = None) -> int:
     record.add_argument("run", help="the run's output folder")
     record.add_argument("game", type=int, help="game number (from games.csv)")
     record.add_argument("--save", help="where to save the game (default: games/<run>_game<N>.json)")
+    imported = commands.add_parser("import", help="store one game of a run in the server's database (replay, debrief)")
+    imported.add_argument("run", help="the run's output folder")
+    imported.add_argument("game", type=int, help="game number (from games.csv)")
+    imported.add_argument("--db", help="the server's database (default: games/nv_games.sqlite)")
     args = parser.parse_args(argv)
-    return _run(args) if args.command == "run" else _record(args)
+    return {"run": _run, "record": _record, "import": _import}[args.command](args)
 
 
 if __name__ == "__main__":
