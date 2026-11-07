@@ -53,9 +53,11 @@ playtest one theory had 5 patents. Zoltan's intention is at most one patent per 
 doesn't count them. With one patent per theory this matters only if more than 15 published theories carry
 patents at once.
 
-**Agreed with Zoltan (2026-11-07):** at most one patent per theory. The engine applies reading 1: the prediction
-still scores credit, citation and the Nobel Prize counter as usual, but no patent is created, and the event log
-says so. A retracted theory loses its patent, as the rulebook already says, so a re-published copy can get a new
-one. **Waiting for:** confirmation of reading 1 (or 2), and the rulebook to say "If the cited theory has no patent
-yet, a patent linked to it is created ..." in Scoring predictions. Remove this entry once the rulebook says so.
+**Agreed with Zoltan (2026-11-07):** reading 2. A theory carries at most one patent, held by the researcher who
+made the latest successful prediction citing it. The rulebook already gives the patent to the researcher making
+the prediction. The engine applies this: the prediction scores as usual, the patent moves, and the event log
+says so. A retracted theory loses its patent, as the rulebook already says. **Waiting for:** the rulebook to say
+so in Scoring predictions, for example "A theory has at most one patent. If the cited theory has no patent yet, a
+patent linked to it is created; otherwise its patent moves. Either way the patent is allocated to the researcher
+making the prediction (not the author of the cited theory)." Remove this entry once the rulebook says so.
 

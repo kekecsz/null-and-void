@@ -378,12 +378,14 @@ def score(ctx: Ctx, p: Prediction) -> None:
         ctx.credit(p.seat, value, "successful prediction")
         reward = s.citation_reward + (s.crisis_pred_citation_reward_bonus if crisis else 0)
         ctx.credit(paper.author, reward, f"T{paper.id} cited")
-        # At most one patent per theory: pending a rulebook change (docs/open_questions.md).
+        # At most one patent per theory, held by the latest successful predictor: pending a
+        # rulebook change (docs/open_questions.md).
         if not paper.patents:
-            paper.patents.append(p.seat)
             ctx.log("patent", f"{ctx.name(p.seat)} gets a patent on T{paper.id}", seat=p.seat, theory=paper.id)
-        else:
-            ctx.log("patent", f"No new patent: T{paper.id} already has one ({ctx.name(paper.patents[0])})", theory=paper.id)
+        elif paper.patents[0] != p.seat:
+            ctx.log("patent", f"The patent on T{paper.id} moves from {ctx.name(paper.patents[0])} to {ctx.name(p.seat)}",
+                    seat=p.seat, theory=paper.id)
+        paper.patents = [p.seat]
         if not crisis:
             paper.nobel += 1
             paper.retraction = 0
