@@ -225,8 +225,8 @@ function renderGrid() {
   });
   fill($("grid"), h("table", { class: "grid" }, h("tr", {}, head), rows),
     h("p", { class: "muted small legend" },
-      h("span", { class: "specialty" }, "Specialty"), " always revealed and true · ",
-      h("span", { class: "sensor" }, "sensor L1-L3"), " revealed, may be noise · ",
+      h("span", { class: "specialty" }, "Specialty"), " always revealed and true \u00b7 ",
+      h("span", { class: "sensor" }, "sensor L1-L3"), " revealed, may be noise \u00b7 ",
       h("span", { class: "unsensed" }, "no sensor"), " shows blank: a sensor can go here"));
 }
 
