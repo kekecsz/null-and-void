@@ -8,7 +8,7 @@ ai_provider: openai
 ai_default_model: gpt-6-luna
 ai_reasoning_effort: medium          # the model's default; GPT-6 Luna accepts none, low, medium, high, xhigh, max
 ai_max_cost_per_decision: 0.50       # USD per decision, reasoning included
-ai_total_budget: 5.00                # USD for all AI calls, across runs (tracked in settings/ai_spending.csv)
+ai_total_budget: 10.00               # USD for all AI calls, across runs (tracked in settings/ai_spending.csv); milestones 4 and 5
 ai_max_input_tokens: 30000           # per decision
 ai_retry_limit: 2
 ai_notes_max_chars: 2000

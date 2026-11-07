@@ -17,12 +17,12 @@ Where this spec seems to disagree with one of them, that document is right and t
 The project has three deliverables built on one shared rules engine:
 
 1. **Playable game** — a multiplayer web game hosted on Google Cloud Run, with a text-first core, a simple visual interface, AI opponents, a spectator mode and an end-of-game debrief.
-2. **Headless balance simulator** — runs many games without a user interface, with any mix of player types (random bots by default, AI players optionally), and writes results as CSV files for analysis.
+2. **Headless balance simulator** — runs many games without a user interface, with any mix of player types (random bots by default, scripted strategy bots and AI players optionally), and writes results as CSV files for analysis.
 3. **World generator** — builds a scenario's World Table from its effect model, screens it against acceptance criteria and saves it as a world file.
 
 **Primary use:** teaching and demonstrating research-culture problems (replication crisis, questionable research practices) to graduate students and postdocs. Non-commercial, small scale: a handful of concurrent games at most.
 
-**Out of scope for the first version:** in-game chat, rule-based strategic bots, a scenario editor, a polished visual design, languages other than English, user accounts.
+**Out of scope for the first version:** in-game chat, a scenario editor, a polished visual design, languages other than English, user accounts.
 
 ## 2. Design principles
 
@@ -44,16 +44,16 @@ Every path runs through `nv_core`: the server, the AI player and the simulator n
 
 | Package | Responsibility | Depends on |
 | --- | --- | --- |
-| `nv_core` | Rules engine: settings loading, state, actions, phases, scoring, views, text rendering; builds the Probe deck, Input Parameter Decks and sensor noise from a world file | no other project package; Pydantic and PyYAML only (no network, clock or database) |
+| `nv_core` | Rules engine: settings loading, state, actions, phases, scoring, views, text rendering; builds the Probe deck, Input Parameter Decks and sensor noise from a world file; the evidence tally of what a player has seen (9.4) | no other project package; Pydantic and PyYAML only (no network, clock or database) |
 | `nv_world` | Scenario loading, World Table generation, screening, world files | `nv_core` data types and settings |
-| `nv_server` | FastAPI app: lobby, joining, WebSocket updates, persistence, host controls | `nv_core`, `nv_ai` |
+| `nv_server` | FastAPI app: lobby, joining, WebSocket updates, persistence, host controls | `nv_core`, `nv_ai`, `nv_sim` (scripted bot seats) |
 | `nv_ai` | AI player: prompt building, tool-call action choice, token and cost tracking | `nv_core`, the model provider's SDK (OpenAI first, Anthropic later) |
-| `nv_sim` | Headless batch simulator and random bot | `nv_core`, `nv_world`, `nv_ai` |
+| `nv_sim` | Headless batch simulator, random bot and scripted strategy bots | `nv_core`, `nv_world`, `nv_ai` |
 | `web/` | Browser client: plain HTML/JS, renders views, sends actions | server API only |
 | `scenarios/` | One folder per scenario: its scenario.md and generated world files | — |
 | docs/ | rules.md (exported from Google Docs), specification.md and parameter\_defaults.yaml | — |
 
-**Technology:** the latest stable Python (3.14 when this was written; the project requires at least that version), FastAPI, Pydantic models for every action and view, PyYAML for the settings and scenario files, WebSockets for live updates, Firestore for persistence, Google Cloud Run for hosting, pytest for tests. The web client stays dependency-light (no build step in the first version).
+**Technology:** the latest stable Python (3.14 when this was written; the project requires at least that version), FastAPI, Pydantic models for every action and view, PyYAML for the settings and scenario files, WebSockets for live updates, SQLite (local) and Firestore (deployed) for persistence, Google Cloud Run for hosting, pytest for tests. The web client stays dependency-light (no build step in the first version).
 
 ## 4. World generator (`nv_world`)
 
@@ -169,12 +169,13 @@ The rulebook is written for human readers and leaves some details to common sens
 
 ## 6. Multiplayer server (`nv_server`)
 
-The server is a stateless FastAPI app on Google Cloud Run: every request rebuilds the game from Firestore, applies one action through the engine, stores it, and pushes fresh views to everyone connected.
+The server is a stateless FastAPI app: every request rebuilds the game from storage, applies one action through the engine, stores it, and pushes fresh views to everyone connected. It runs locally first (milestone 5) and on Google Cloud Run later (milestone 7).
 
 ### 6.1 Persistence
 
-- **Firestore layout:** `games/{id}` holds metadata (scenario, world, settings, seed, seats, status, hashed join and spectator passwords); `games/{id}/actions/{seq}` holds the ordered action log; `games/{id}/snapshots/{seq}` holds a state snapshot at the start of each round, so loading never replays a whole game.
-- **Writes:** an action is accepted only if its sequence number is the next one, checked in a Firestore transaction. Two players acting at once can never corrupt the log; the loser simply retries against the new state.
+- **One storage interface, two backends:** a local SQLite file (milestone 5) and Firestore (milestone 7) store the same data, so the server does not care which one it runs on.
+- **Layout** (Firestore paths; the SQLite tables mirror them): `games/{id}` holds metadata (scenario, world, settings, seed, seats, status, hashed join and spectator passwords); `games/{id}/actions/{seq}` holds the ordered action log; `games/{id}/snapshots/{seq}` holds a state snapshot at the start of each round, so loading never replays a whole game.
+- **Writes:** an action is accepted only if its sequence number is the next one, checked in a transaction. Two players acting at once can never corrupt the log; the loser simply retries against the new state.
 - **Saving is automatic.** Every action is stored the moment it is accepted, so a game can stop at any point and resume days later from the host's link.
 
 ### 6.2 Live updates
@@ -185,7 +186,7 @@ The server is a stateless FastAPI app on Google Cloud Run: every request rebuild
 
 ### 6.3 Creating and joining games
 
-1. The host opens the lobby, chooses a scenario and world (or generates a new one), a settings preset, and the seats (within the player limits in parameter\_defaults.yaml), each marked human or AI (with its model).
+1. The host opens the lobby, chooses a scenario and world (or generates a new one), a settings preset, and the seats (within the player limits in parameter\_defaults.yaml), each marked human, AI (with its model and persona) or scripted bot (9.4).
 2. The host gets a **join link** and an optional password, and a separate **spectator password**.
 3. A player opens the link, enters a nickname and picks a free seat and colour. The browser keeps a seat token, so a refresh or a dropped connection rejoins the same seat.
 4. The host starts the game when all human seats are filled. Settings are locked from then on.
@@ -255,7 +256,7 @@ In simultaneous phases, AI seats decide in parallel in the background while huma
 
 ### 8.2 Memory
 
-The API is stateless, so each AI seat keeps a private notes field in the game state (plans, which theories it is working towards, what it has learned from experiments). The model can update its notes as part of any decision, within a set length. The notes are hidden from other players and shown in spectator mode and the debrief. Until the server stores games (milestone 5), the notes are kept by the AI player and written to the decision log, so a game resumed from its record starts with empty notes.
+The API is stateless, so each AI seat keeps a private notes field in the game state (plans, which theories it is working towards, what it has learned from experiments). The model can update its notes as part of any decision, within a set length. The notes are hidden from other players and shown in spectator mode and the debrief. The server stores them with the game, so a resumed game keeps them. The text client and the simulator do not store games: there the notes are kept by the AI player and written to the decision log, so a game resumed from its record starts with empty notes.
 
 ### 8.3 Personas
 
@@ -386,7 +387,7 @@ The software's own settings live in `settings/software.yaml`:
 | `ai_default_model` | `gpt-6-luna`, chosen per seat in the lobby |
 | `ai_reasoning_effort` | the model's default (`medium` for GPT-6 Luna) |
 | `ai_max_cost_per_decision` | 0.50 USD, reasoning included |
-| `ai_total_budget` | 5.00 USD for all AI calls, across runs |
+| `ai_total_budget` | 10.00 USD for all AI calls, across runs (testing in milestones 4 and 5) |
 | `ai_max_input_tokens` | 30,000 per decision |
 | `ai_retry_limit` | 2 |
 | `ai_notes_max_chars` | 2,000 |
@@ -417,7 +418,7 @@ Build in this order, so the rules and numbers are mostly tuned before anyone pla
 | 2 | Rules engine and text client (local, all seats on one machine) | Full games can be played in the text client (by scripted players; playing a whole game by hand is too slow with typed commands, so hand play is tested with the web UI in milestone 5); replaying the action log reproduces the final state exactly. |
 | 3 | Random bot and simulator | 100 random-bot games finish without errors or broken invariants (e.g. no negative staff, one Probe time per Probe, counters within range); CSV outputs are written. |
 | 4 | AI player and scripted bots | An AI seat finishes complete games in the text client; invalid moves fall back safely; token use and cost are reported. Every scripted bot type (9.4) finishes 100 games without errors or broken invariants, and a comparison run reports the endings of the main seating mixes. |
-| 5 | Server, persistence and web UI | 2–5 people on separate computers finish a game; a refreshed browser rejoins its seat; a paused game resumes after a server restart. |
+| 5 | Server, persistence and web UI | A human finishes a game in the browser against scripted bots, and one against AI seats; two browsers on the same network finish a game together; a refreshed browser rejoins its seat; a paused game resumes after a server restart. |
 | 6 | Spectator mode and debrief | A spectator sees the hidden World Table; the debrief appears at game end and can be reopened later; fabrication and file-drawer panels show totals only. |
 | 7 | Deployment | Runs on Google Cloud Run with Firestore and Secret Manager; a game with an AI seat works end to end from outside the local network. |
 
