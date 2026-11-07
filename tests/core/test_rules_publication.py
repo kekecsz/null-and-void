@@ -155,6 +155,20 @@ def test_full_portal_refuses_peer_review_tiers_but_not_tier_0():
     assert state.manuscript(903).area == "accept"
 
 
+def test_journals_without_peer_review_take_no_records_beyond_their_minimum():
+    """docs/open_questions.md (pending rulebook change): spare records cannot help a submission to
+    a journal without peer review, so they are refused there, and not offered."""
+    from nv_core.engine import legal_actions
+
+    state = _submission()
+    _refused(state, a.Submit(seat=0, manuscript=903, tier=0, records=[_exp_record(801)]))
+    assert validate(state, a.Submit(seat=0, manuscript=903, tier=0, records=[])) is None
+    assert validate(state, a.Submit(seat=0, manuscript=901, tier=1, records=[_exp_record(801), _exp_record(802)])) is None
+    submit = next(o for o in legal_actions(state, 0) if o.type == "submit")
+    assert all(not spare for key, spare in submit.template["spare_records"].items() if key.endswith("/0"))
+    assert any(spare for key, spare in submit.template["spare_records"].items() if key.endswith("/1"))
+
+
 def test_submission_takes_the_first_open_position():
     """Submission: the manuscript goes to the first open numbered position."""
     taken = [

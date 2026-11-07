@@ -150,6 +150,10 @@ def check_submission(ctx: Ctx, r: Researcher, idea: Idea, tier_number: int, reco
         raise IllegalAction(f"tier {tier_number} needs at least {tier.min_observations} observation record(s)")
     if experiments < tier.min_experiments:
         raise IllegalAction(f"tier {tier_number} needs at least {tier.min_experiments} experiment record(s)")
+    # Pending a rulebook change (docs/open_questions.md): records beyond the minimum only shorten
+    # processing and make a stack look bigger, which a journal without peer review cannot use.
+    if not tier.peer_review and len(records) > max(tier.min_records, tier.min_observations + tier.min_experiments):
+        raise IllegalAction(f"tier {tier_number} has no peer review, so it takes no records beyond its minimum")
     cost = tier.submission_fee + (tier.apc if pay_apc else 0)
     if cost > ctx.spendable(r):
         if cost <= r.money:
@@ -292,7 +296,8 @@ def possible_submissions(ctx: Ctx, seat: int) -> list[tuple[Submit, list]]:
                 check_submission(ctx, r, idea, tier_number, build_records(ctx, r, records), False)
             except IllegalAction:
                 continue
-            found.append((Submit(seat=seat, manuscript=idea.id, tier=tier_number, records=records), rest[needed:]))
+            spare = rest[needed:] if tier.peer_review else []
+            found.append((Submit(seat=seat, manuscript=idea.id, tier=tier_number, records=records), spare))
     return found
 
 
