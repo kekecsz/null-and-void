@@ -640,6 +640,8 @@ function submitForm(option) {
   return option.actions.map((a) => {
     const spare = (t.spare_records[`${a.manuscript}/${a.tier}`] || []).map((r) => [r, h("input", { type: "checkbox" })]);
     const apc = t.apc[String(a.tier)];
+    // Only offered when the submission fee and the charge together fit the money that may be spent.
+    const canPayApc = apc > 0 && (t.submission_fee ? t.submission_fee[String(a.tier)] : 0) + apc <= t.spendable;
     const apcBox = h("input", { type: "checkbox" });
     // Duplicates are allowed (e.g. to fast-track a reformulated theory), so these only warn.
     const idea = view().lab.ideas.find((i) => i.id === a.manuscript);
@@ -658,7 +660,8 @@ function submitForm(option) {
       warnings.map((w) => h("div", { class: "warn" }, w)),
       spare.length ? h("div", { class: "small" }, "Add spare records (each extra record shortens processing): ",
         spare.map(([r, box]) => h("label", {}, box, ` ${recordText(r)} `))) : null,
-      apc > 0 ? h("label", { class: "small" }, apcBox, ` pay the article processing charge (${apc}; you can spend ${t.spendable}) `) : null,
+      canPayApc ? h("label", { class: "small" }, apcBox, ` pay the article processing charge (${apc}; you can spend ${t.spendable}) `) : null,
+      apc > 0 && !canPayApc ? h("span", { class: "small muted" }, ` (article processing charge ${apc}: not enough money) `) : null,
       h("button", { onclick: submit }, "Submit"));
   });
 }

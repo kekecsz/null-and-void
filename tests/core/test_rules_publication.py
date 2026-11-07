@@ -198,6 +198,18 @@ def test_apc_is_paid_and_makes_the_manuscript_open_access():
     assert state.researcher(0).money == money - TIERS[1]["submission_fee"] - TIERS[1]["apc"]
 
 
+def test_submission_options_give_each_tiers_fee_and_charge_and_the_money_to_spend():
+    """Submission and Article processing: the page needs [submission_fee], [apc] and the money that
+    may be spent to offer the article processing charge only when it can be paid."""
+    from nv_core.engine import legal_actions
+
+    state = _submission()
+    template = next(o for o in legal_actions(state, 0) if o.type == "submit").template
+    assert template["submission_fee"] == {str(i): t["submission_fee"] for i, t in enumerate(TIERS)}
+    assert template["apc"] == {str(i): t["apc"] for i, t in enumerate(TIERS)}
+    assert template["spendable"] == state.researcher(0).money
+
+
 @pytest.mark.parametrize("spare, allowed", [(0, True), (-1, False)])
 def test_at_zero_credit_apc_only_if_postdocs_can_still_be_paid(spare, allowed):
     """Academic credit rules: at 0 credit a researcher cannot spend money they need to pay their postdocs."""

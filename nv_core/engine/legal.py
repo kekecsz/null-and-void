@@ -225,6 +225,7 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
                             for submit, spare in found
                         },
                         "apc": {str(i): t.apc for i, t in enumerate(tiers)},
+                        "submission_fee": {str(i): t.submission_fee for i, t in enumerate(tiers)},
                         "spendable": ctx.spendable(r),
                         "rule": "extra records and pay_apc may be added to a listed submission",
                     },
