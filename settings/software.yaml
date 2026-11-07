@@ -23,8 +23,10 @@ ai_price_table:
 
 # Scripted strategy bots (specification section 9.4)
 bot_confidence_threshold: 0.7        # lower bound of the 95% interval of a theory's success rate
-bot_nobel_guard: 2                   # successes: selfish bots avoid rivals' theories this close to the Nobel Prize
+bot_rival_citation_factor: 2.0       # selfish bots cite a rival's theory only if worth this many times their best own
+bot_kill_counter: 2                  # selfish bots reveal failures of rivals' theories with at least this Nobel counter
 bot_memory_corruption: 0.0           # chance per round that a remembered Probe reading changes
+bot_max_wait_rounds: 20              # patient bots wake up after this round at the latest
 
 # Server (specification section 6)
 snapshot_every: round

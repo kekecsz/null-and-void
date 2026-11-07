@@ -102,7 +102,7 @@ added to `settings/ai_spending.csv`, and no calls are made once `ai_total_budget
 # Watch an AI play against two random bots (the game plays itself; costs are printed)
 .venv/Scripts/nv-play new scenarios/venus_expedition/worlds/world_seed1.json --players Ada,Bot1,Bot2 --seat Ada=ai --seat Bot1=random --seat Bot2=random
 
-# Play yourself against an AI (seat types: random, ai, ai:cooperative, ai:selfish)
+# Play yourself against an AI (seat types: random, selfish, cooperative, patient-selfish, patient-cooperative, ai, ai:cooperative, ai:selfish)
 .venv/Scripts/nv-play new scenarios/venus_expedition/worlds/world_seed1.json --players Zoltan,Ada --seat Ada=ai
 
 # Simulate games with AI seats (asks before starting; --max-cost caps this run)
@@ -112,11 +112,17 @@ added to `settings/ai_spending.csv`, and no calls are made once `ai_total_budget
 ## Simulating games
 
 The simulator plays many games with automated players and writes CSV files for analysis in R or Python
-(specification, section 9). For now the players are random bots; AI players come with milestone 4.
+(specification, section 9). Seats can be random bots, AI players (section 8) or scripted strategy bots
+(section 9.4): `selfish`, `cooperative`, `patient-selfish` and `patient-cooperative`. The scripted bots' settings
+are in [`settings/software.yaml`](settings/software.yaml).
 
 ```sh
 # 100 games with 4 random bots, each on a freshly generated world
 .venv/Scripts/nv-sim run --players 4 --games 100 --seed 42 --out results/run01
+
+# Does a selfish field crash more often than a cooperative one? (100 games each)
+.venv/Scripts/nv-sim run --players 3 --seats selfish,selfish,selfish --games 100 --out results/selfish
+.venv/Scripts/nv-sim run --players 3 --seats cooperative,cooperative,cooperative --games 100 --out results/cooperative
 
 # All games on one world, comparing three values of a setting
 .venv/Scripts/nv-sim run --world scenarios/venus_expedition/worlds/world_seed1.json --sweep nobel_condition=4,5,6 --games 100 --out results/run02
@@ -138,7 +144,7 @@ reported as an error.
 | `nv_core/` | Rules engine: settings, game state, actions, the phases of a round, player views and text rendering, game records |
 | `nv_world/` | World generator: scenario reader, World Table generation, screening, world files, `nv-world` command |
 | `nv_server/` | The `nv-play` text client (the multiplayer server comes in milestone 5) |
-| `nv_sim/` | Simulator: random bot, invariant checks, the `nv-sim` command |
+| `nv_sim/` | Simulator: random bot, scripted strategy bots, invariant checks, the `nv-sim` command |
 | `nv_ai/` | AI player: prompt and tools, model provider, costs and the spending ledger |
 | `web/` | Browser client (milestone 5) |
 | `scenarios/` | One folder per scenario, with its scenario file and generated worlds |

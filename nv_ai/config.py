@@ -40,6 +40,12 @@ class SoftwareSettings(BaseModel):
     ai_retry_limit: int
     ai_notes_max_chars: int
     ai_price_table: dict[str, Prices]
+    # Scripted strategy bots (specification 9.4)
+    bot_confidence_threshold: float
+    bot_rival_citation_factor: float
+    bot_kill_counter: int
+    bot_memory_corruption: float
+    bot_max_wait_rounds: int
 
     def prices(self, model: str) -> Prices:
         if model not in self.ai_price_table:
