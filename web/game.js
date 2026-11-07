@@ -420,9 +420,24 @@ function paperAuthor(id) {  // " (name)" or " (name, your own)" for a published 
   return ` (${nameOf(paper.author)}${paper.author === msg.you ? ", your own" : ""})`;
 }
 
+// Prediction choices: by Probe, then my own theories first, then the theories closest to the
+// Nobel Prize (highest counter), then by theory number; the plain choice before the preregistered one.
+function sortPredictions(actions) {
+  const papers = Object.fromEntries(view().published.map((p) => [p.id, p]));
+  const key = (a) => {
+    const p = papers[a.theory] || {};
+    return [a.probe, p.author === msg.you ? 0 : 1, -(p.nobel || 0), a.theory, a.preregister ? 1 : 0];
+  };
+  return [...actions].sort((x, y) => {
+    const kx = key(x), ky = key(y);
+    for (let i = 0; i < kx.length; i++) if (kx[i] !== ky[i]) return kx[i] - ky[i];
+    return 0;
+  });
+}
+
 function predictionContext(a) {  // what a theory says, for prediction choices
   const paper = view().published.find((p) => p.id === a.theory);
-  return paper ? ` - ${theoryText(paper)}` : "";
+  return paper ? ` - ${theoryText(paper)} (Nobel ${paper.nobel}/${view().nobel_condition})` : "";
 }
 
 function reviewForm(option) {  // one block per allocation card: the manuscript, its records, the two votes
@@ -641,6 +656,7 @@ function renderActions() {
     else if (option.type === "submit") body = submitForm(option);
     else if (option.type === "order_predictions") body = orderForm(option.template);
     else if (option.type === "review_vote") body = reviewForm(option);
+    else if (option.type === "make_prediction") body = completeActions({ ...option, actions: sortPredictions(option.actions) });
     else body = completeActions(option);
     box.append(h("div", { class: "option" }, h("h3", {}, TITLES[option.type] || option.type), body));
   }
