@@ -13,6 +13,7 @@ from nv_core.views import player_view, visible_events
 from nv_core.world_data import WorldData
 from nv_sim import invariants
 from nv_sim.bots import BOTS
+from nv_sim.strategy import SEAT_TYPES, BotSettings, StrategyBot
 
 MAX_REFUSALS = 20  # a bot whose choices are refused this often in a row commits or passes instead
 RECENT_EVENTS = 25  # public events shown to an AI player with each decision
@@ -35,11 +36,17 @@ def check_seat_types(seat_types: list[str]) -> None:
         if base == "ai":
             if persona and persona not in PERSONAS:
                 raise ValueError(f"unknown persona {persona!r} (available: {', '.join(PERSONAS)})")
-        elif kind not in BOTS:
-            raise ValueError(f"unknown seat type {kind!r} (available: {', '.join(BOTS)}, ai, ai:<persona>)")
+        elif kind not in BOTS and kind not in SEAT_TYPES:
+            raise ValueError(
+                f"unknown seat type {kind!r} (available: {', '.join([*BOTS, *SEAT_TYPES])}, ai, ai:<persona>)"
+            )
 
 
-def make_players(seat_types: list[str], seed: int, world: WorldData | None = None, ai: AIContext | None = None) -> list:
+def make_players(
+    seat_types: list[str], seed: int, world: WorldData | None = None, ai: AIContext | None = None,
+    settings: Settings | None = None,
+) -> list:
+    """``world`` and ``settings`` are needed by AI seats and scripted strategy bots."""
     check_seat_types(seat_types)
     players = []
     for seat, kind in enumerate(seat_types):
@@ -55,6 +62,10 @@ def make_players(seat_types: list[str], seed: int, world: WorldData | None = Non
                     game=str(seed), name=f"{kind}{seat + 1}", fallback_seed=f"{seed}/seat{seat}/fallback",
                 )
             )
+        elif kind in SEAT_TYPES:
+            if world is None or settings is None:
+                raise ValueError("scripted strategy bots need the world and the game settings")
+            players.append(StrategyBot(f"{seed}/seat{seat}", kind, world, settings, BotSettings.load()))
         else:
             players.append(BOTS[kind](f"{seed}/seat{seat}"))
     return players
@@ -217,7 +228,7 @@ def play_game(
     on_action=None,
 ) -> GameReport:
     """``on_action(state, seat, action, events)`` is called after every accepted action."""
-    players = make_players(seat_types, seed, world, ai)
+    players = make_players(seat_types, seed, world, ai, settings)
     names = [f"{kind}{seat + 1}" for seat, kind in enumerate(seat_types)]
     all_events: list = []
     state = new_game(world, settings, seed, names)
@@ -260,6 +271,9 @@ def play_game(
             state, events = result
             actions.append(action)
             all_events += events
+            for watcher, other in enumerate(players):  # bots watch the board like humans do
+                if hasattr(other, "observe"):
+                    other.observe(visible_events(events, watcher))
             if on_action:
                 on_action(state, seat, action, events)
             collector.events(state, events)

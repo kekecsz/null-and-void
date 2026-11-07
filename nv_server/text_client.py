@@ -48,7 +48,7 @@ def _automated_players(record: GameRecord, ai=None) -> list:
             from nv_sim.run import ai_context
 
             ai = ai_context()
-        player = make_players([kind], record.seed, record.world, ai)[0]
+        player = make_players([kind], record.seed, record.world, ai, record.settings)[0]
         if hasattr(player, "name"):
             player.name = record.players[seat]
         players.append(player)
@@ -153,6 +153,9 @@ class TextClient:
         self.state, events = result
         self.record.actions.append(action)
         self.events += events
+        for watcher, player in enumerate(self.players):  # scripted bots watch the board
+            if hasattr(player, "observe"):
+                player.observe(visible_events(events, watcher))
         if self.save_path:
             self.record.save(self.save_path)
         humans = [s for s in range(len(self.players)) if self._human(s)]

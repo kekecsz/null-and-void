@@ -40,7 +40,7 @@ def deal_probes(ctx: Ctx) -> None:
             else:
                 probe.readings[parameter] = Card(var=parameter, state=None, origin="supply")
         shown = ", ".join(f"{k}={c.state or 'blank'}" for k, c in probe.readings.items())
-        ctx.log("probe", f"P{probe.index + 1}: {shown}", probe=probe.index)
+        ctx.log("probe", f"P{probe.index + 1}: {shown}", probe=probe.index, readings={k: c.state for k, c in probe.readings.items()})
 
 
 def mismatch(values: dict[str, str], cards: dict[str, Card]) -> bool:
@@ -207,7 +207,7 @@ def finish_prediction(ctx: Ctx) -> None:
     for probe in state.probes:
         probe.outcomes_revealed = True
         shown = ", ".join(f"{k}={c.state}" for k, c in probe.outcomes.items())
-        ctx.log("outcomes", f"P{probe.index + 1} outcomes: {shown}", probe=probe.index)
+        ctx.log("outcomes", f"P{probe.index + 1} outcomes: {shown}", probe=probe.index, outcomes={k: c.state for k, c in probe.outcomes.items()})
     for prediction in state.predictions:
         prediction.success = _success(ctx, prediction)  # hidden ones too, for the debrief
 
