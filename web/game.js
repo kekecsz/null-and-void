@@ -283,11 +283,31 @@ function renderLiterature() {
   fill($("literature"), rows.length ? table(["Paper", "Author", "Tier", "Content", "Nobel", "Retraction", ""], rows) : h("p", { class: "muted" }, "Nothing published yet."));
 }
 
+// Peer review: each of my non-zero allocation cards names a position in the Awaiting peer review area.
+function myReviewCards() {
+  const v = view();
+  return (msg.you !== null && v.review_cards && v.review_cards[String(msg.you)]) || [];
+}
+const manuscriptUnderReview = (position) => view().manuscripts.find((m) => m.area === "review" && m.position === position);
+function reviewLabel(card) {
+  const position = myReviewCards()[card];
+  const m = manuscriptUnderReview(position);
+  const twice = myReviewCards().filter((c) => c === position).length > 1 ? `, your card ${card + 1}` : "";
+  return (m ? `D${m.id} (awaiting peer review #${position}${twice})` : `awaiting peer review #${position}${twice}`);
+}
+function recordList(m) {
+  if (!m.record_cards) return m.records;
+  return h("div", {}, `${m.records} record(s):`, m.record_cards.map((r) => h("div", { class: "small" }, `${r.kind}: ${values(r.cards)}`)));
+}
+
 function renderPortal() {
   const v = view();
+  const reviewing = new Set(myReviewCards().filter(Boolean));
   const rows = v.manuscripts.map((m) => [
-    `D${m.id}`, chip(m.author), m.tier, m.area + (m.position ? ` #${m.position}` : ""),
-    m.area === "accept" ? `${m.tokens} round(s) to go` : "", m.votes, m.records,
+    `D${m.id}`, chip(m.author), m.tier,
+    h("span", {}, m.area + (m.position ? ` #${m.position}` : ""),
+      m.area === "review" && reviewing.has(m.position) ? h("div", { class: "hot" }, "you review this") : null),
+    m.area === "accept" ? `${m.tokens} round(s) to go` : "", m.votes, recordList(m),
     m.content ? theoryText(m.content) : "(face down)",
   ]);
   fill($("portal"), rows.length ? table(["Manuscript", "Author", "Tier", "Area", "Processing", "Votes", "Records", "Content"], rows) : h("p", { class: "muted" }, "No manuscripts."));
@@ -347,7 +367,7 @@ function describe(a) {
     case "develop_method": return `Develop a method for ${a.parameter}`;
     case "cancel_development": return `Drop development choice ${a.index + 1}`;
     case "revise": return `Revise manuscript D${a.manuscript}`;
-    case "review_vote": return `Peer review card ${a.card + 1}: ${a.vote}`;
+    case "review_vote": return `Review ${reviewLabel(a.card)}: ${a.vote}`;
     case "propose_alliance": return `Propose an alliance to ${n(a.partner)}`;
     case "accept_alliance": return `Accept the alliance with ${n(a.partner)}`;
     case "leave_alliance": return `Leave the alliance with ${n(a.partner)}`;
@@ -359,6 +379,22 @@ function describe(a) {
 function predictionContext(a) {  // what a theory says, for prediction choices
   const paper = view().published.find((p) => p.id === a.theory);
   return paper ? ` - ${theoryText(paper)}` : "";
+}
+
+function reviewForm(option) {  // one block per allocation card: the manuscript, its records, the two votes
+  const chosen = view().lab.pending.votes || {};
+  const cards = [...new Set(option.actions.map((a) => a.card))];
+  return cards.map((card) => {
+    const m = manuscriptUnderReview(myReviewCards()[card]);
+    const vote = chosen[String(card)];
+    return h("div", { class: "form-row" },
+      h("b", {}, reviewLabel(card)),
+      m ? h("div", { class: "small" }, chip(m.author), ` tier ${m.tier}: `, m.content ? theoryText(m.content) : "(face down)") : null,
+      m ? h("div", { class: "small" }, recordList(m)) : null,
+      option.actions.filter((a) => a.card === card).map((a) =>
+        h("button", { class: vote === a.vote ? "primary" : "", onclick: () => send(a) }, a.vote)),
+      h("span", { class: "muted small" }, vote ? ` chosen: ${vote}` : " not voted yet"));
+  });
 }
 
 function completeActions(option) {
@@ -514,6 +550,7 @@ function renderActions() {
     else if (option.type === "formulate_theory") body = theoryForm(option.template);
     else if (option.type === "submit") body = submitForm(option);
     else if (option.type === "order_predictions") body = orderForm(option.template);
+    else if (option.type === "review_vote") body = reviewForm(option);
     else body = completeActions(option);
     box.append(h("div", { class: "option" }, h("h3", {}, TITLES[option.type] || option.type), body));
   }
