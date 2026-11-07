@@ -36,7 +36,7 @@ RECENT_EVENTS = 25
 
 def _automated_players(record: GameRecord, ai=None) -> list:
     """One player object per automated seat, None for human seats."""
-    from nv_sim.game import make_players
+    from nv_sim.game import make_player
 
     seats = record.seats or ["human"] * len(record.players)
     players = []
@@ -48,10 +48,7 @@ def _automated_players(record: GameRecord, ai=None) -> list:
             from nv_sim.run import ai_context
 
             ai = ai_context()
-        player = make_players([kind], record.seed, record.world, ai, record.settings)[0]
-        if hasattr(player, "name"):
-            player.name = record.players[seat]
-        players.append(player)
+        players.append(make_player(kind, seat, record.seed, record.world, ai, record.settings, name=record.players[seat]))
     return players
 
 

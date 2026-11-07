@@ -48,27 +48,30 @@ def make_players(
 ) -> list:
     """``world`` and ``settings`` are needed by AI seats and scripted strategy bots."""
     check_seat_types(seat_types)
-    players = []
-    for seat, kind in enumerate(seat_types):
-        base, _, persona = kind.partition(":")
-        if base == "ai":
-            if ai is None or world is None:
-                raise ValueError("AI seats need the AI settings (nv_ai)")
-            from nv_ai.player import AIPlayer
+    return [make_player(kind, seat, seed, world, ai, settings) for seat, kind in enumerate(seat_types)]
 
-            players.append(
-                AIPlayer(
-                    ai.make_provider(), ai.software, ai.ledger, world.story, persona or "neutral",
-                    game=str(seed), name=f"{kind}{seat + 1}", fallback_seed=f"{seed}/seat{seat}/fallback",
-                )
-            )
-        elif kind in SEAT_TYPES:
-            if world is None or settings is None:
-                raise ValueError("scripted strategy bots need the world and the game settings")
-            players.append(StrategyBot(f"{seed}/seat{seat}", kind, world, settings, BotSettings.load()))
-        else:
-            players.append(BOTS[kind](f"{seed}/seat{seat}"))
-    return players
+
+def make_player(
+    kind: str, seat: int, seed: int, world: WorldData | None = None, ai: AIContext | None = None,
+    settings: Settings | None = None, name: str | None = None,
+):
+    """The automated player for one seat (its random choices are seeded by game seed and seat)."""
+    check_seat_types([kind])
+    base, _, persona = kind.partition(":")
+    if base == "ai":
+        if ai is None or world is None:
+            raise ValueError("AI seats need the AI settings (nv_ai)")
+        from nv_ai.player import AIPlayer
+
+        return AIPlayer(
+            ai.make_provider(), ai.software, ai.ledger, world.story, persona or "neutral",
+            game=str(seed), name=name or f"{kind}{seat + 1}", fallback_seed=f"{seed}/seat{seat}/fallback",
+        )
+    if kind in SEAT_TYPES:
+        if world is None or settings is None:
+            raise ValueError("scripted strategy bots need the world and the game settings")
+        return StrategyBot(f"{seed}/seat{seat}", kind, world, settings, BotSettings.load())
+    return BOTS[kind](f"{seed}/seat{seat}")
 
 
 def theory_truth(world: WorldData, inputs: dict[str, str], outcomes: dict[str, str]) -> tuple[float, float]:
