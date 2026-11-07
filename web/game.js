@@ -529,16 +529,48 @@ function sensorForm(t) {
   });
 }
 
+// Duplicate theories ---------------------------------------------------------------------------
+const theoryKey = (i) => JSON.stringify([Object.entries(i.inputs || {}).sort(), Object.entries(i.outcomes || {}).sort()]);
+function publishedCopies(idea) {  // published theories with the same content
+  return view().published.filter((p) => p.kind === "theory" && theoryKey(p) === theoryKey(idea));
+}
+function ownCopies(idea, except) {  // my other theories with the same content: stacks, this phase's choices, manuscripts
+  const v = view();
+  const key = theoryKey(idea);
+  const found = [];
+  for (const i of v.lab.ideas) if (i.kind === "theory" && i.id !== except && theoryKey(i) === key) found.push(`D${i.id} (development stack)`);
+  v.lab.pending.development.forEach((i, n) => { if (i.kind === "theory" && theoryKey(i) === key) found.push(`choice ${n + 1} of this phase`); });
+  for (const m of v.manuscripts) {
+    if (m.author === msg.you && m.id !== except && m.content && m.content.kind === "theory" && theoryKey(m.content) === key) {
+      found.push(`D${m.id} (submitted, ${m.area === "review" ? "awaiting peer review" : m.area === "revise" ? "Revise area" : "Accept area"})`);
+    }
+  }
+  return found;
+}
+
 function theoryForm(t) {
   const pick = (group) => Object.entries(group).map(([v, states]) =>
     [v, h("select", {}, h("option", { value: "" }, "blank"), states.map((s) => h("option", { value: s }, s)))]);
   const inputs = pick(t.inputs);
   const outcomes = pick(t.outcomes);
   const chosen = (list) => Object.fromEntries(list.filter(([, s]) => s.value).map(([v, s]) => [v, s.value]));
-  return [
-    table(["Row", "State"], [...inputs, ...outcomes].map(([v, s]) => [v, s])),
-    h("button", { onclick: () => send({ type: "formulate_theory", inputs: chosen(inputs), outcomes: chosen(outcomes) }) }, "Formulate this theory"),
-  ];
+  const button = h("button", { onclick: () => send({ type: "formulate_theory", inputs: chosen(inputs), outcomes: chosen(outcomes) }) }, "Formulate this theory");
+  const note = h("div", {});
+  const check = () => {  // runs whenever a state is chosen
+    const idea = { inputs: chosen(inputs), outcomes: chosen(outcomes) };
+    const published = publishedCopies(idea);
+    const own = ownCopies(idea);
+    note.innerHTML = "";
+    button.disabled = published.length > 0;
+    if (published.length) {
+      note.append(h("div", { class: "warn-bad" }, `Already published as ${published.map((p) => `T${p.id} (${nameOf(p.author)})`).join(", ")}: `
+        + "a theory that is already published cannot be formulated, so it could never be submitted."));
+    } else if (own.length) {
+      note.append(h("div", { class: "warn" }, `You already have this theory: ${own.join(", ")}.`));
+    }
+  };
+  for (const [, select] of [...inputs, ...outcomes]) select.addEventListener("change", check);
+  return [table(["Row", "State"], [...inputs, ...outcomes].map(([v, s]) => [v, s])), note, button];
 }
 
 function recordText(r) {
@@ -551,12 +583,25 @@ function submitForm(option) {
     const spare = (t.spare_records[`${a.manuscript}/${a.tier}`] || []).map((r) => [r, h("input", { type: "checkbox" })]);
     const apc = t.apc[String(a.tier)];
     const apcBox = h("input", { type: "checkbox" });
+    // Duplicates are allowed (e.g. to fast-track a reformulated theory), so these only warn.
+    const idea = view().lab.ideas.find((i) => i.id === a.manuscript);
+    const own = idea && idea.kind === "theory" ? ownCopies(idea, a.manuscript) : [];
+    const published = idea && idea.kind === "theory" ? publishedCopies(idea) : [];
+    const warnings = [
+      own.length ? `You already have a theory like this: ${own.join(", ")}.` : "",
+      published.length ? `The same theory is already published as ${published.map((p) => `T${p.id} (${nameOf(p.author)})`).join(", ")}.` : "",
+    ].filter(Boolean);
+    const submit = () => {
+      if (warnings.length && !window.confirm(`${warnings.join("\n")}\n\nAre you sure you want to submit D${a.manuscript}?`)) return;
+      send({ ...a, records: [...a.records, ...spare.filter(([, b]) => b.checked).map(([r]) => r)], pay_apc: apcBox.checked });
+    };
     return h("div", { class: "option" },
-      `D${a.manuscript} to tier ${a.tier} with ${a.records.length ? a.records.map(recordText).join(", ") : "no records"}. `,
+      `D${a.manuscript}${idea ? ` (${theoryText(idea)})` : ""} to tier ${a.tier} with ${a.records.length ? a.records.map(recordText).join(", ") : "no records"}. `,
+      warnings.map((w) => h("div", { class: "warn" }, w)),
       spare.length ? h("div", { class: "small" }, "Add spare records (each extra record shortens processing): ",
         spare.map(([r, box]) => h("label", {}, box, ` ${recordText(r)} `))) : null,
       apc > 0 ? h("label", { class: "small" }, apcBox, ` pay the article processing charge (${apc}; you can spend ${t.spendable}) `) : null,
-      h("button", { onclick: () => send({ ...a, records: [...a.records, ...spare.filter(([, b]) => b.checked).map(([r]) => r)], pay_apc: apcBox.checked }) }, "Submit"));
+      h("button", { onclick: submit }, "Submit"));
   });
 }
 
