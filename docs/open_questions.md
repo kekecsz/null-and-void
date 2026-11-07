@@ -61,3 +61,28 @@ so in Scoring predictions, for example "A theory has at most one patent. If the 
 patent linked to it is created; otherwise its patent moves. Either way the patent is allocated to the researcher
 making the prediction (not the author of the cited theory)." Remove this entry once the rulebook says so.
 
+
+## Talent development is a no-brainer, then forgotten (design note)
+
+**Document:** rulebook, Talent development phase, together with Hiring and task allocation phase (student cap) and
+Student task check phase (leaving students).
+
+**Text:** "If a researcher has allocated staff to Talent development, they can advance their marker on the Talent
+development track by one position. The Talent development marker can be advanced at most by one position each
+round."
+
+**Problem (Zoltan, playtest 2026-11-07):** each position raises the student cap (`student_base_hire_cap` plus the
+position) and lowers the chance that students leave (`student_unassigned_base_threshold` minus the position). That
+is so strong that a postdoc on Talent development is worth it in every opening round. Once the track is at
+`talent_track_max`, the player never thinks about it again, so the mechanism feels empty after the opening.
+
+**Ideas to try (Zoltan's):**
+
+1. **Decay:** the marker drops one position in a round in which nobody is allocated to Talent development, or
+   after a set number of such rounds. The track then needs upkeep, like the grant admin requirement.
+2. **Rising cost:** each further position needs more staff members on Talent development, for example as many as
+   the position to reach. This would also change the rule that only one staff member can be allocated to Talent
+   development.
+
+**Waiting for:** Zoltan to choose and playtest a version, then update the rulebook and `parameter_defaults.yaml`.
+The engine and the bots will follow the rulebook export. Nothing changes in the code until then.
