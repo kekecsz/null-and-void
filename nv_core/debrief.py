@@ -66,11 +66,15 @@ def build_debrief(
     predictions = _predictions(state)
     scored = [p for p in predictions if p.status == "scored"]
     paper_log = list(state.paper_log)
-    recorded = bool(paper_log) or not state.published  # games before the bookkeeping have none
-    if not paper_log:  # older games: what is still published
-        for paper in state.published:
-            paper_log.append(PaperLog(paper=paper.id, manuscript=0, idea=paper.idea, author=paper.author, tier=paper.tier,
-                                      open_access=paper.open_access, round=paper.round, records=0, fabricated=0, reviewed=False))
+    # Games begun before the bookkeeping existed (or resumed with it partway) miss some papers: add
+    # what is still published, and say that the history is incomplete.
+    logged = {entry.paper for entry in paper_log}
+    missing = [paper for paper in state.published if paper.id not in logged]
+    recorded = not missing and (not state.round_log or state.round_log[0].round == 1)
+    for paper in missing:
+        paper_log.append(PaperLog(paper=paper.id, manuscript=0, idea=paper.idea, author=paper.author, tier=paper.tier,
+                                  open_access=paper.open_access, round=paper.round, records=0, fabricated=0, reviewed=False))
+    paper_log.sort(key=lambda entry: entry.paper)
     papers = {entry.paper: entry for entry in paper_log}
     crisis_start = next((e.round for e in events if e.kind == "crisis"), None)
 

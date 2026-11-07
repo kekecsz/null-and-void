@@ -110,3 +110,16 @@ def test_debrief_nobel_prize_with_its_streak():
     assert nobel["theory"] == state.result.theory
     assert len(nobel["streak"]) >= 2
     assert nobel["chance"] == pytest.approx(nobel["true_accuracy"] ** len(nobel["streak"]))
+
+
+def test_debrief_of_a_game_begun_before_the_bookkeeping(crash_game):
+    """A game resumed partway with the bookkeeping: still-published papers are listed, and the
+    debrief says that its history is incomplete."""
+    state, events = crash_game
+    older = state.model_copy(deep=True)
+    older.paper_log = older.paper_log[len(older.paper_log) // 2:]
+    older.round_log = older.round_log[3:]
+    debrief = build_debrief(older, events, low_chance=0.5)
+    assert {p.id for p in older.published if p.kind == "theory"} <= {t["theory"] for t in debrief["literature"]}
+    assert not debrief["bookkeeping_recorded"]
+    assert build_debrief(state, events, low_chance=0.5)["bookkeeping_recorded"]
