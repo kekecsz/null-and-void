@@ -20,7 +20,7 @@ true world.
 | 1 | World generator and report | done |
 | 2 | Rules engine and text client | done |
 | 3 | Random bot and simulator | done |
-| 4 | AI player and scripted bots | in progress |
+| 4 | AI player and scripted bots | done |
 | 5–7 | Server and web UI, spectator mode and debrief, deployment | planned |
 
 The milestones and their acceptance criteria are in the specification, section 13.
