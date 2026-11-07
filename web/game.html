@@ -17,15 +17,17 @@
   <div id="join" class="lobby" style="display:none"></div>
   <main id="board">
     <div class="column">
-      <section class="panel" id="actions-panel"><h2>What you can do now</h2><div id="actions"></div></section>
+      <section class="panel" id="actions-panel"><h2 id="actions-title">What you can do now</h2><div id="actions"></div></section>
       <section class="panel"><h2>World Grid</h2><div id="grid"></div></section>
       <section class="panel"><h2>Literature</h2><div id="literature"></div></section>
       <section class="panel"><h2>Submission Portal</h2><div id="portal"></div></section>
       <section class="panel"><h2>Predictions</h2><div id="predictions"></div></section>
+      <section class="panel" id="world-panel" style="display:none"><h2>World Table <span class="muted small">(spectators only)</span></h2><div id="world"></div></section>
     </div>
     <div class="column">
-      <section class="panel"><h2>Your lab <span class="muted small">(behind your lab shield)</span></h2><div id="lab"></div></section>
+      <section class="panel"><h2 id="lab-title">Your lab <span class="muted small">(behind your lab shield)</span></h2><div id="lab"></div></section>
       <section class="panel"><h2>Tracks</h2><div id="tracks"></div></section>
+      <section class="panel" id="notes-panel" style="display:none"><h2>AI players' notes</h2><div id="notes"></div></section>
       <section class="panel" id="host-panel" style="display:none"><h2>Host controls</h2><div id="host"></div></section>
       <section class="panel"><h2>Event log <input id="log-filter" placeholder="filter" class="small"></h2><div class="log" id="log"></div></section>
     </div>

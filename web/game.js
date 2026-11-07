@@ -19,7 +19,10 @@ for (const [prefix, name] of [["#host=", "host"], ["#seat=", "seat"]]) {
   }
 }
 
-let msg = null;          // the latest message from the server
+let msg = null;          // what the page shows: the live message, or a replayed view
+let live = null;         // the latest message from the server
+let replay = null;       // spectators: the replayed state being shown (specification 7.3)
+let rounds = null;       // spectators: where each round starts, for the replay controls
 let socket = null;
 let lobbyOptions = null; // seat kinds, for the host's "hand over" control
 let refused = false;     // the server would not let this browser in
@@ -98,16 +101,31 @@ async function showJoin() {
       button,
     );
   }
-  if (store.get("host")) panel.append(h("p", {}, h("button", { onclick: () => { box.style.display = "none"; $("board").style.display = ""; connect(); } }, "Continue as host without a seat")));
+  if (store.get("host")) panel.append(h("p", {}, h("button", { onclick: () => { box.style.display = "none"; $("board").style.display = ""; connect(); } }, "Continue as host without a seat (you spectate)")));
+  const watch = h("input", { type: "password", placeholder: "spectator password" });
+  panel.append(h("h3", {}, "Or watch as a spectator"), h("div", { class: "form-row" }, watch, " ",
+    h("button", { onclick: () => {
+      store.set("spectator", watch.value);
+      store.set("spectate", "1");
+      refused = false;
+      box.style.display = "none";
+      $("board").style.display = "";
+      connect();
+    } }, "Watch")),
+  h("p", { class: "small muted" }, "Spectators see everything, including every lab and the hidden world, so the host decides who may watch."));
   box.innerHTML = "";
   box.append(panel);
 }
 
 // Connection ------------------------------------------------------------------------------------
 function connect() {
-  const query = new URLSearchParams({ seat_token: store.get("seat"), host_token: store.get("host") });
+  const query = new URLSearchParams({
+    seat_token: store.get("seat"), host_token: store.get("host"),
+    spectate: store.get("spectate") === "1" ? "1" : "0", spectator_password: store.get("spectator"),
+  });
   const protocol = location.protocol === "https:" ? "wss" : "ws";
   socket = new WebSocket(`${protocol}://${location.host}/ws/${gameId}?${query}`);
+  const this_socket = socket;
   socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
     if (data.type === "error") {
@@ -116,13 +134,16 @@ function connect() {
       return;
     }
     if (data.type === "accepted") { showError(""); return; }
-    if (data.type === "state" && (!msg || data.seq >= msg.seq || data.status !== msg.status || data.you !== msg.you)) {
-      msg = data;
+    if (data.type === "state" && (!live || data.seq >= live.seq || data.status !== live.status || data.you !== live.you)) {
+      live = data;
+      if (!live.spectator) replay = null;
+      msg = replay ? { ...live, view: replay.view, text: replay.text, events: replay.events } : live;
       render();
     }
   };
   socket.onclose = () => {
-    if (refused) { store.set("seat", ""); showJoin(); return; }
+    if (socket !== this_socket) return;  // replaced by a new connection
+    if (refused) { store.set("seat", ""); store.set("spectator", ""); store.set("spectate", ""); showJoin(); return; }
     $("status").textContent = "Connection lost; reconnecting...";
     setTimeout(connect, 1500);
   };
@@ -138,6 +159,12 @@ function render() {
   renderBanner();
   renderHost();
   renderLog();
+  const spectator = Boolean(msg.spectator);
+  $("actions-title").textContent = spectator ? "Replay" : "What you can do now";
+  $("lab-title").textContent = spectator ? "Every lab" : "Your lab";
+  if (!spectator) $("lab-title").append(" ", h("span", { class: "muted small" }, "(behind your lab shield)"));
+  $("world-panel").style.display = spectator ? "" : "none";
+  $("notes-panel").style.display = spectator && Object.keys(msg.ai_notes || {}).length ? "" : "none";
   const v = view();
   if (!v) {
     for (const id of ["actions", "grid", "literature", "portal", "predictions", "lab", "tracks"]) $(id).innerHTML = "";
@@ -146,7 +173,7 @@ function render() {
       : "You have no seat in this game; you see the public event log."));
     return;
   }
-  renderActions();
+  if (spectator) { renderReplay(); renderWorld(); renderNotes(); } else renderActions();
   renderGrid();
   renderLab();
   renderLiterature();
@@ -171,6 +198,7 @@ function renderStatus() {
   const cost = Object.values(msg.ai_cost || {}).reduce((a, b) => a + b, 0);
   if (cost > 0) parts.push(h("span", { class: "muted" }, ` \u00b7 AI cost ${cost.toFixed(4)} USD`));
   if (msg.you !== null) parts.push(h("span", { class: "muted" }, " \u00b7 you are "), chip(msg.you));
+  if (msg.spectator) parts.push(h("span", { class: "you-act" }, replay ? `replay: action ${replay.at} of ${replay.total}` : "spectating"));
   $("status").innerHTML = "";
   $("status").append(...parts);
   $("actions-panel").classList.toggle("act", mustAct());
@@ -180,12 +208,13 @@ function renderBanner() {
   const v = view();
   const box = $("banner");
   box.innerHTML = "";
-  if (v && v.result) {
+  const debrief = h("a", { href: `/game/${encodeURIComponent(gameId)}/debrief` }, "Open the debrief");
+  if (v && v.result && !replay) {
     const r = v.result;
     const winners = (r.winners || []).map((s) => nameOf(s)).join(", ") || "nobody";
-    box.append(h("div", { class: "banner" }, `Game over: ${String(r.ending).replace("_", " ")}. Winners: ${winners}.`));
+    box.append(h("div", { class: "banner" }, `Game over: ${String(r.ending).replace("_", " ")}. Winners: ${winners}. `, debrief));
   } else if (msg.status === "ended") {
-    box.append(h("div", { class: "banner" }, "The host ended this game."));
+    box.append(h("div", { class: "banner" }, "The host ended this game. ", debrief));
   } else if (msg.status === "paused") {
     box.append(h("div", { class: "banner" }, "The game is paused by the host."));
   }
@@ -215,6 +244,10 @@ function renderGrid() {
         const status = specialty ? "revealed" : sensor ? `sensor L${sensor}` : "no sensor";
         if (p.readings) text = (p.readings[variable.id] ?? "blank") + (sensor ? ` (sensor L${sensor})` : "");
         else text = status;
+        const truth = v.probe_truth && v.probe_truth[p.index];
+        if (truth && (!p.readings || p.readings[variable.id] !== truth[variable.id])) {
+          text = [text, h("div", { class: "truth" }, `true: ${truth[variable.id]}`)];
+        }
       } else {
         text = p.outcomes ? p.outcomes[variable.id] : "hidden";
         if (!p.outcomes) cls = "hidden";
@@ -254,10 +287,20 @@ const taskOrder = (t) => (TASK_ORDER.includes(t) ? TASK_ORDER.indexOf(t) : TASK_
 
 function renderLab() {
   const v = view();
-  const me = v.researchers[msg.you];
-  const lab = v.lab;
   const box = $("lab");
   box.innerHTML = "";
+  if (msg.spectator) {
+    for (const lab of v.labs) {
+      const part = h("div", { class: "option" }, h("h3", {}, chip(lab.seat)));
+      labInto(part, v, v.researchers[lab.seat], lab, lab.seat);
+      box.append(part);
+    }
+    return;
+  }
+  labInto(box, v, v.researchers[msg.you], v.lab, msg.you);
+}
+
+function labInto(box, v, me, lab, seat) {
   box.append(h("p", {}, `Academic credit ${me.credit} \u00b7 money ${me.money} \u00b7 Grant position ${me.grant_position} \u00b7 `
     + `Talent ${me.talent_position} \u00b7 ${me.postdocs} postdoc(s), ${me.students} student(s) \u00b7 ${me.patents} patent(s)`));
   const staff = Object.entries(me.staff).filter(([, c]) => c.postdocs + c.students)
@@ -290,7 +333,7 @@ function renderLab() {
   }
   if (pending.leaving_students) box.append(h("p", { class: "small" }, `Leaving students chosen: ${values(pending.leaving_students)}`));
   if (lab.experiments.length) {
-    box.append(h("h3", {}, "This round's experiments"),
+    box.append(h("h3", {}, msg.spectator ? "Experiments (every round)" : "This round's experiments"),
       table(["Experiment", "Inputs", "Outcomes", "Specified"], lab.experiments.map((e) => [`E${e.id}`, values(e.inputs), values(e.outcomes), Object.keys(e.specified).join(", ")])));
   }
   for (const area of ["fresh", "stale"]) {
@@ -301,9 +344,9 @@ function renderLab() {
     ];
     if (rows.length) box.append(h("h3", {}, `${area} records`), table(["Record", "From", "Cards"], rows));
   }
-  const mine = v.predictions.filter((p) => p.seat === msg.you);
+  const mine = v.predictions.filter((p) => p.seat === seat);
   if (mine.length) {
-    box.append(h("h3", {}, "Your predictions this round"),
+    box.append(h("h3", {}, msg.spectator ? "Predictions this round" : "Your predictions this round"),
       table(["Prediction", "Theory", "Probe", "Preregistered", "Status", "Result"],
         mine.map((p) => [`Q${p.id}`, `T${p.theory}`, `P${p.probe + 1}`, p.preregistered ? "yes" : "no", p.status, p.success === null ? "" : (p.success ? "success" : "failed")])));
   }
@@ -352,7 +395,7 @@ function renderPortal() {
 
 function renderPredictions() {
   const v = view();
-  const rows = v.predictions.filter((p) => p.seat !== msg.you || !["hidden"].includes(p.status)).map((p) => [
+  const rows = v.predictions.filter((p) => msg.spectator || p.seat !== msg.you || !["hidden"].includes(p.status)).map((p) => [
     `Q${p.id}`, chip(p.seat), `T${p.theory}`, `P${p.probe + 1}`, p.preregistered ? "preregistered" : "", p.status,
     p.success === null || p.success === undefined ? "" : (p.success ? "success" : "failed"),
   ]);
@@ -662,6 +705,85 @@ function renderActions() {
   }
 }
 
+// Spectators: replay, World Table, AI notes (specification 7.3) ---------------------------------
+function reconnect() {
+  const old = socket;
+  socket = null;
+  if (old) old.close();
+  msg = live = replay = rounds = null;
+  connect();
+}
+
+async function loadReplay(at) {
+  const r = await fetch(`/api/games/${gameId}/replay`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ host_token: store.get("host"), spectator_password: store.get("spectator"), at }),
+  });
+  const data = await r.json();
+  if (!r.ok) { showError(data.detail || r.statusText); return null; }
+  rounds = data.rounds;
+  return data;
+}
+
+async function showReplay(at) {
+  const data = await loadReplay(at);
+  if (!data) return;
+  replay = data;
+  showError(data.problem || "");
+  msg = { ...live, view: data.view, text: data.text, events: data.events };
+  render();
+}
+
+function goLive() {
+  replay = null;
+  showError("");
+  msg = live;
+  render();
+}
+
+function renderReplay() {
+  const box = $("actions");
+  box.innerHTML = "";
+  if (rounds === null) { rounds = []; loadReplay(live.seq).then(() => msg && renderReplay()); }
+  const total = replay ? replay.total : live.seq;
+  const at = replay ? replay.at : live.seq;
+  const number = h("input", { type: "number", min: 0, max: total, value: at });
+  const roundOf = (seq) => [...(rounds || [])].reverse().find((r) => r.seq <= seq);
+  const current = roundOf(at);
+  const select = h("select", { onchange: () => showReplay(Number(select.value)) },
+    h("option", { value: "" }, "jump to round..."),
+    (rounds || []).map((r) => h("option", { value: r.seq, selected: current && current.seq === r.seq && replay ? true : null }, `round ${r.round} (action ${r.seq})`)));
+  box.append(
+    h("p", {}, replay ? `Showing the game after action ${at} of ${total}.` : `Live: ${total} action(s) so far.`),
+    h("div", { class: "replay" },
+      h("button", { onclick: () => showReplay(0) }, "|< start"),
+      h("button", { onclick: () => showReplay(Math.max(0, at - 1)) }, "< back"),
+      h("button", { onclick: () => showReplay(Math.min(total, at + 1)) }, "forward >"),
+      h("button", { class: replay ? "primary" : "", onclick: goLive }, "live >|"),
+      select,
+      "action ", number, ` of ${total} `,
+      h("button", { onclick: () => showReplay(Number(number.value)) }, "go")),
+    h("p", { class: "small" }, h("a", { href: `/game/${encodeURIComponent(gameId)}/debrief` }, "Open the debrief"),
+      msg.view && msg.view.result ? "" : " (so far: spectators may look before the end)"),
+  );
+}
+
+function renderWorld() {
+  const v = view();
+  const inputs = v.variables.filter((x) => x.kind === "input");
+  const outcomes = v.variables.filter((x) => x.kind !== "input");
+  const truth = (v.probe_truth || []).map((t, i) => (t ? `P${i + 1}` : null));
+  const rows = v.world_table.map((row) => {
+    const probes = (v.probe_truth || []).map((t, i) => (t && inputs.every((x) => t[x.id] === row.inputs[x.id]) ? `P${i + 1}` : null)).filter(Boolean);
+    return [...inputs.map((x) => row.inputs[x.id]), ...outcomes.map((x) => row.outcomes[x.id]), probes.join(", ")];
+  });
+  fill($("world"), table([...inputs.map((x) => x.id), ...outcomes.map((x) => x.id), truth.some(Boolean) ? "on the grid now" : ""], rows));
+}
+
+function renderNotes() {
+  fill($("notes"), Object.entries(msg.ai_notes || {}).map(([name, text]) => h("div", {}, h("h3", {}, name), h("pre", {}, text))));
+}
+
 // Host controls ---------------------------------------------------------------------------------
 async function hostCommand(command, extra) {
   const r = await fetch(`/api/games/${gameId}/host/${command}`, {
@@ -698,6 +820,11 @@ async function renderHost() {
   });
   box.append(table(["Seat", "Played by", "Person", ""], rows));
   if (msg.you === null && store.get("seat") === "") box.append(h("p", {}, h("button", { onclick: showJoin }, "Take a seat yourself")));
+  if (store.get("seat")) {
+    const watching = store.get("spectate") === "1";
+    box.append(h("p", {}, h("button", { onclick: () => { store.set("spectate", watching ? "" : "1"); reconnect(); } },
+      watching ? "Back to my seat" : "Watch as spectator (see every lab and the hidden world)")));
+  }
 }
 
 // Start ------------------------------------------------------------------------------------------
