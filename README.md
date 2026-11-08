@@ -21,8 +21,8 @@ true world.
 | 2 | Rules engine and text client | done |
 | 3 | Random bot and simulator | done |
 | 4 | AI player and scripted bots | done |
-| 5 | Server, persistence and web UI | implemented; acceptance playtests in progress |
-| 6 | Spectator mode and debrief | implemented; acceptance playtests in progress |
+| 5 | Server, persistence and web UI | done |
+| 6 | Spectator mode and debrief | done |
 | 7 | Deployment | planned |
 
 The milestones and their acceptance criteria are in the specification, section 13.
