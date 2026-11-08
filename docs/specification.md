@@ -251,6 +251,30 @@ Every page's top row links to the **credits** page (`/credits`), which opens in 
 - Intended for the teacher or facilitator, and for replaying games step by step: one action forward or back, to the start of any round, or to any action number (out of the total so far), and back to the live game. A replay is rebuilt from the latest round snapshot before that action. A game played under older rules may not replay past the point where the rules changed; the replay then says so and stops there.
 - Simulated games can be opened the same way: `nv-sim import` (9.2) stores one in the server's database as a finished game.
 
+### 7.4 Board design (milestone 8)
+
+The web UI's world states become icons in strips. This section records the design agreed with the prototype; where a detail is not listed here, the prototype shows the intent.
+
+**Strips and columns.** Every thing that holds world states is one horizontal strip: Probes, records, theories (unpublished and published), manuscripts, and whatever is being formulated (a theory, an experiment, a prediction, a submission). All strips share one column order, input parameters then world outcomes, so that the panels line up above each other and each state's column can be scanned downwards. The World Grid, experimentation and theory formulation are horizontal like the rest. A blank slot is an empty dashed box and a hidden outcome a "?". Every state has its icon (`web/icons/<scenario>/`, made by `asset_generation/make_icons.py`) with its name.
+
+**Tile style** is a player setting: *tall* (icon with the name under it) or *compact* (a coloured pill with the name on it). Both are the same layout and behaviour; only the styling differs.
+
+**Selecting and highlighting.** Clicking a strip selects it for comparison. Every other strip that has no mismatch with it is highlighted in a light blue, and every identical strip in a rich, darker blue; the rest fade. A mismatch is a slot where both strips have a state and the states differ. Identical means the same state in every slot, blanks included. The strip being formulated can be selected too, and the highlights follow it as it changes.
+
+**The top of the board.** The topmost panel is always the current task (the only panel that changes by phase). Directly under it is the labelled selection panel, showing the selected strip. Both are pinned to the top while scrolling by default, and each has a pin icon on its right to unpin it. Unpinning is remembered for each player, so an unpinned selection panel stays unpinned when a new strip is selected, and is re-pinned by scrolling up to it.
+
+**Panels** can be minimised to their title; this is remembered too.
+
+**Tasks.**
+
+- *Predictions:* the task lists only the eligible theory strips, with a choice for each Probe. Which theories fit a Probe is shown by selecting the Probe.
+- *Experiments:* the experiment being specified is a selectable strip. A "use" button on the selected strip copies its input states into it.
+- *Citations:* while an experiment is not valid for lack of citations, its button reads "Auto-cite and run"; once the player's own citations make it valid, "Run". The methods auto-cite would choose are highlighted in light blue. Auto-cite picks only from eligible methods and prefers, in order: the player's own methods; the methods of the author with the lowest academic credit; the method published first.
+- *Sensors:* "+" fills an eligible sensor slot, for installing and upgrading alike, and is transparent so what is under it stays visible. Pressing it opens the same citation choice, with auto-cite.
+- *Theory formulation:* "use" on a record or on the selected strip copies its states into the theory being formulated.
+- *Submission:* a submission is a box. Its top row is the theory (placed with "use"); the supporting records go below it. A box minimises to a strip showing the theory and expands back to show the records. The article processing charge is offered under the same condition as today.
+- *Peer review:* the same strips that expand to boxes, in the task panel, with the vote buttons.
+
 ## 8. AI opponents (`nv_ai`)
 
 An AI seat is a language model that reads the same text view a human could and answers each decision with a tool call naming one legal action. It never sees hidden information it isn't entitled to. The provider and model are settings (section 11): the first version uses OpenAI's GPT-6 Luna, which is cheap enough for testing; Claude models can be added through the same interface.
@@ -426,6 +450,8 @@ The AI defaults are starting points to tune with the simulator, not tested value
 All earlier rule questions are settled in rulebook v4; these items remain open.
 
 - [ ] **Balance check:** whether `[nobel_condition]` consecutive successes fit within the Calm period (about 15 rounds). To be tested with the simulator.
+- [ ] **Later idea, garden of forking paths** (not planned yet; probably only for a solo or cooperative game mode): an expandable page that shows every possible experiment strip (no blanks) and which of them the player has already covered, from which an uncovered one can be chosen.
+- [ ] **Later:** optimise the board for phones (milestone 8 is designed for laptop screens).
 
 ## 13. Milestones and acceptance criteria
 
@@ -440,6 +466,7 @@ Build in this order, so the rules and numbers are mostly tuned before anyone pla
 | 5 | Server, persistence and web UI | A human finishes a game in the browser against scripted bots, and one against AI seats; two browsers on the same network finish a game together; a refreshed browser rejoins its seat; a paused game resumes after a server restart. |
 | 6 | Spectator mode and debrief | A spectator sees the hidden World Table; the debrief appears at game end and can be reopened later; fabrication and file-drawer panels show totals only. |
 | 7 | Deployment | Runs on Google Cloud Run with Firestore and Secret Manager; a game with an AI seat works end to end from outside the local network. |
+| 8 | Board design (7.4) | A human finishes a game on a laptop using the strip board in every phase; selecting a strip highlights the strips with no mismatch and the identical ones; pinning, minimising and the tile style are remembered. |
 
 **Testing throughout:**
 
