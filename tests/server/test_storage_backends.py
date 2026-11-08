@@ -111,6 +111,15 @@ def test_the_deployed_server_refuses_to_start_without_an_organiser_password(monk
         main(["--storage", "firestore"])
 
 
+# The credits page (specification 7.2) ----------------------------------------------------------------
+def test_the_credits_page_shows_the_credits_document_and_every_page_links_to_it(tmp_path):
+    with TestClient(create_app(db=tmp_path / "g.sqlite")) as client:
+        assert client.get("/credits").status_code == 200
+        assert client.get("/api/credits").text == (REPO_ROOT / "docs" / "credits.md").read_text(encoding="utf-8")
+    for page in ("index.html", "game.html", "debrief.html"):
+        assert 'href="/credits"' in (REPO_ROOT / "web" / page).read_text(encoding="utf-8"), page
+
+
 # Deployment: the API key never leaves this computer in the upload or the container -----------------
 def test_the_deployment_files_keep_local_secrets_out():
     for name in (".dockerignore", ".gcloudignore"):

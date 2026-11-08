@@ -242,6 +242,8 @@ Plain and functional, desktop-first, English only. One page with these areas:
 - A "show as text" toggle replaces the board with the same `render_text` output the AI sees.
 - Each player uses their own device, so their lab is always open on their screen and never sent to anyone else's. Players at the same table are trusted not to look at each other's screens, as with a physical lab shield.
 
+Every page's top row links to the **credits** page (`/credits`), which opens in a new tab and shows `docs/credits.md`.
+
 ### 7.3 Spectator mode
 
 - Opened with the host link, or by anyone with the spectator password (if the host set one); read-only.

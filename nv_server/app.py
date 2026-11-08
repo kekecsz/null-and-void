@@ -24,13 +24,13 @@ from urllib.parse import unquote
 
 import yaml
 from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError
 
 from nv_core.actions import ACTION_ADAPTER
 from nv_core.debrief import csv_tables
-from nv_core.paths import REPO_ROOT, SCENARIOS_DIR
+from nv_core.paths import CREDITS, REPO_ROOT, SCENARIOS_DIR
 from nv_core.settings import Settings
 from nv_server.session import COLOURS, HUMAN, Connection, GameError, GameManager, GameSetup
 from nv_server.storage import SQLiteStorage, Storage
@@ -196,6 +196,14 @@ def create_app(storage: Storage | None = None, ai_context=None, db: Path | str =
     @app.get("/game/{game_id}/debrief")
     async def debrief_page(game_id: str):
         return FileResponse(WEB_DIR / "debrief.html")
+
+    @app.get("/credits")
+    async def credits_page():
+        return FileResponse(WEB_DIR / "credits.html")
+
+    @app.get("/api/credits")
+    async def credits_text():
+        return PlainTextResponse(CREDITS.read_text(encoding="utf-8"))
 
     # Lobby API ------------------------------------------------------------------------------
     @app.get("/api/options")

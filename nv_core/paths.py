@@ -7,6 +7,7 @@ DOCS_DIR = REPO_ROOT / "docs"
 RULEBOOK = DOCS_DIR / "rules.md"
 PARAMETER_DEFAULTS = DOCS_DIR / "parameter_defaults.yaml"
 SPECIFICATION = DOCS_DIR / "specification.md"
+CREDITS = DOCS_DIR / "credits.md"
 SCENARIOS_DIR = REPO_ROOT / "scenarios"
 SETTINGS_DIR = REPO_ROOT / "settings"
 

@@ -70,6 +70,8 @@ tr.current td { font-weight: 700; }
 
 /* Debrief page (specification 10) and spectator mode (7.3) */
 .debrief { max-width: 1200px; margin: 0 auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.credits h1 { margin-bottom: 8px; }
+.credits h2 { display: block; margin-top: 14px; }
 .debrief pre { max-height: 240px; overflow-y: auto; }
 .replay { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .replay input[type=number] { width: 6em; }
