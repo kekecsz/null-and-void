@@ -92,6 +92,7 @@ body.tiles-compact { --head: 92px; --cell: 122px; --tile: 21px; }
 
 #actions-panel.pinned { position: sticky; top: var(--top-h); z-index: 5; }
 #actions-panel.pinned #actions { max-height: 42vh; overflow-y: auto; overflow-x: hidden; }
+#actions-panel.pinned #actions.whole { max-height: calc(100vh - var(--top-h) - 50px); }
 #selection-panel.pinned { position: sticky; top: calc(var(--top-h) + var(--task-h)); z-index: 4; }
 #actions-panel.act { background: var(--act); border-color: #e6d48c; }
 #board .selection { border-color: var(--accent); }
@@ -100,7 +101,10 @@ body.tiles-compact { --head: 92px; --cell: 122px; --tile: 21px; }
 .swatch.fits { background: var(--fits); }
 .swatch.same { background: var(--same); }
 .group-label { font-size: 11px; color: var(--muted); padding: 3px 2px 1px; }
-.rows, #grid, #records, #ideas, #literature, #portal, #world { display: flex; flex-direction: column; gap: 2px; }
+.rows, #grid, #records, #ideas, #literature, #portal, #world, .record-area { display: flex; flex-direction: column; gap: 2px; }
+#records { gap: 6px; }
+.record-area { border: 1px solid var(--blank); border-radius: 5px; margin-inline: -1px; padding-bottom: 2px; }
+.record-area .group-label { font-weight: 700; font-size: 12px; color: var(--ink); padding: 3px 5px 1px; }
 
 .strip { border-radius: 4px; padding: 3px 0; border: 1px solid transparent; }
 .tiles-compact .strip { padding: 1px 0; border-bottom-color: var(--line); border-radius: 0; }
@@ -151,6 +155,7 @@ body.tiles-compact { --head: 92px; --cell: 122px; --tile: 21px; }
 .cite button { font-size: 11.5px; padding: 0 7px; }
 .cite button.auto { background: #cfe2fb; }
 button.on, button.on:hover { background: var(--accent); color: #fff; }
+button.commit-waiting, button.commit-waiting:hover { background: #e4e4de; border-color: var(--blank); color: var(--muted); }
 .note-bad { font-size: 12px; color: var(--bad); }
 
 .box { border: 1px solid var(--line); border-radius: 5px; background: var(--panel); padding-block: 2px; margin-inline: -1px; }

@@ -501,6 +501,22 @@ function actionsKey() {
     msg.options, v.lab, myReviewCards(), v.published.map((p) => p.id), v.manuscripts.map((m) => [m.id, m.area, m.position])]);
 }
 
+// While something could still be submitted or revised, and nothing has been, Commit is grey and
+// asks first: committing ends the step. (Whatever was done this step can be withdrawn, so
+// "withdraw_submission" being on offer means something was.)
+const nothingSubmittedYet = () => Boolean(optionOf("submit") || optionOf("revise")) && !optionOf("withdraw_submission");
+function titleButton(option) {
+  const unsubmitted = option.type === "commit" && nothingSubmittedYet();
+  return h("button", {
+    class: unsubmitted ? "commit-waiting" : option.type === "commit" ? "primary" : "",
+    title: unsubmitted ? "You have not submitted or revised a manuscript in this step" : COMMIT_HELP[option.type],
+    onclick: () => {
+      if (unsubmitted && !window.confirm("You have not submitted or revised a manuscript in this step.\n\nCommit anyway?")) return;
+      send(option.actions[0]);
+    },
+  }, IN_THE_TITLE[option.type]);
+}
+
 function setTaskHeading(name, note, buttons) {
   $("actions-title").textContent = name ? `What you can do now: ${name}` : "What you can do now";
   $("actions-note").textContent = note || "";
@@ -528,6 +544,7 @@ function renderActions() {
   actionsShown = shown;
   const scrolled = box.scrollTop;
   box.innerHTML = "";
+  box.classList.toggle("whole", Boolean(optionOf("allocate_staff")));  // this form should fit without scrolling
   setTaskHeading();
   if (v.result || msg.status !== "running") { box.append(h("p", { class: "muted" }, "Nothing to do.")); return; }
   if (!msg.options.length) {
@@ -537,8 +554,7 @@ function renderActions() {
   }
   const named = msg.options.find((o) => TASK_NAMES[o.type]);
   const [name, note] = named ? TASK_NAMES[named.type] : [null, null];
-  setTaskHeading(name, note, msg.options.filter((o) => IN_THE_TITLE[o.type]).map((o) =>
-    h("button", { class: o.type === "commit" ? "primary" : "", title: COMMIT_HELP[o.type], onclick: () => send(o.actions[0]) }, IN_THE_TITLE[o.type])));
+  setTaskHeading(name, note, msg.options.filter((o) => IN_THE_TITLE[o.type]).map(titleButton));
   const last = (o) => (o.type === "alliance" ? 1 : 0);
   // The sensor choices are drawn with the experiment; withdrawing is done on the prediction strips.
   const listed = msg.options.filter((o) => !IN_THE_TITLE[o.type] && o.type !== "install_sensor" && o.type !== "cancel_prediction");

@@ -249,20 +249,20 @@ function labRecords(lab) {
     ...lab[area].experiments.map((e) => ({ id: e.id, kind: "experiment", head: `E${e.id}`, sub: `experiment${specified(e.id)}`, slots: e.cards })),
   ]]);
 }
+const recordArea = (owner, title, strips) => h("div", { class: "record-area" }, groupLabel(owner, title), strips);
 function renderRecords() {
   const rows = [];
   for (const lab of shownLabs()) {
     const owner = () => (msg.spectator ? [chip(lab.seat), " "] : []);
     for (const [area, records] of labRecords(lab)) {
-      if (records.length) rows.push(groupLabel(owner(), area === "fresh" ? "Fresh records" : "Stale records"));
-      for (const r of records) rows.push(strip({ key: `${lab.seat}/${r.head}`, head: r.head, sub: r.sub, slots: r.slots, tail: msg.spectator ? null : useRecordButton(r) }));
+      if (!records.length) continue;
+      rows.push(recordArea(owner(), area === "fresh" ? "Fresh records" : "Stale records",
+        records.map((r) => strip({ key: `${lab.seat}/${r.head}`, head: r.head, sub: r.sub, slots: r.slots, tail: msg.spectator ? null : useRecordButton(r) }))));
     }
     if (msg.spectator && lab.experiments.length) {
-      rows.push(groupLabel(owner(), "Experiments, every round"));
-      for (const e of lab.experiments) {
-        rows.push(strip({ key: `${lab.seat}/run${e.id}`, head: `E${e.id}`, sub: `round ${e.round}`, slots: { ...e.inputs, ...e.outcomes },
-          tail: Object.keys(e.specified).length ? info(`specified ${Object.keys(e.specified).join(" ")}`) : null }));
-      }
+      rows.push(recordArea(owner(), "Experiments, every round", lab.experiments.map((e) =>
+        strip({ key: `${lab.seat}/run${e.id}`, head: `E${e.id}`, sub: `round ${e.round}`, slots: { ...e.inputs, ...e.outcomes },
+          tail: Object.keys(e.specified).length ? info(`specified ${Object.keys(e.specified).join(" ")}`) : null }))));
     }
   }
   $("records-title").textContent = msg.spectator ? "Records of every lab" : "Your records";
