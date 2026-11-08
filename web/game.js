@@ -30,16 +30,16 @@ let refused = false;     // the server would not let this browser in
 // Small helpers -----------------------------------------------------------------------------------
 function fill(node, ...children) {  // append children, skipping empty ones (null would show as "null")
   node.innerHTML = "";
-  node.append(...children.flat().filter((c) => c !== null && c !== undefined && c !== false));
+  node.append(...children.flat(Infinity).filter((c) => c !== null && c !== undefined && c !== false));
 }
 function h(tag, attrs, ...children) {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
-    if (k === "onclick" || k === "onchange" || k === "oninput") node[k] = v;
+    if (k.startsWith("on")) node[k] = v;
     else if (k === "class") node.className = v;
     else if (v !== false && v !== null && v !== undefined) node.setAttribute(k, v === true ? "" : v);
   }
-  for (const child of children.flat()) {
+  for (const child of children.flat(Infinity)) {
     if (child === null || child === undefined || child === false) continue;
     node.append(child instanceof Node ? child : document.createTextNode(String(child)));
   }
@@ -55,7 +55,6 @@ const nameOf = (seat) => (view() ? view().players[seat] : `seat ${seat + 1}`);
 const colourOf = (seat) => (msg && msg.seats[seat] ? msg.seats[seat].colour : "gray");
 const chip = (seat) => h("span", { class: "chip", style: `background:${colourOf(seat)}` }, nameOf(seat));
 const values = (obj) => Object.entries(obj || {}).map(([k, v]) => `${k}=${v === null ? "blank" : v}`).join(", ");
-const theoryText = (i) => (i.kind === "method" ? `method for ${i.parameter}` : `${values(i.inputs)} -> ${values(i.outcomes)}`);
 function table(headers, rows) {
   return h("table", {}, h("tr", {}, headers.map((x) => h("th", {}, x))), rows.map((r) => h("tr", {}, r.map((c) => h("td", {}, c)))));
 }
@@ -130,6 +129,7 @@ function connect() {
     const data = JSON.parse(event.data);
     if (data.type === "error") {
       showError(data.message);
+      task.afterSend = null;  // refused: the draft stays
       if (!msg) refused = true;  // no seat and not the host: show the join form instead of reconnecting
       return;
     }
@@ -159,28 +159,38 @@ function render() {
   renderBanner();
   renderHost();
   renderLog();
+  renderColumns();
   const spectator = Boolean(msg.spectator);
-  $("actions-title").textContent = spectator ? "Replay" : "What you can do now";
+  if (spectator) { setTaskHeading(); $("actions-title").textContent = "Replay"; }
   $("lab-title").textContent = spectator ? "Every lab" : "Your lab";
-  if (!spectator) $("lab-title").append(" ", h("span", { class: "muted small" }, "(behind your lab shield)"));
+  if (!spectator) $("lab-title").append(" ", h("span", { class: "h-note" }, "behind your lab shield"));
   $("world-panel").style.display = spectator ? "" : "none";
   $("notes-panel").style.display = spectator && Object.keys(msg.ai_notes || {}).length ? "" : "none";
   const v = view();
   if (spectator || !v) actionsShown = null;  // the actions panel shows something else now
   if (!v) {
-    for (const id of ["actions", "grid", "literature", "portal", "predictions", "lab", "tracks"]) $(id).innerHTML = "";
+    for (const id of ["actions", "grid", "records", "ideas", "literature", "portal", "methods", "predictions", "lab", "tracks"]) $(id).innerHTML = "";
+    selected = null;
+    setTaskHeading();
+    refreshHighlights();
     $("actions").append(h("p", { class: "muted" }, msg.status === "lobby"
       ? "Waiting for the host to start the game. Seats: " + msg.seats.map((s) => `${s.name} (${s.kind}${s.taken ? ", joined" : ""})`).join(", ")
       : "You have no seat in this game; you see the public event log."));
     return;
   }
+  loadIcons(v.scenario.id);
   if (spectator) { renderReplay(); renderWorld(); renderNotes(); } else renderActions();
   renderGrid();
+  renderRecords();
+  renderIdeas();
   renderLab();
   renderLiterature();
   renderPortal();
+  renderMethods();
   renderPredictions();
   renderTracks();
+  refreshHighlights();
+  layoutPins();
 }
 
 function renderStatus() {
@@ -233,49 +243,6 @@ function renderBanner() {
   }
 }
 
-function renderGrid() {
-  const v = view();
-  const head = [h("th", {}, "")];
-  for (const p of v.probes) {
-    const marks = [];
-    if (p.hot_topic) marks.push("hot topic");
-    head.push(h("th", { class: p.hot_topic ? "hot" : "" }, `P${p.index + 1}`,
-      marks.length ? h("div", { class: "small" }, marks.join(", ")) : null,
-      p.probe_time !== null ? h("div", {}, chip(p.probe_time)) : null));
-  }
-  const rows = v.variables.map((variable) => {
-    const cells = [h("th", {}, `${variable.id} ${variable.name}`)];
-    for (const p of v.probes) {
-      let text = "";
-      let cls = "";
-      if (variable.kind === "input") {
-        // Before the Probe stacks are dealt, say what each slot will show: Specialty (always
-        // revealed), a sensor of some level (revealed, with noise), or nothing (a blank card).
-        const sensor = p.sensors[variable.id];
-        const specialty = p.specialty.includes(variable.id);
-        cls = specialty ? "specialty" : sensor ? "sensor" : "unsensed";
-        const status = specialty ? "revealed" : sensor ? `sensor L${sensor}` : "no sensor";
-        if (p.readings) text = (p.readings[variable.id] ?? "blank") + (sensor ? ` (sensor L${sensor})` : "");
-        else text = status;
-        const truth = v.probe_truth && v.probe_truth[p.index];
-        if (truth && (!p.readings || p.readings[variable.id] !== truth[variable.id])) {
-          text = [text, h("div", { class: "truth" }, `true: ${truth[variable.id]}`)];
-        }
-      } else {
-        text = p.outcomes ? p.outcomes[variable.id] : "hidden";
-        if (!p.outcomes) cls = "hidden";
-      }
-      cells.push(h("td", { class: cls }, text));
-    }
-    return h("tr", {}, cells);
-  });
-  fill($("grid"), h("table", { class: "grid" }, h("tr", {}, head), rows),
-    h("p", { class: "muted small legend" },
-      h("span", { class: "specialty" }, "Specialty"), " always revealed and true \u00b7 ",
-      h("span", { class: "sensor" }, "sensor L1-L3"), " revealed, may be noise \u00b7 ",
-      h("span", { class: "unsensed" }, "no sensor"), " shows blank: a sensor can go here"));
-}
-
 // The engine's steps in round order (nv_core.state.Phase), and the steps where each staff task
 // works. Talent development and Grants work after the last step (Talent development and
 // Clean-up phases), so they are never "past" within a round.
@@ -305,130 +272,71 @@ function renderLab() {
   if (msg.spectator) {
     for (const lab of v.labs) {
       const part = h("div", { class: "option" }, h("h3", {}, chip(lab.seat)));
-      labInto(part, v, v.researchers[lab.seat], lab, lab.seat);
+      labInto(part, v, v.researchers[lab.seat], lab);
       box.append(part);
     }
     return;
   }
-  labInto(box, v, v.researchers[msg.you], v.lab, msg.you);
+  labInto(box, v, v.researchers[msg.you], v.lab);
 }
 
-function labInto(box, v, me, lab, seat) {
-  box.append(h("p", {}, `Academic credit ${me.credit} \u00b7 money ${me.money} \u00b7 Grant position ${me.grant_position} \u00b7 `
-    + `Talent ${me.talent_position} \u00b7 ${me.postdocs} postdoc(s), ${me.students} student(s) \u00b7 ${me.patents} patent(s)`));
+function labInto(box, v, me, lab) {
+  box.append(h("p", {}, `Credit ${me.credit} \u00b7 money ${me.money} \u00b7 Grant ${me.grant_position} \u00b7 Talent ${me.talent_position}`,
+    h("br"), `${me.postdocs} postdoc(s), ${me.students} student(s) \u00b7 ${me.patents} patent(s)`));
   const staff = Object.entries(me.staff).filter(([, c]) => c.postdocs + c.students)
     .sort(([a], [b]) => taskOrder(a) - taskOrder(b));
   if (staff.length) {
     const now = STEP_ORDER.indexOf(v.phase);
-    box.append(h("h3", {}, "Staff this round"), h("table", {},
-      h("tr", {}, ["Task", "When", "Postdocs", "Students", "Used"].map((x) => h("th", {}, x))),
+    box.append(h("table", {},
+      h("tr", {}, ["Task", "P", "S", "Used"].map((x) => h("th", {}, x))),
       staff.map(([t, c]) => {
         const steps = TASK_STEPS[t] || [];
         const first = Math.min(...steps.map((p) => STEP_ORDER.indexOf(p)));
         const last = Math.max(...steps.map((p) => STEP_ORDER.indexOf(p)));
         const cls = now < 0 || !steps.length ? "" : now > last ? "past" : now >= first ? "current" : "";
-        return h("tr", { class: cls }, [t.replace("_", " "), TASK_WHEN[t] || "", c.postdocs, c.students, c.used].map((x) => h("td", {}, x)));
+        const name = t.replace("_", " ");
+        const when = TASK_WHEN[t] && TASK_WHEN[t].toLowerCase() !== name ? h("div", { class: "muted" }, TASK_WHEN[t]) : null;
+        return h("tr", { class: cls }, h("td", {}, name, when), [c.postdocs, c.students, c.used].map((x) => h("td", {}, x)));
       })));
   }
   if (lab.leaving_students) box.append(h("p", { class: "bad" }, `${lab.leaving_students} student(s) must leave.`));
-  if (lab.ideas.length) {
-    box.append(h("h3", {}, "Development stacks (unpublished)"),
-      h("ul", {}, lab.ideas.map((i) => h("li", {}, `D${i.id}: ${theoryText(i)}`))));
-  }
   const pending = lab.pending;
-  if (pending.development.length) {
-    box.append(h("h3", {}, "Chosen this phase"), h("ul", {}, pending.development.map((i) => h("li", {}, theoryText(i)))));
-  }
   if (pending.allocation) {
     const a = pending.allocation;
     box.append(h("p", { class: "small" }, `Planned staff: hire ${a.hire_postdocs} postdoc(s), fire ${a.fire_postdocs}, hire ${a.hire_students} student(s); `
       + Object.entries(a.allocation).map(([t, c]) => `${t} ${c.postdocs}p+${c.students}s`).join(", ")));
   }
   if (pending.leaving_students) box.append(h("p", { class: "small" }, `Leaving students chosen: ${values(pending.leaving_students)}`));
-  if (lab.experiments.length) {
-    box.append(h("h3", {}, msg.spectator ? "Experiments (every round)" : "This round's experiments"),
-      table(["Experiment", "Inputs", "Outcomes", "Specified"], lab.experiments.map((e) => [`E${e.id}`, values(e.inputs), values(e.outcomes), Object.keys(e.specified).join(", ")])));
-  }
-  for (const area of ["fresh", "stale"]) {
-    const records = lab[area];
-    const rows = [
-      ...records.observations.map((o) => [`O${o.id}`, `P${o.probe + 1}, round ${o.round}`, values(o.cards)]),
-      ...records.experiments.map((e) => [`E${e.id}`, "experiment", values(e.cards)]),
-    ];
-    if (rows.length) box.append(h("h3", {}, `${area} records`), table(["Record", "From", "Cards"], rows));
-  }
-  const mine = v.predictions.filter((p) => p.seat === seat);
-  if (mine.length) {
-    box.append(h("h3", {}, msg.spectator ? "Predictions this round" : "Your predictions this round"),
-      table(["Prediction", "Theory", "Probe", "Preregistered", "Status", "Result"],
-        mine.map((p) => [`Q${p.id}`, `T${p.theory}`, `P${p.probe + 1}`, p.preregistered ? "yes" : "no", p.status, p.success === null ? "" : (p.success ? "success" : "failed")])));
-  }
-}
-
-function renderLiterature() {
-  const v = view();
-  const rows = v.published.map((p) => [
-    `${p.kind === "theory" ? "T" : "M"}${p.id}`, chip(p.author), p.tier + (p.open_access ? " (open access)" : ""),
-    theoryText(p), p.kind === "theory" ? `${p.nobel} / ${v.nobel_condition}` : "",
-    p.kind === "theory" ? `${p.retraction} / ${v.retraction_threshold}` : "",
-    [p.fresh ? "fresh out of print" : "", p.sideways ? "cited this round" : "", p.patents.length ? `patent: ${p.patents.map(nameOf).join(", ")}` : ""].filter(Boolean).join(", "),
-  ]);
-  fill($("literature"), rows.length ? table(["Paper", "Author", "Tier", "Content", "Nobel", "Retraction", ""], rows) : h("p", { class: "muted" }, "Nothing published yet."));
-}
-
-// Peer review: each of my non-zero allocation cards names a position in the Awaiting peer review area.
-function myReviewCards() {
-  const v = view();
-  return (msg.you !== null && v.review_cards && v.review_cards[String(msg.you)]) || [];
-}
-const manuscriptUnderReview = (position) => view().manuscripts.find((m) => m.area === "review" && m.position === position);
-function reviewLabel(card) {
-  const position = myReviewCards()[card];
-  const m = manuscriptUnderReview(position);
-  const twice = myReviewCards().filter((c) => c === position).length > 1 ? `, your card ${card + 1}` : "";
-  return (m ? `D${m.id} (awaiting peer review #${position}${twice})` : `awaiting peer review #${position}${twice}`);
-}
-function recordList(m) {
-  if (!m.record_cards) return m.records;
-  return h("div", {}, `${m.records} record(s):`, m.record_cards.map((r) => h("div", { class: "small" }, `${r.kind}: ${values(r.cards)}`)));
-}
-
-function renderPortal() {
-  const v = view();
-  const reviewing = new Set(myReviewCards().filter(Boolean));
-  const rows = v.manuscripts.map((m) => [
-    `D${m.id}`, chip(m.author), m.tier,
-    h("span", {}, m.area + (m.position ? ` #${m.position}` : ""),
-      m.area === "review" && reviewing.has(m.position) ? h("div", { class: "hot" }, "you review this") : null),
-    m.area === "accept" ? `${m.tokens} round(s) to go` : "", m.votes, recordList(m),
-    m.content ? theoryText(m.content) : "(face down)",
-  ]);
-  fill($("portal"), rows.length ? table(["Manuscript", "Author", "Tier", "Area", "Processing", "Votes", "Records", "Content"], rows) : h("p", { class: "muted" }, "No manuscripts."));
-}
-
-function renderPredictions() {
-  const v = view();
-  const rows = v.predictions.filter((p) => msg.spectator || p.seat !== msg.you || !["hidden"].includes(p.status)).map((p) => [
-    `Q${p.id}`, chip(p.seat), `T${p.theory}`, `P${p.probe + 1}`, p.preregistered ? "preregistered" : "", p.status,
-    p.success === null || p.success === undefined ? "" : (p.success ? "success" : "failed"),
-  ]);
-  const hidden = Object.entries(v.hidden_predictions || {}).map(([seat, probes]) =>
-    `${nameOf(Number(seat))}: ${Object.entries(probes).map(([p, n]) => `${n} on P${Number(p) + 1}`).join(", ")}`);
-  fill($("predictions"), rows.length ? table(["Prediction", "Researcher", "Theory", "Probe", "", "Status", "Result"], rows) : h("p", { class: "muted" }, "No public predictions this round."),
-    hidden.length ? h("p", { class: "small" }, "Hidden predictions: " + hidden.join("; ")) : null);
 }
 
 function renderTracks() {
   const v = view();
   const rows = v.researchers.map((r) => [
-    chip(r.seat), r.credit, r.money, r.grant_position, r.talent_position, `${r.postdocs}p / ${r.students}s`, r.patents,
-    v.alliances.filter((pair) => pair.includes(r.seat)).map((pair) => nameOf(pair[0] === r.seat ? pair[1] : pair[0])).join(", "),
-    r.committed ? "ready" : "",
+    h("span", {}, chip(r.seat), r.committed ? h("span", { class: "muted" }, " ready") : null),
+    r.credit, r.money, r.grant_position, r.talent_position, `${r.postdocs}p ${r.students}s`, r.patents,
   ]);
+  const allies = v.alliances.map((pair) => `${nameOf(pair[0])} + ${nameOf(pair[1])}`);
   fill($("tracks"),
-    table(["Researcher", "Credit", "Money", "Grant", "Talent", "Staff", "Patents", "Allies", ""], rows),
+    table(["", "Credit", "Money", "Grant", "Talent", "Staff", "Pat."], rows),
+    allies.length ? h("p", { class: "small" }, `Alliances: ${allies.join(", ")}`) : null,
     v.proposals.length ? h("p", { class: "small" }, "Alliance proposals: " + v.proposals.map(([a, b]) => `${nameOf(a)} -> ${nameOf(b)}`).join(", ")) : null,
   );
+}
+
+function renderMethods() {
+  const methods = view().published.filter((p) => p.kind === "method").sort((a, b) => ownFirst(a, b) || a.id - b.id);
+  fill($("methods"), methods.length ? methods.map((m) => h("div", {}, `M${m.id} ${m.parameter} `, chip(m.author), ` tier ${m.tier}`,
+    m.open_access ? " open access" : "", m.fresh ? " fresh" : "", m.sideways ? " cited this round" : "")) : h("span", { class: "muted" }, "None published yet."));
+}
+
+function renderPredictions() {
+  const v = view();
+  const rows = v.predictions.map((p) => h("div", {}, `Q${p.id} `, chip(p.seat), ` T${p.theory} on P${p.probe + 1}`, p.preregistered ? ", preregistered" : "",
+    p.success === null || p.success === undefined ? ` (${p.status})` : (p.success ? ": success" : ": failed")));
+  const hidden = Object.entries(v.hidden_predictions || {}).map(([seat, probes]) =>
+    `${nameOf(Number(seat))}: ${Object.entries(probes).map(([p, n]) => `${n} on P${Number(p) + 1}`).join(", ")}`);
+  fill($("predictions"), rows.length ? rows : h("span", { class: "muted" }, "None visible yet."),
+    hidden.length ? h("p", { class: "small" }, "Hidden predictions: " + hidden.join("; ")) : null);
 }
 
 function renderLog() {
@@ -441,321 +349,6 @@ function renderLog() {
 }
 $("log-filter").oninput = () => msg && renderLog();
 $("as-text").onchange = () => msg && render();
-
-// Actions ---------------------------------------------------------------------------------------
-function describe(a) {
-  const n = (seat) => nameOf(seat);
-  switch (a.type) {
-    case "commit": return "Commit: my choices for this step are final";
-    case "pass": return "Pass: stop experimenting this round";
-    case "claim_probe_time": return `Take Probe time on P${a.probe + 1}`;
-    case "make_prediction": return `Predict with T${a.theory}${paperAuthor(a.theory)} on P${a.probe + 1}${a.preregister ? " (preregistered)" : ""}`;
-    case "cancel_prediction": return `Withdraw prediction Q${a.prediction}`;
-    case "set_preregistered": return `${a.preregister ? "Preregister" : "Un-preregister"} Q${a.prediction}`;
-    case "reveal_prediction": return a.reveal ? `Reveal Q${a.prediction}` : `Keep Q${a.prediction} hidden after all`;
-    case "develop_method": return `Develop a method for ${a.parameter}`;
-    case "cancel_development": return `Drop development choice ${a.index + 1}`;
-    case "revise": return `Revise manuscript D${a.manuscript}`;
-    case "withdraw_submission": return `Withdraw D${a.manuscript} (undo this step's submission or revision)`;
-    case "review_vote": return `Review ${reviewLabel(a.card)}: ${a.vote}`;
-    case "propose_alliance": return `Propose an alliance to ${n(a.partner)}`;
-    case "accept_alliance": return `Accept the alliance with ${n(a.partner)}`;
-    case "leave_alliance": return `Leave the alliance with ${n(a.partner)}`;
-    case "stay_in_alliance": return `Stay in the alliance with ${n(a.partner)}`;
-    default: return JSON.stringify(a);
-  }
-}
-
-function paperAuthor(id) {  // " (name)" or " (name, your own)" for a published paper
-  const paper = view().published.find((p) => p.id === id);
-  if (!paper) return "";
-  return ` (${nameOf(paper.author)}${paper.author === msg.you ? ", your own" : ""})`;
-}
-
-// Prediction choices: by Probe, then my own theories first, then the theories closest to the
-// Nobel Prize (highest counter), then by theory number; the plain choice before the preregistered one.
-function sortPredictions(actions) {
-  const papers = Object.fromEntries(view().published.map((p) => [p.id, p]));
-  const key = (a) => {
-    const p = papers[a.theory] || {};
-    return [a.probe, p.author === msg.you ? 0 : 1, -(p.nobel || 0), a.theory, a.preregister ? 1 : 0];
-  };
-  return [...actions].sort((x, y) => {
-    const kx = key(x), ky = key(y);
-    for (let i = 0; i < kx.length; i++) if (kx[i] !== ky[i]) return kx[i] - ky[i];
-    return 0;
-  });
-}
-
-function predictionContext(a) {  // what a theory says, for prediction choices
-  const paper = view().published.find((p) => p.id === a.theory);
-  return paper ? ` - ${theoryText(paper)} (Nobel ${paper.nobel}/${view().nobel_condition})` : "";
-}
-
-function reviewForm(option) {  // one block per allocation card: the manuscript, its records, the two votes
-  const chosen = view().lab.pending.votes || {};
-  const cards = [...new Set(option.actions.map((a) => a.card))];
-  return cards.map((card) => {
-    const m = manuscriptUnderReview(myReviewCards()[card]);
-    const vote = chosen[String(card)];
-    return h("div", { class: "form-row" },
-      h("b", {}, reviewLabel(card)),
-      m ? h("div", { class: "small" }, chip(m.author), ` tier ${m.tier}: `, m.content ? theoryText(m.content) : "(face down)") : null,
-      m ? h("div", { class: "small" }, recordList(m)) : null,
-      option.actions.filter((a) => a.card === card).map((a) =>
-        h("button", { class: vote === a.vote ? "primary" : "", onclick: () => send(a) }, a.vote)),
-      h("span", { class: "muted small" }, vote ? ` chosen: ${vote}` : " not voted yet"));
-  });
-}
-
-function completeActions(option) {
-  const items = option.actions;
-  if (items.length <= 8) {
-    return items.map((a) => h("button", { class: a.type === "commit" ? "primary" : "", onclick: () => send(a) },
-      describe(a) + (a.type === "make_prediction" ? predictionContext(a) : "")));
-  }
-  const select = h("select", {}, items.map((a, i) => h("option", { value: i }, describe(a) + (a.type === "make_prediction" ? predictionContext(a) : ""))));
-  return [select, h("button", { onclick: () => send(items[Number(select.value)]) }, "Do it")];
-}
-
-function numberInput(value, min, max) {
-  return h("input", { type: "number", value, min, max: max === null || max === undefined ? false : max });
-}
-
-function allocateForm(t) {
-  const pending = view().lab.pending.allocation;
-  const now = t.postdocs_now;
-  const [low, high] = t.postdocs_after;
-  const postdocs = numberInput(pending ? now + pending.hire_postdocs - pending.fire_postdocs : now, low, high);
-  const students = numberInput(pending ? pending.hire_students : 0, 0, t.max_students);
-  const inputs = {};
-  const rows = [...t.tasks].sort((a, b) => taskOrder(a) - taskOrder(b)).map((task) => {
-    const current = pending && pending.allocation[task] ? pending.allocation[task] : { postdocs: 0, students: 0 };
-    const p = numberInput(current.postdocs, 0, task === "talent_development" ? 1 : null);
-    const s = numberInput(current.students, 0, null);
-    if (t.postdoc_only.includes(task)) s.disabled = true;
-    inputs[task] = [p, s];
-    return [task.replace("_", " "), TASK_WHEN[task] || "", p, s];
-  });
-  const button = h("button", { onclick: () => {
-    const after = Number(postdocs.value);
-    const allocation = {};
-    for (const [task, [p, s]] of Object.entries(inputs)) {
-      const count = { postdocs: Number(p.value) || 0, students: Number(s.value) || 0 };
-      if (count.postdocs || count.students) allocation[task] = count;
-    }
-    send({ type: "allocate_staff", hire_postdocs: Math.max(0, after - now), fire_postdocs: Math.max(0, now - after),
-      hire_students: Number(students.value) || 0, allocation });
-  } }, "Set staff allocation");
-  return [
-    h("div", { class: "form-row" }, `You have ${now} postdoc(s). Postdocs after hiring/firing: `, postdocs,
-      ` (${low} to ${high === null ? "any" : high}) \u00b7 students to hire: `, students, ` (at most ${t.max_students})`),
-    table(["Task", "When", "Postdocs", "Students"], rows),
-    h("div", { class: "small muted" }, "Every staff member needs a task; Development and Talent development take postdocs only; at most one on Talent development."),
-    button,
-  ];
-}
-
-function leavingForm(t) {
-  const inputs = Object.entries(t.students_by_task).sort(([a], [b]) => taskOrder(a) - taskOrder(b))
-    .map(([task, n]) => [task, numberInput(0, 0, n), n]);
-  return [
-    h("p", {}, `${t.count} student(s) must leave. Choose from which tasks:`),
-    table(["Task", "When", "Students there", "Leaving"], inputs.map(([task, input, n]) => [task.replace("_", " "), TASK_WHEN[task] || "", n, input])),
-    h("button", { onclick: () => {
-      const by_task = {};
-      for (const [task, input] of inputs) if (Number(input.value)) by_task[task] = Number(input.value);
-      send({ type: "choose_leaving_students", by_task });
-    } }, "Choose"),
-  ];
-}
-
-function experimentForm(t) {
-  const selects = Object.entries(t.states).map(([param, states]) =>
-    [param, h("select", {}, h("option", { value: "" }, "drawn at random"), states.map((s) => h("option", { value: s }, s)))]);
-  const methods = sortMethods(t.methods, (m) => m.id).map((m) => [m, h("input", { type: "checkbox" })]);
-  return [
-    h("p", { class: "small" }, `Specify up to ${t.free_input_parameters} input states for free, plus one per cited method (${t.rule}).`),
-    table(["Input parameter", "State"], selects.map(([p, s]) => [p, s])),
-    methods.length ? h("div", { class: "form-row" }, "Cite methods: ", methods.map(([m, box]) => h("label", {}, box, ` ${methodLabel(m.id)} `))) : null,
-    h("button", { onclick: () => {
-      const specified = {};
-      for (const [param, select] of selects) if (select.value) specified[param] = select.value;
-      send({ type: "run_experiment", specified, cited_methods: methods.filter(([, box]) => box.checked).map(([m]) => m.id) });
-    } }, "Run the experiment"),
-  ];
-}
-
-// Methods to cite: "M3 (IP1; name)" or "M3 (IP1; name, your own)", my own first.
-function methodLabel(id) {
-  const paper = view().published.find((p) => p.id === id);
-  if (!paper) return `M${id}`;
-  return `M${id} (${paper.parameter}; ${nameOf(paper.author)}${paper.author === msg.you ? ", your own" : ""})`;
-}
-function sortMethods(list, idOf) {
-  const own = (x) => { const p = view().published.find((q) => q.id === idOf(x)); return p && p.author === msg.you ? 0 : 1; };
-  return [...list].sort((a, b) => own(a) - own(b) || idOf(a) - idOf(b));
-}
-
-function sensorForm(t) {
-  return t.choices.map((c) => {
-    const boxes = sortMethods(c.methods, (id) => id).map((id) => [id, h("input", { type: "checkbox" })]);
-    return h("div", { class: "form-row" }, `P${c.probe + 1} ${c.parameter}: cite ${c.methods_needed} method(s) `,
-      boxes.map(([id, box]) => h("label", {}, box, ` ${methodLabel(id)} `)),
-      h("button", { onclick: () => send({ type: "install_sensor", probe: c.probe, parameter: c.parameter,
-        cited_methods: boxes.filter(([, b]) => b.checked).map(([id]) => id) }) }, "Install / upgrade sensor"));
-  });
-}
-
-// Duplicate theories ---------------------------------------------------------------------------
-const theoryKey = (i) => JSON.stringify([Object.entries(i.inputs || {}).sort(), Object.entries(i.outcomes || {}).sort()]);
-function publishedCopies(idea) {  // published theories with the same content
-  return view().published.filter((p) => p.kind === "theory" && theoryKey(p) === theoryKey(idea));
-}
-function ownCopies(idea, except) {  // my other theories with the same content: stacks, this phase's choices, manuscripts
-  const v = view();
-  const key = theoryKey(idea);
-  const found = [];
-  for (const i of v.lab.ideas) if (i.kind === "theory" && i.id !== except && theoryKey(i) === key) found.push(`D${i.id} (development stack)`);
-  v.lab.pending.development.forEach((i, n) => { if (i.kind === "theory" && theoryKey(i) === key) found.push(`choice ${n + 1} of this phase`); });
-  for (const m of v.manuscripts) {
-    if (m.author === msg.you && m.id !== except && m.content && m.content.kind === "theory" && theoryKey(m.content) === key) {
-      found.push(`D${m.id} (submitted, ${m.area === "review" ? "awaiting peer review" : m.area === "revise" ? "Revise area" : "Accept area"})`);
-    }
-  }
-  return found;
-}
-
-function theoryForm(t) {
-  const pick = (group) => Object.entries(group).map(([v, states]) =>
-    [v, h("select", {}, h("option", { value: "" }, "blank"), states.map((s) => h("option", { value: s }, s)))]);
-  const inputs = pick(t.inputs);
-  const outcomes = pick(t.outcomes);
-  const chosen = (list) => Object.fromEntries(list.filter(([, s]) => s.value).map(([v, s]) => [v, s.value]));
-  const button = h("button", { onclick: () => send({ type: "formulate_theory", inputs: chosen(inputs), outcomes: chosen(outcomes) }) }, "Formulate this theory");
-  const note = h("div", {});
-  const check = () => {  // runs whenever a state is chosen
-    const idea = { inputs: chosen(inputs), outcomes: chosen(outcomes) };
-    const published = publishedCopies(idea);
-    const own = ownCopies(idea);
-    note.innerHTML = "";
-    button.disabled = published.length > 0;
-    if (published.length) {
-      note.append(h("div", { class: "warn-bad" }, `Already published as ${published.map((p) => `T${p.id} (${nameOf(p.author)})`).join(", ")}: `
-        + "a theory that is already published cannot be formulated, so it could never be submitted."));
-    } else if (own.length) {
-      note.append(h("div", { class: "warn" }, `You already have this theory: ${own.join(", ")}.`));
-    }
-  };
-  for (const [, select] of [...inputs, ...outcomes]) select.addEventListener("change", check);
-  // One click copies a record's cards into the slots (blank cards and missing rows become blank).
-  const lab = view().lab;
-  const records = ["fresh", "stale"].flatMap((area) => [
-    ...lab[area].observations.map((o) => [`O${o.id} (P${o.probe + 1}, round ${o.round}, ${area})`, o.cards]),
-    ...lab[area].experiments.map((e) => [`E${e.id} (experiment, ${area})`, e.cards]),
-  ]);
-  const use = (cards) => {
-    for (const [v, select] of [...inputs, ...outcomes]) {
-      const state = cards[v];
-      select.value = state && [...select.options].some((o) => o.value === state) ? state : "";
-    }
-    check();
-  };
-  const copy = records.length ? h("details", { open: true }, h("summary", { class: "small" }, "Fill the slots from one of your records"),
-    records.map(([label, cards]) => h("div", { class: "small" },
-      h("button", { onclick: () => use(cards) }, "use"), ` ${label}: ${values(cards)}`))) : null;
-  return [copy, table(["Row", "State"], [...inputs, ...outcomes].map(([v, s]) => [v, s])), note, button];
-}
-
-function recordText(r) {
-  return r.kind === "observation" ? `O${r.observation}` : `experiment cards ${r.cards.map(([e, v]) => `E${e}:${v}`).join(" ")}`;
-}
-
-function submitForm(option) {
-  const t = option.template;
-  return option.actions.map((a) => {
-    const spare = (t.spare_records[`${a.manuscript}/${a.tier}`] || []).map((r) => [r, h("input", { type: "checkbox" })]);
-    const apc = t.apc[String(a.tier)];
-    // Only offered when the submission fee and the charge together fit the money that may be spent.
-    const canPayApc = apc > 0 && (t.submission_fee ? t.submission_fee[String(a.tier)] : 0) + apc <= t.spendable;
-    const apcBox = h("input", { type: "checkbox" });
-    // Duplicates are allowed (e.g. to fast-track a reformulated theory), so these only warn.
-    const idea = view().lab.ideas.find((i) => i.id === a.manuscript);
-    const own = idea && idea.kind === "theory" ? ownCopies(idea, a.manuscript) : [];
-    const published = idea && idea.kind === "theory" ? publishedCopies(idea) : [];
-    const warnings = [
-      own.length ? `You already have a theory like this: ${own.join(", ")}.` : "",
-      published.length ? `The same theory is already published as ${published.map((p) => `T${p.id} (${nameOf(p.author)})`).join(", ")}.` : "",
-    ].filter(Boolean);
-    const submit = () => {
-      if (warnings.length && !window.confirm(`${warnings.join("\n")}\n\nAre you sure you want to submit D${a.manuscript}?`)) return;
-      send({ ...a, records: [...a.records, ...spare.filter(([, b]) => b.checked).map(([r]) => r)], pay_apc: apcBox.checked });
-    };
-    return h("div", { class: "option" },
-      `D${a.manuscript}${idea ? ` (${theoryText(idea)})` : ""} to tier ${a.tier} with ${a.records.length ? a.records.map(recordText).join(", ") : "no records"}. `,
-      warnings.map((w) => h("div", { class: "warn" }, w)),
-      spare.length ? h("div", { class: "small" }, "Add spare records (each extra record shortens processing): ",
-        spare.map(([r, box]) => h("label", {}, box, ` ${recordText(r)} `))) : null,
-      canPayApc ? h("label", { class: "small" }, apcBox, ` pay the article processing charge (${apc}; you can spend ${t.spendable}) `) : null,
-      apc > 0 && !canPayApc ? h("span", { class: "small muted" }, ` (article processing charge ${apc}: not enough money) `) : null,
-      h("button", { onclick: submit }, "Submit"));
-  });
-}
-
-function orderForm(t) {
-  const input = h("input", { value: t.predictions.map((id) => `Q${id}`).join(", "), size: 30 });
-  return [h("p", { class: "small" }, "Several of your predictions are on the same Probe: the order in which they are scored."), input,
-    h("button", { onclick: () => send({ type: "order_predictions", order: input.value.split(",").map((x) => Number(x.trim().replace(/^Q/, ""))) }) }, "Set the order")];
-}
-
-const TITLES = {
-  allocate_staff: "Hiring and task allocation", choose_leaving_students: "Student task check", run_experiment: "Run an experiment",
-  install_sensor: "Install or upgrade a sensor", pass: "Pass", claim_probe_time: "Probe time", make_prediction: "Make a prediction",
-  cancel_prediction: "Withdraw a prediction", set_preregistered: "Preregistration", reveal_prediction: "Reveal predictions",
-  order_predictions: "Scoring order", formulate_theory: "Formulate a theory", develop_method: "Develop a method",
-  cancel_development: "Change your development choices", submit: "Submit a manuscript", revise: "Revise a manuscript", withdraw_submission: "Change your mind",
-  review_vote: "Peer review", alliance: "Alliances", leave_alliance: "Last chance to leave an alliance",
-  stay_in_alliance: "Stay in an alliance", commit: "Done?",
-};
-
-// The server sends a new state after every player's action, also another player's. Rebuilding the
-// forms then would throw away what this player has typed but not sent yet, so they are rebuilt
-// only when something they show has changed: the choices, the step, this lab, the literature.
-let actionsShown = null;
-function actionsKey() {
-  const v = view();
-  return JSON.stringify([msg.status, msg.you, msg.seats[msg.you] && msg.seats[msg.you].kind, Boolean(v.result), v.round, v.phase,
-    msg.options, v.lab, myReviewCards(), v.published.map((p) => p.id), v.manuscripts.map((m) => [m.id, m.area, m.position])]);
-}
-
-function renderActions() {
-  const box = $("actions");
-  const shown = actionsKey();
-  if (shown === actionsShown && box.childElementCount) return;
-  actionsShown = shown;
-  box.innerHTML = "";
-  if (view().result || msg.status !== "running") { box.append(h("p", { class: "muted" }, "Nothing to do.")); return; }
-  if (!msg.options.length) {
-    box.append(h("p", { class: "muted" }, msg.seats[msg.you] && msg.seats[msg.you].kind !== "human"
-      ? `Your seat is played by an automated player (${msg.seats[msg.you].kind}) for now.` : "Nothing to do right now; others are deciding."));
-    return;
-  }
-  const order = (o) => (o.type === "commit" ? 2 : o.type === "alliance" ? 1 : 0);
-  for (const option of [...msg.options].sort((a, b) => order(a) - order(b))) {
-    let body;
-    if (option.type === "allocate_staff") body = allocateForm(option.template);
-    else if (option.type === "choose_leaving_students") body = leavingForm(option.template);
-    else if (option.type === "run_experiment") body = experimentForm(option.template);
-    else if (option.type === "install_sensor") body = sensorForm(option.template);
-    else if (option.type === "formulate_theory") body = theoryForm(option.template);
-    else if (option.type === "submit") body = submitForm(option);
-    else if (option.type === "order_predictions") body = orderForm(option.template);
-    else if (option.type === "review_vote") body = reviewForm(option);
-    else if (option.type === "make_prediction") body = completeActions({ ...option, actions: sortPredictions(option.actions) });
-    else body = completeActions(option);
-    box.append(h("div", { class: "option" }, h("h3", {}, TITLES[option.type] || option.type), body));
-  }
-}
 
 // Spectators: replay, World Table, AI notes (specification 7.3) ---------------------------------
 function reconnect() {
@@ -820,18 +413,6 @@ function renderReplay() {
   );
 }
 
-function renderWorld() {
-  const v = view();
-  const inputs = v.variables.filter((x) => x.kind === "input");
-  const outcomes = v.variables.filter((x) => x.kind !== "input");
-  const truth = (v.probe_truth || []).map((t, i) => (t ? `P${i + 1}` : null));
-  const rows = v.world_table.map((row) => {
-    const probes = (v.probe_truth || []).map((t, i) => (t && inputs.every((x) => t[x.id] === row.inputs[x.id]) ? `P${i + 1}` : null)).filter(Boolean);
-    return [...inputs.map((x) => row.inputs[x.id]), ...outcomes.map((x) => row.outcomes[x.id]), probes.join(", ")];
-  });
-  fill($("world"), table([...inputs.map((x) => x.id), ...outcomes.map((x) => x.id), truth.some(Boolean) ? "on the grid now" : ""], rows));
-}
-
 function renderNotes() {
   fill($("notes"), Object.entries(msg.ai_notes || {}).map(([name, text]) => h("div", {}, h("h3", {}, name), h("pre", {}, text))));
 }
@@ -880,6 +461,7 @@ async function renderHost() {
 }
 
 // Start ------------------------------------------------------------------------------------------
+initPanels();
 if (store.get("seat") || store.get("host")) {
   if (!store.get("seat") && store.get("host")) {
     fetch(`/api/games/${gameId}`).then((r) => r.json()).then((info) => {

@@ -7,33 +7,51 @@
   <link rel="stylesheet" href="/web/style.css">
 </head>
 <body>
-  <header>
-    <h1><a href="/" style="color:inherit;text-decoration:none">Null &amp; Void</a></h1>
-    <div class="status" id="status">Connecting...</div>
-    <a href="/credits" target="_blank">Credits</a>
-    <label class="small"><input type="checkbox" id="as-text"> show as text</label>
-  </header>
-  <div class="error-bar" id="error"></div>
-  <div id="banner"></div>
+  <div class="top" id="top">
+    <header>
+      <h1><a href="/" style="color:inherit;text-decoration:none">Null &amp; Void</a></h1>
+      <div class="status" id="status">Connecting...</div>
+      <a href="/credits" target="_blank">Credits</a>
+      <label class="small">Tiles <select id="tile-style"><option value="tall">tall</option><option value="compact">compact</option></select></label>
+      <label class="small"><input type="checkbox" id="as-text"> show as text</label>
+    </header>
+    <div class="error-bar" id="error"></div>
+    <div id="banner"></div>
+    <div class="columns" id="columns" style="display:none"></div>
+  </div>
   <div id="join" class="lobby" style="display:none"></div>
   <main id="board">
-    <div class="column">
-      <section class="panel" id="actions-panel"><h2 id="actions-title">What you can do now</h2><div id="actions"></div></section>
-      <section class="panel"><h2>World Grid</h2><div id="grid"></div></section>
-      <section class="panel"><h2>Literature</h2><div id="literature"></div></section>
-      <section class="panel"><h2>Submission Portal</h2><div id="portal"></div></section>
-      <section class="panel"><h2>Predictions</h2><div id="predictions"></div></section>
-      <section class="panel" id="world-panel" style="display:none"><h2>World Table <span class="muted small">(spectators only)</span></h2><div id="world"></div></section>
+    <div class="column board-main">
+      <section class="panel" id="actions-panel" data-panel="task">
+        <h2><span id="actions-title">What you can do now</span> <span class="h-note" id="actions-note"></span>
+          <span class="h-right"><span class="h-task" id="task-buttons"></span><button class="pin" id="pin-task"></button></span></h2>
+        <div id="actions"></div>
+      </section>
+      <section class="panel selection" id="selection-panel" data-panel="selection">
+        <h2>Selected for comparison
+          <span class="h-right"><span class="legend"><span><i class="swatch fits"></i>no mismatch</span><span><i class="swatch same"></i>identical</span></span><button class="pin" id="pin-selection"></button></span></h2>
+        <div id="selection"></div>
+      </section>
+      <section class="panel" data-panel="grid"><h2>World Grid <span class="h-note">L1-L3: a sensor's level, its reading may be noise</span></h2><div id="grid"></div></section>
+      <section class="panel" id="records-panel" data-panel="records" style="display:none"><h2><span id="records-title">Your records</span></h2><div id="records"></div></section>
+      <section class="panel" id="ideas-panel" data-panel="ideas" style="display:none"><h2><span id="ideas-title">Your unpublished work</span></h2><div id="ideas"></div></section>
+      <section class="panel" data-panel="literature"><h2>Literature <span class="h-note">theories; your own first, then closest to the Nobel Prize</span></h2><div id="literature"></div></section>
+      <section class="panel" data-panel="portal"><h2>Submission Portal</h2><div id="portal"></div></section>
+      <section class="panel" id="world-panel" data-panel="world" style="display:none"><h2>World Table <span class="h-note">spectators only</span></h2><div id="world"></div></section>
     </div>
-    <div class="column">
-      <section class="panel"><h2 id="lab-title">Your lab <span class="muted small">(behind your lab shield)</span></h2><div id="lab"></div></section>
-      <section class="panel"><h2>Tracks</h2><div id="tracks"></div></section>
-      <section class="panel" id="notes-panel" style="display:none"><h2>AI players' notes</h2><div id="notes"></div></section>
-      <section class="panel" id="host-panel" style="display:none"><h2>Host controls</h2><div id="host"></div></section>
-      <section class="panel"><h2>Event log <input id="log-filter" placeholder="filter" class="small"></h2><div class="log" id="log"></div></section>
-    </div>
+    <aside class="column side">
+      <section class="panel" data-panel="lab"><h2><span id="lab-title">Your lab</span></h2><div id="lab"></div></section>
+      <section class="panel" data-panel="tracks"><h2>Tracks</h2><div id="tracks"></div></section>
+      <section class="panel" data-panel="methods"><h2>Methods</h2><div id="methods"></div></section>
+      <section class="panel" data-panel="predictions"><h2>Predictions this round</h2><div id="predictions"></div></section>
+      <section class="panel" id="notes-panel" data-panel="notes" style="display:none"><h2>AI players' notes</h2><div id="notes"></div></section>
+      <section class="panel" id="host-panel" data-panel="host" style="display:none"><h2>Host controls</h2><div id="host"></div></section>
+      <section class="panel" data-panel="log"><h2>Event log <input id="log-filter" placeholder="filter" class="small"></h2><div class="log" id="log"></div></section>
+    </aside>
   </main>
   <section class="panel" id="text-view" style="display:none;margin:12px"><pre id="text"></pre></section>
+  <script src="/web/strips.js"></script>
+  <script src="/web/tasks.js"></script>
   <script src="/web/game.js"></script>
 </body>
 </html>
