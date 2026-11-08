@@ -24,7 +24,7 @@ true world.
 | 5 | Server, persistence and web UI | done |
 | 6 | Spectator mode and debrief | done |
 | 7 | Deployment | done |
-| 8 | Board design with icons | being designed (specification 7.4) |
+| 8 | Board design with icons | in the game, waiting for acceptance (specification 7.4) |
 
 The milestones and their acceptance criteria are in the specification, section 13.
 

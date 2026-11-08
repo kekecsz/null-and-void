@@ -226,7 +226,7 @@ There are two clients, a text client and a simple web UI, and both show the same
 
 ### 7.2 Web UI (first version)
 
-Plain and functional, desktop-first, English only. One page with these areas:
+Plain and functional, desktop-first, English only. Section 7.4 replaces how the world states and the forms are drawn; the areas stay. One page with these areas:
 
 | Area | Shows | Player can |
 | --- | --- | --- |
@@ -263,13 +263,15 @@ The web UI's world states become icons in strips. This section records the desig
 
 **The top of the board.** The topmost panel is always the current task (the only panel that changes by phase). Directly under it is the labelled selection panel, showing the selected strip. Both are pinned to the top while scrolling by default, and each has a pin icon on its right to unpin it. Unpinning is remembered for each player, so an unpinned selection panel stays unpinned when a new strip is selected, and is re-pinned by scrolling up to it.
 
-**Panels** can be minimised to their title; this is remembered too.
+**Panels** can be minimised to their title by a click anywhere on the title line (controls on that line keep their own function); this is remembered too.
+
+**The selection** stays through phase changes and ends when its strip is gone (a Probe is a different strip each round). At the start of the prediction step the first Probe is selected for the player, if nothing is selected; that selection ends with the step unless the player chose it.
 
 **Tasks.**
 
-- *Predictions:* the task lists only the eligible theory strips, with a choice for each Probe. Which theories fit a Probe is shown by selecting the Probe.
+- *Predictions:* the task lists only the eligible theory strips (the player's own first, then those closest to the Nobel Prize), with a choice for each Probe. Which theories fit a Probe is shown by selecting the Probe.
 - *Experiments:* the experiment being specified is a selectable strip. A "use" button on the selected strip copies its input states into it.
-- *Citations:* while an experiment is not valid for lack of citations, its button reads "Auto-cite and run"; once the player's own citations make it valid, "Run". The methods auto-cite would choose are highlighted in light blue. Auto-cite picks only from eligible methods and prefers, in order: the player's own methods; the methods of the author with the lowest academic credit; the method published first.
+- *Citations:* while an experiment is not valid for lack of citations, its button reads "Auto-cite and run"; once the player's own citations make it valid, "Run". The methods auto-cite would choose are highlighted in light blue. Citations made by hand are kept and auto-cite only adds what is still missing. Auto-cite picks only from eligible methods and prefers, in order: the player's own methods; the methods of the author with the lowest academic credit; the method published first.
 - *Sensors:* "+" fills an eligible sensor slot, for installing and upgrading alike, and is transparent so what is under it stays visible. Pressing it opens the same citation choice, with auto-cite.
 - *Theory formulation:* "use" on a record or on the selected strip copies its states into the theory being formulated.
 - *Submission:* a submission is a box. Its top row is the theory (placed with "use"); the supporting records go below it. A box minimises to a strip showing the theory and expands back to show the records. The article processing charge is offered under the same condition as today.
