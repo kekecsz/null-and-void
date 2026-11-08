@@ -23,7 +23,7 @@ true world.
 | 4 | AI player and scripted bots | done |
 | 5 | Server, persistence and web UI | done |
 | 6 | Spectator mode and debrief | done |
-| 7 | Deployment | planned |
+| 7 | Deployment | done |
 
 The milestones and their acceptance criteria are in the specification, section 13.
 
