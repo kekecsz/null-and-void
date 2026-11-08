@@ -4,9 +4,11 @@
 
 icons.yaml says which source image and colour each state gets. The tiles go to
 web/icons/<scenario>/, one per state, named after the state with spaces as underscores
-(fat blue -> fat_blue.png); the server already serves that folder at /web/icons/<scenario>/.
+(fat blue -> fat_blue.png), with colours.json for the compact tiles; the server already serves
+that folder at /web/icons/<scenario>/.
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -49,6 +51,14 @@ def make_tile(source: Path, colour: str) -> Image.Image:
     return tile.resize((SIZE, SIZE), Image.LANCZOS)
 
 
+def tile_colours(colour: str) -> dict[str, str]:
+    """The colour of a state's tile, and a readable text colour on it (for the compact tiles)."""
+    rgb = colour[1:7]
+    red, green, blue = (int(rgb[i : i + 2], 16) for i in (0, 2, 4))
+    brightness = 0.299 * red + 0.587 * green + 0.114 * blue
+    return {"background": f"#{rgb}", "text": "#ffffff" if brightness < 140 else "#1d1d1b"}
+
+
 def main() -> None:
     config = yaml.safe_load((HERE / "icons.yaml").read_text(encoding="utf-8"))
     scenario_id, icons = config["scenario"], config["icons"]
@@ -57,6 +67,9 @@ def main() -> None:
     output.mkdir(parents=True, exist_ok=True)
     for state, icon in icons.items():
         make_tile(SOURCE_DIR / icon["source"], icon["colour"]).save(output / f"{state.replace(' ', '_')}.png")
+    # The web client reads this; asset_generation/ itself is not deployed.
+    colours = {state: tile_colours(icon["colour"]) for state, icon in icons.items()}
+    (output / "colours.json").write_text(json.dumps(colours, indent=1) + "\n", encoding="utf-8", newline="\n")
     print(f"{len(icons)} icons in {output.relative_to(REPO_ROOT)}")
 
 

@@ -1,0 +1,38 @@
+{
+ "fat blue": {
+  "background": "#2BC1F7",
+  "text": "#1d1d1b"
+ },
+ "green ameba": {
+  "background": "#0C7500",
+  "text": "#ffffff"
+ },
+ "smooth": {
+  "background": "#D489B9",
+  "text": "#1d1d1b"
+ },
+ "cratered": {
+  "background": "#A9744F",
+  "text": "#ffffff"
+ },
+ "spiky": {
+  "background": "#999895",
+  "text": "#1d1d1b"
+ },
+ "sugar": {
+  "background": "#F0EAD6",
+  "text": "#1d1d1b"
+ },
+ "sulfur": {
+  "background": "#D9FF5D",
+  "text": "#1d1d1b"
+ },
+ "scorching hot": {
+  "background": "#F7C52B",
+  "text": "#1d1d1b"
+ },
+ "acid rain": {
+  "background": "#DA0000",
+  "text": "#ffffff"
+ }
+}
