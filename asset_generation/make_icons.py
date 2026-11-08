@@ -5,7 +5,6 @@
 icons.yaml says which source image and colour each state gets. The tiles go to
 web/icons/<scenario>/, one per state, named after the state with spaces as underscores
 (fat blue -> fat_blue.png); the server already serves that folder at /web/icons/<scenario>/.
-A sheet of all tiles, for checking them by eye, goes to asset_generation/icons_preview.png.
 """
 
 import sys
@@ -22,12 +21,10 @@ from nv_world.scenario import load_scenario  # noqa: E402
 
 SOURCE_DIR = HERE / "icons_source"
 OUTPUT_ROOT = REPO_ROOT / "web" / "icons"
-PREVIEW = HERE / "icons_preview.png"
 
 SIZE, SS = 512, 4  # output size, supersampling factor
 S = SIZE * SS
 BORDER, RADIUS, MARGIN, ICON = 22 * SS, 96 * SS, 6 * SS, 0.66  # ICON = share of the tile's width
-PREVIEW_COLUMNS, PREVIEW_GAP = 5, 40
 
 
 def check_states(icons: dict[str, dict[str, str]], scenario_id: str) -> None:
@@ -52,28 +49,15 @@ def make_tile(source: Path, colour: str) -> Image.Image:
     return tile.resize((SIZE, SIZE), Image.LANCZOS)
 
 
-def save_preview(tiles: list[Image.Image]) -> None:
-    rows = (len(tiles) + PREVIEW_COLUMNS - 1) // PREVIEW_COLUMNS
-    step = SIZE + PREVIEW_GAP
-    sheet = Image.new("RGBA", (PREVIEW_COLUMNS * step + PREVIEW_GAP, rows * step + PREVIEW_GAP), "white")
-    for i, tile in enumerate(tiles):
-        sheet.alpha_composite(tile, (PREVIEW_GAP + i % PREVIEW_COLUMNS * step, PREVIEW_GAP + i // PREVIEW_COLUMNS * step))
-    sheet.convert("RGB").save(PREVIEW)
-
-
 def main() -> None:
     config = yaml.safe_load((HERE / "icons.yaml").read_text(encoding="utf-8"))
     scenario_id, icons = config["scenario"], config["icons"]
     check_states(icons, scenario_id)
     output = OUTPUT_ROOT / scenario_id
     output.mkdir(parents=True, exist_ok=True)
-    tiles = []
     for state, icon in icons.items():
-        tile = make_tile(SOURCE_DIR / icon["source"], icon["colour"])
-        tile.save(output / f"{state.replace(' ', '_')}.png")
-        tiles.append(tile)
-    save_preview(tiles)
-    print(f"{len(tiles)} icons in {output.relative_to(REPO_ROOT)}; preview: {PREVIEW.relative_to(REPO_ROOT)}")
+        make_tile(SOURCE_DIR / icon["source"], icon["colour"]).save(output / f"{state.replace(' ', '_')}.png")
+    print(f"{len(icons)} icons in {output.relative_to(REPO_ROOT)}")
 
 
 if __name__ == "__main__":
