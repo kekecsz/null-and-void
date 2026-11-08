@@ -29,3 +29,6 @@ games/
 settings/api_keys.env
 settings/ai_spending.csv
 .env
+
+# Generated sheet for checking the icons by eye
+asset_generation/icons_preview.png

@@ -1,0 +1,13 @@
+# Which source image (in icons_source/) and tile colour each state of a scenario gets.
+# The keys are the state names in the scenario file; make_icons.py stops if they do not match.
+scenario: venus_expedition
+icons:
+  fat blue:      {source: fat_blue_black.png,  colour: "#2BC1F7"}
+  green ameba:   {source: green_black.png,     colour: "#5DBB63"}
+  smooth:        {source: smooth_black.png,    colour: "#D489B9"}
+  cratered:      {source: cratered_black.png,  colour: "#A9744F"}
+  spiky:         {source: spiked_black.png,    colour: "#999895"}
+  sugar:         {source: sugar_black.png,     colour: "#F0EAD6"}
+  sulfur:        {source: sulfur_black.png,    colour: "#D9FF5D"}
+  scorching hot: {source: scorching_black.png, colour: "#F7C52B"}
+  acid rain:     {source: acid_rain_black.png, colour: "#4DBF5C"}

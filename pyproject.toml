@@ -23,6 +23,7 @@ nv-sim = "nv_sim.run:main"
 nv-server = "nv_server.app:main"
 
 [project.optional-dependencies]
+assets = ["pillow>=11"]  # asset_generation/make_icons.py
 cloud = ["google-cloud-firestore>=2.20"]  # the deployed server's storage
 dev = ["pytest>=8", "httpx>=0.28", "google-cloud-firestore>=2.20"]  # httpx: FastAPI's test client
 
