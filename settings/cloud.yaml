@@ -1,0 +1,8 @@
+# Null & Void: where and how the server is deployed (specification 6.6; used by deploy/cloud_run.py).
+project: null-and-void-514112
+region: europe-central2
+service: null-and-void               # the Cloud Run service
+service_account: nv-server           # the identity the server runs as
+max_instances: 1                     # live updates assume a single instance (specification 6.2)
+timeout_seconds: 3600                # WebSockets are closed after this; browsers reconnect by themselves
+memory: 1Gi

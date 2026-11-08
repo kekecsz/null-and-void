@@ -175,6 +175,7 @@ The server is a stateless FastAPI app: every request rebuilds the game from stor
 
 - **One storage interface, two backends:** a local SQLite file (milestone 5) and Firestore (milestone 7) store the same data, so the server does not care which one it runs on.
 - **Layout** (Firestore paths; the SQLite tables mirror them): `games/{id}` holds metadata (scenario, world, settings, seed, seats, status, hashed join and spectator passwords); `games/{id}/actions/{seq}` holds the ordered action log, each action with the events it produced; `games/{id}/snapshots/{seq}` holds a state snapshot at the start of each round (also used to replay any action: 7.3); `games/{id}/ai_decisions/{n}` holds the AI decision log. Loading starts from the latest snapshot and applies the actions after it; the stored events give the event log and the scripted bots' memory, so loading never replays a whole game. Metadata also holds the AI seats' notes and costs, and the world file's drawn effects, interactions and row probabilities (for the debrief).
+- **AI spending:** on the deployed server the ledger's total and entries are in Firestore (`ai_spending/total`), because a Cloud Run instance's disk does not last; `ai_total_budget` therefore holds across restarts. It counts deployed spending only; local runs keep their own ledger file.
 - **Writes:** an action is accepted only if its sequence number is the next one, checked in a transaction. Two players acting at once can never corrupt the log; the loser simply retries against the new state.
 - **Saving is automatic.** Every action is stored the moment it is accepted, so a game can stop at any point and resume days later from the host's link.
 
@@ -187,7 +188,7 @@ The server is a stateless FastAPI app: every request rebuilds the game from stor
 
 ### 6.3 Creating and joining games
 
-1. The host opens the lobby, chooses a scenario and world (or generates a new one), a settings preset, and the seats (within the player limits in parameter\_defaults.yaml), each marked human, AI (with its model and persona) or scripted bot (9.4).
+1. The host opens the lobby (on a server with an **organiser password**, which the deployed server must have, entering it is needed to create a game or see the list of games; players only need their link), chooses a scenario and world (or generates a new one), a settings preset, and the seats (within the player limits in parameter\_defaults.yaml), each marked human, AI (with its model and persona) or scripted bot (9.4).
 2. The host gets a **join link** and an optional password, and an optional **spectator password**. Without a spectator password, only the host link can spectate.
 3. A player opens the link, enters a nickname and picks a free seat and a colour from a fixed list. The browser keeps a seat token, so a refresh or a dropped connection rejoins the same seat; a link with the token (`#seat=...`) takes the seat to another device.
 4. The host starts the game when all human seats are filled. Settings are locked from then on.
@@ -205,6 +206,13 @@ The server is a stateless FastAPI app: every request rebuilds the game from stor
 - Hidden information never leaves the server except in the view of the player entitled to it.
 - The model provider's API key lives in Google Secret Manager and is used only server-side. For local runs it is read from `settings/api_keys.env`, which git ignores and is never committed.
 - No accounts and no personal data beyond nicknames. If logged games are ever used as research data, consent and ethics approval are needed first; that is outside this spec.
+- The organiser password (6.3) is what stops strangers from spending the AI budget. It lives in Secret Manager, and the server refuses to start on Firestore without one.
+
+### 6.6 Deployment
+
+- `deploy/cloud_run.py` does the work; the project, region and service limits are in `settings/cloud.yaml`.
+- The image is built from the `Dockerfile`, which names each folder it copies, so local keys, the local ledger and saved games cannot end up in it; `.gcloudignore` also keeps them out of the upload.
+- The server runs as its own service account, which may use Firestore and read its two secrets.
 
 ## 7. Clients
 
@@ -407,7 +415,7 @@ The software's own settings live in `settings/software.yaml`:
 | `bot_memory_corruption` | 0 (scripted bots: chance per round that a remembered reading changes) |
 | `bot_max_wait_rounds` | 20 (patient scripted bots wake up after this round at the latest) |
 | `snapshot_every` | each round |
-| `max_instances` (Cloud Run) | 1 |
+| `max_instances` (Cloud Run) | see `settings/cloud.yaml` |
 
 The AI defaults are starting points to tune with the simulator, not tested values.
 

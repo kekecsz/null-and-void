@@ -27,6 +27,20 @@ true world.
 
 The milestones and their acceptance criteria are in the specification, section 13.
 
+## Deployment (milestone 7)
+
+The project, region and limits are in `settings/cloud.yaml`. With the Google Cloud CLI signed in:
+
+```sh
+.venv/Scripts/python deploy/cloud_run.py setup     # once: services, Firestore database, server identity
+.venv/Scripts/python deploy/cloud_run.py secrets   # the API key (from settings/api_keys.env) and an organiser password
+.venv/Scripts/python deploy/cloud_run.py deploy    # build and publish; prints the address (also after every code change)
+```
+
+On the deployed server the organiser password is needed to create games and to see the list of games.
+Players only need their join link. The AI budget (`ai_total_budget`) counts deployed spending separately
+from the local ledger.
+
 ## The documents
 
 The game and the software are defined by four documents. The code reads its values from them rather than
