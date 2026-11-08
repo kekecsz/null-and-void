@@ -87,11 +87,33 @@ is so strong that a postdoc on Talent development is worth it in every opening r
 **Waiting for:** Zoltan to choose and playtest a version, then update the rulebook and `parameter_defaults.yaml`.
 The engine and the bots will follow the rulebook export. Nothing changes in the code until then.
 
+## A minimum number of Game Period cards for each researcher
+
+**Document:** rulebook, Hiring and task allocation phase.
+
+**Text:** "At the end of the Hiring and task allocation phase, the total number of research staff across all
+researchers is tallied, and that many cards are revealed from the top of the Game Period Deck."
+
+**Decided by Zoltan (2026-11-08):** a new setting, `min_cards_burn_each_round_per_player`. Each researcher counts
+for their research staff, but for at least this number. It is not a flat extra per player: it is a penalty for
+running a lab with (almost) no staff. The engine applies it, and specification 5.7 records it for now.
+
+**Waiting for:** the rulebook sentence above to be updated, for example to "At the end of the Hiring and task
+allocation phase, the research staff of each researcher are counted, a researcher with fewer than
+[min_cards_burn_each_round_per_player] counting as that many, and the sum of these numbers of cards is revealed
+from the top of the Game Period Deck." The AI players read the rulebook, so they learn this rule only from that
+export. Once the rulebook says so, remove this entry and the clarification in specification 5.7.
+
 ## The Crisis is almost unwinnable with the defaults (balance)
 
-**Document:** `parameter_defaults.yaml` (`crisis_condition: 5`, `crisis_length: 4`); rulebook, Crisis.
+**Document:** `parameter_defaults.yaml` (`crisis_condition`, `crisis_length`); rulebook, Crisis.
 
-**Problem:** with 3 players there are 4 Probes, so a 4-round Crisis has 16 Probe-rounds. Each failed prediction
+**Update (Zoltan, 2026-11-08):** the parameter file now has `crisis_length: 3` and `crisis_condition: 6`. The
+figures below were measured with the earlier 4 rounds and condition 5. **Rulebook:** no change is needed for these
+two values, because its Crisis section only names them as `[crisis_length]` and `[crisis_condition]` (checked on
+that date). If the values are written out anywhere else later, such as on a player aid, that text must follow.
+
+**Problem (with the earlier values):** with 3 players there are 4 Probes, so a 4-round Crisis has 16 Probe-rounds. Each failed prediction
 and each Probe without a prediction counts as unsuccessful, so surviving the Crisis allows at most 4 of 16. The
 simulator (2026-11-07, scripted bots of specification 9.4, Venus Expedition, 3 players, 100 games per table,
 `crisis_condition` set to 100 so the Crisis always runs its full length) gives these unsuccessful predictions per
@@ -121,8 +143,9 @@ Crisis with `crisis_condition` 7 to 8 gives about the same odds as a 4-round Cri
 value probably depends on the player count, and a condition relative to the number of Probes might hold up better.
 The scripted bots do not play differently as a crash comes closer.
 
-**Waiting for:** Zoltan's choice and a playtest, then `parameter_defaults.yaml`. A sweep with 4 and 5 players can
-check how the value should scale.
+**Waiting for:** a playtest of the new values (3 rounds, condition 6: in the table above, 38% of cooperative
+tables, 11% of mixed and 3% of selfish ones survive). A sweep with 4 and 5 players can check how the value should
+scale.
 
 ## Early pullout: averting the Crisis by scaling down (design idea)
 

@@ -60,6 +60,9 @@ class Settings(_Strict):
     calm_cards_per_player_top: StrictInt
     calm_cards_per_player_warning: StrictInt
     calm_cards_per_player_crisis: StrictInt
+    # A game saved before this setting existed keeps the rule it was started under (no minimum).
+    # The parameter file must still list it: see _validate.
+    min_cards_burn_each_round_per_player: StrictInt = 0
     # Probes and sensors
     probe_deck_copies: StrictInt
     probe_deck_min_rebuild_stacks: StrictInt
@@ -128,6 +131,9 @@ def _location(error: dict[str, Any]) -> str:
 
 def _validate(data: dict[str, Any], path: Path, overridden: set[str]) -> Settings:
     """Validate; each problem names its setting and whether it came from the file or an override."""
+    absent = [name for name, field in Settings.model_fields.items() if not field.is_required() and name not in data]
+    if absent:
+        raise SettingsError("; ".join(f"{path}: {name}: missing" for name in absent))
     try:
         return Settings.model_validate(data)
     except ValidationError as exc:

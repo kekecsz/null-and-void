@@ -28,6 +28,7 @@ talent_track_max: 3
 calm_cards_per_player_top: 40
 calm_cards_per_player_warning: 20
 calm_cards_per_player_crisis: 20
+min_cards_burn_each_round_per_player: 1 
 
 # Probes and sensors
 probe_deck_copies: 10
@@ -56,8 +57,8 @@ retraction_threshold: 3                    # retraction counter value
 retraction_ac_penalty: -5                  # academic credit
 
 # Crisis
-crisis_condition: 5                        # unsuccessful predictions
-crisis_length: 4                           # rounds
+crisis_condition: 6                        # unsuccessful predictions
+crisis_length: 3                           # rounds
 
 # Publication
 submission_portal_positions: 40

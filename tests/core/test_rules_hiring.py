@@ -6,9 +6,12 @@ and hand-made decks are written here.
 """
 
 import pytest
+import yaml
 
 from nv_core import actions as a
 from nv_core.engine import IllegalAction, apply, validate
+from nv_core.paths import PARAMETER_DEFAULTS
+from nv_core.settings import Settings, SettingsError, load_settings
 from nv_core.state import Phase, StaffCount, Task
 from tests.core.engine_helpers import do, game, settings
 
@@ -102,6 +105,42 @@ def test_period_cards_revealed_count_students_too():
         a.CommitPhase(seat=1),
     )
     assert before - len(state.period_deck) == 4
+
+
+def _reveal(state, staff_of_seat_0):
+    """Seat 0 hires that many postdocs, seat 1 nobody; returns how many Game Period cards are revealed."""
+    for r in state.researchers:
+        r.money = 10 * S.cost_of_postdoc
+    state.period_deck = "c" * 100
+    state = do(
+        state,
+        a.AllocateStaff(seat=0, hire_postdocs=staff_of_seat_0, allocation=_postdocs(staff_of_seat_0)),
+        a.CommitPhase(seat=0),
+        a.CommitPhase(seat=1),
+    )
+    return 100 - len(state.period_deck)
+
+
+@pytest.mark.parametrize("minimum, staff, revealed", [(1, 3, 3 + 1), (1, 1, 1 + 1), (3, 2, 3 + 3), (3, 4, 4 + 3), (0, 2, 2)])
+def test_each_researcher_counts_for_at_least_the_minimum(minimum, staff, revealed):
+    """Specification 5.7, Game Period cards: the minimum replaces a lab's staff count only when it is
+    larger; here seat 1 has no staff at all, and seat 0 pays nothing extra for having staff."""
+    assert _reveal(game(min_cards_burn_each_round_per_player=minimum), staff) == revealed
+
+
+def test_a_game_saved_before_the_minimum_existed_keeps_its_rule():
+    saved = settings().model_dump(mode="json")
+    del saved["min_cards_burn_each_round_per_player"]
+    assert Settings.model_validate(saved).min_cards_burn_each_round_per_player == 0
+
+
+def test_the_parameter_file_must_list_the_minimum(tmp_path):
+    data = yaml.safe_load(PARAMETER_DEFAULTS.read_text(encoding="utf-8"))
+    del data["min_cards_burn_each_round_per_player"]
+    path = tmp_path / "parameters.yaml"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    with pytest.raises(SettingsError, match="min_cards_burn_each_round_per_player: missing"):
+        load_settings(path=path)
 
 
 @pytest.mark.parametrize("calm_before, crisis", [(1, True), (2, False)])

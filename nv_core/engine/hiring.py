@@ -93,9 +93,11 @@ def finish(ctx: Ctx) -> None:
 
 
 def reveal_period_cards(ctx: Ctx) -> None:
-    """End of the Hiring and task allocation phase: reveal Game Period cards (see also Crisis)."""
+    """End of the Hiring and task allocation phase: reveal Game Period cards (see also Crisis).
+    A lab counts for at least its minimum (specification 5.7)."""
     state = ctx.state
-    total = sum(r.postdocs + r.students for r in state.researchers)
+    minimum = ctx.settings.min_cards_burn_each_round_per_player
+    total = sum(max(minimum, r.postdocs + r.students) for r in state.researchers)
     revealed, state.period_deck = state.period_deck[:total], state.period_deck[total:]
     ctx.log("period_deck", f"{len(revealed)} Game Period card(s) revealed; {len(state.period_deck)} left")
     if "w" in revealed:
