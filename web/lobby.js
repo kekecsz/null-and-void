@@ -10,10 +10,16 @@ function showError(text) {
   bar.style.display = text ? "block" : "none";
 }
 
+// The organiser password is kept for this browser tab only.
+const organiser = {
+  get: () => { try { return sessionStorage.getItem("nv:organiser") || ""; } catch { return ""; } },
+  set: (value) => { try { sessionStorage.setItem("nv:organiser", value); } catch { /* private window */ } },
+};
+
 async function api(path, body) {
-  const response = await fetch(path, body === undefined ? {} : {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-  });
+  const password = $("organiser").value;
+  const headers = { ...(body === undefined ? {} : { "Content-Type": "application/json" }), ...(password ? { "X-Organiser-Password": encodeURIComponent(password) } : {}) };
+  const response = await fetch(path, body === undefined ? { headers } : { method: "POST", headers, body: JSON.stringify(body) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.detail || response.statusText);
   return data;
@@ -41,6 +47,8 @@ function renumber() {
 
 async function loadOptions() {
   options = await api("/api/options");
+  $("organiser-row").style.display = options.organiser_required ? "" : "none";
+  $("organiser").value = organiser.get();
   const world = $("world");
   world.innerHTML = "";
   for (const w of options.worlds) world.add(new Option(`${w.scenario} / ${w.id}`, `file:${w.file}`));
@@ -51,8 +59,12 @@ async function loadOptions() {
 }
 
 async function loadGames() {
-  const games = await api("/api/games");
   const box = $("games");
+  if (options.organiser_required && !$("organiser").value) {
+    box.innerHTML = '<p class="muted">Enter the organiser password to see the games on this server.</p>';
+    return;
+  }
+  const games = await api("/api/games");
   if (!games.length) { box.innerHTML = '<p class="muted">No games yet.</p>'; return; }
   const table = document.createElement("table");
   table.innerHTML = "<tr><th>Game</th><th>World</th><th>Status</th><th>Seats</th><th>Actions</th><th>Created</th><th></th></tr>";
@@ -80,7 +92,8 @@ async function loadGames() {
 
 $("add-seat").onclick = () => { $("seats").append(seatRow($("seats").children.length, "selfish")); };
 $("remove-seat").onclick = () => { const s = $("seats"); if (s.children.length > 1) s.lastChild.remove(); renumber(); };
-$("refresh").onclick = () => loadGames().catch((e) => showError(e.message));
+$("refresh").onclick = () => { showError(""); loadGames().catch((e) => showError(e.message)); };
+$("organiser").onchange = () => { organiser.set($("organiser").value); showError(""); loadGames().catch((e) => showError(e.message)); };
 
 $("create").onsubmit = async (event) => {
   event.preventDefault();

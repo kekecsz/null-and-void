@@ -43,15 +43,16 @@ def has_ai(seats: list[str]) -> bool:
     return any(s.split(":")[0] == "ai" for s in seats)
 
 
-def ai_context() -> AIContext:
-    """Settings, ledger and provider for AI seats; raises ValueError when the key is missing."""
+def ai_context(spending: Any = None) -> AIContext:
+    """Settings, ledger and provider for AI seats; raises ValueError when the key is missing.
+    ``spending``: where the ledger keeps its total instead of the local file (the deployed server)."""
     from nv_ai.config import SPENDING_LEDGER, load_software_settings, require_api_key
     from nv_ai.costs import Ledger
     from nv_ai.provider import make_provider
 
     software = load_software_settings()
     require_api_key(software.ai_provider)
-    ledger = Ledger(SPENDING_LEDGER, software.ai_total_budget)
+    ledger = Ledger(None if spending is not None else SPENDING_LEDGER, software.ai_total_budget, spending)
     return AIContext(
         software,
         ledger,

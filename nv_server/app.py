@@ -5,20 +5,25 @@ and one WebSocket per browser.
     nv-server --host 0.0.0.0       # also other devices on the same network (Wi-Fi)
 
 Games are stored in a SQLite file (default ``games/nv_games.sqlite``) and survive a restart.
+Deployed (specification 6.6) they are stored in Firestore, and the environment gives the rest:
+``NV_STORAGE``, ``NV_ORGANISER_PASSWORD``, ``PORT``.
 """
 
 import argparse
 import asyncio
 import csv
+import hmac
 import io
+import os
 import random
 import socket
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import yaml
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError
@@ -137,22 +142,32 @@ def _setup(request: CreateGame):
     return world, settings, model
 
 
-def _cached_ai_context():
+def _cached_ai_context(spending: Any = None):
     cache: dict[str, Any] = {}
 
     def get():
         if "ai" not in cache:
             from nv_sim.run import ai_context
 
-            cache["ai"] = ai_context()  # raises ValueError when the API key is missing
+            cache["ai"] = ai_context(spending)  # raises ValueError when the API key is missing
         return cache["ai"]
 
     return get
 
 
-def create_app(storage: Storage | None = None, ai_context=None, db: Path | str = DEFAULT_DB) -> FastAPI:
-    """``ai_context``: () -> AIContext for AI seats (default: the real provider and ledger)."""
-    manager = GameManager(storage or SQLiteStorage(db), ai_context or _cached_ai_context())
+def create_app(storage: Storage | None = None, ai_context=None, db: Path | str = DEFAULT_DB,
+               organiser_password: str = "") -> FastAPI:
+    """``ai_context``: () -> AIContext for AI seats (default: the real provider and ledger).
+    ``organiser_password``: if set, needed to create games and to list them (specification 6.3)."""
+    storage = storage or SQLiteStorage(db)
+    spending = storage if hasattr(storage, "add_spending") else None
+    manager = GameManager(storage, ai_context or _cached_ai_context(spending))
+
+    def require_organiser(password: str | None) -> None:
+        # URL-encoded by the browser, because a header cannot carry every character.
+        given = unquote(password or "").encode()
+        if organiser_password and not hmac.compare_digest(given, organiser_password.encode()):
+            raise HTTPException(403, "this needs the organiser password")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -192,10 +207,11 @@ def create_app(storage: Storage | None = None, ai_context=None, db: Path | str =
         kinds = [HUMAN, *SEAT_TYPES, *BOTS, "ai", *[f"ai:{p}" for p in PERSONAS if p != "neutral"]]
         settings = Settings.model_fields
         return {"worlds": _worlds(), "scenarios": _scenarios(), "seat_kinds": kinds, "colours": COLOURS,
-                "settings": sorted(settings)}
+                "settings": sorted(settings), "organiser_required": bool(organiser_password)}
 
     @app.get("/api/games")
-    async def list_games():
+    async def list_games(x_organiser_password: str | None = Header(default=None)):
+        require_organiser(x_organiser_password)
         games = []
         for g in manager.storage.list_games():
             m = g["meta"]
@@ -204,7 +220,8 @@ def create_app(storage: Storage | None = None, ai_context=None, db: Path | str =
         return games
 
     @app.post("/api/games")
-    async def create_game(request: CreateGame):
+    async def create_game(request: CreateGame, x_organiser_password: str | None = Header(default=None)):
+        require_organiser(x_organiser_password)
         try:
             world, settings, model = await asyncio.to_thread(_setup, request)
             seed = request.seed if request.seed is not None else random.SystemRandom().randrange(1_000_000_000)
@@ -342,15 +359,24 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(prog="nv-server", description="Null & Void multiplayer server")
     parser.add_argument("--host", default="127.0.0.1", help="0.0.0.0 lets other devices on your network join")
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8000)))  # Cloud Run sets PORT
     parser.add_argument("--db", default=str(DEFAULT_DB), help="SQLite file the games are stored in")
+    parser.add_argument("--storage", choices=["sqlite", "firestore"], default=os.environ.get("NV_STORAGE", "sqlite"))
     args = parser.parse_args(argv)
+    organiser_password = os.environ.get("NV_ORGANISER_PASSWORD", "")
+    storage = None
+    if args.storage == "firestore":
+        if not organiser_password:  # a public server without it would let anyone spend the AI budget
+            parser.error("NV_ORGANISER_PASSWORD must be set when the games are stored in Firestore")
+        from nv_server.firestore_storage import FirestoreStorage
+
+        storage = FirestoreStorage()
     print(f"Null & Void server: open http://127.0.0.1:{args.port}/ in your browser")
     if args.host == "0.0.0.0":
         address = _lan_address()
         if address:
             print(f"Other devices on this network: http://{address}:{args.port}/")
-    uvicorn.run(create_app(db=args.db), host=args.host, port=args.port, log_level="warning")
+    uvicorn.run(create_app(storage=storage, db=args.db, organiser_password=organiser_password), host=args.host, port=args.port, log_level="warning")
     return 0
 
 

@@ -5,6 +5,7 @@ import threading
 from dataclasses import asdict, dataclass, fields
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from nv_ai.config import Prices
 
@@ -33,15 +34,18 @@ def cost(usage: Usage, prices: Prices) -> float:
 
 
 class Ledger:
-    """Every AI call's cost, appended to a CSV file; the total enforces ai_total_budget."""
+    """Every AI call's cost, appended to a CSV file or kept in ``store`` (the deployed server, whose
+    disk does not last: ``spending_total()``, ``add_spending(entry, amount)``); the total enforces
+    ai_total_budget."""
 
     COLUMNS = ["time", "game", "seat", "model", *[f.name for f in fields(Usage)], "cost"]
 
-    def __init__(self, path: Path | None, budget: float):
+    def __init__(self, path: Path | None, budget: float, store: Any = None):
         self.path = Path(path) if path else None
+        self.store = store
         self.budget = budget
         self._lock = threading.Lock()
-        self._total = 0.0
+        self._total = store.spending_total() if store is not None else 0.0
         if self.path and self.path.exists():
             with open(self.path, encoding="utf-8", newline="") as handle:
                 self._total = sum(float(row["cost"]) for row in csv.DictReader(handle))
@@ -57,6 +61,10 @@ class Ledger:
     def add(self, game: str, seat: str, model: str, usage: Usage, amount: float) -> None:
         with self._lock:
             self._total += amount
+            row = [datetime.now(timezone.utc).isoformat(timespec="seconds"), game, seat, model,
+                   *asdict(usage).values(), f"{amount:.6f}"]
+            if self.store is not None:
+                self.store.add_spending(dict(zip(self.COLUMNS, row)), amount)
             if not self.path:
                 return
             new = not self.path.exists()
@@ -65,7 +73,4 @@ class Ledger:
                 writer = csv.writer(handle)
                 if new:
                     writer.writerow(self.COLUMNS)
-                writer.writerow(
-                    [datetime.now(timezone.utc).isoformat(timespec="seconds"), game, seat, model,
-                     *asdict(usage).values(), f"{amount:.6f}"]
-                )
+                writer.writerow(row)

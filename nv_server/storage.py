@@ -1,7 +1,7 @@
 """Game storage (specification 6.1): one interface, two backends.
 
-The local backend is a SQLite file (milestone 5); Firestore follows in milestone 7 behind the
-same interface. A game is stored as:
+The local backend is a SQLite file; the deployed one is Firestore (``nv_server.firestore_storage``),
+behind the same interface. A game is stored as:
 
 - its metadata (setup, seats, status, hashed passwords and tokens, AI notes and costs);
 - its ordered action log; each action keeps the events it produced, so a game can be loaded
