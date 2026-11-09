@@ -18,9 +18,9 @@ from nv_core.markdown_text import read_markdown
 from nv_core.paths import RULEBOOK
 from nv_core.text import render_text
 
-# Rulebook sections a player does not need (specification 8.1): the physical pieces, the
-# backstory (the scenario story replaces it) and the pointer to the world generator.
-LEFT_OUT_SECTIONS = ("Pieces", "Backstory", "Scenario setup rules")
+# Rulebook sections a player does not need (specification 8.1): the backstory (the scenario
+# story replaces it) and the pointer to the world generator.
+LEFT_OUT_SECTIONS = ("Backstory", "Scenario setup rules")
 
 # One line per action type: what it does and where the rulebook explains it.
 DESCRIPTIONS: dict[str, str] = {

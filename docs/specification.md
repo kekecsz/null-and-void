@@ -9,6 +9,7 @@ This spec defines how the board game *Null & Void* is implemented in Python: a m
 | Document | Holds | Used by the software as |
 | --- | --- | --- |
 | Rulebook (`docs/rules.md`, exported from Google Docs) | every game rule, in phase order | the behaviour the rules engine implements and the tests check |
+| `docs/pieces.md` | the pieces of a physical copy, split off from the rulebook | a reference only: the software reads it just for the consistency check, and it is not in the PDF rulebook |
 | `docs/parameter_defaults.yaml` | every numeric game setting, including the grant track and journal tier tables; top-level settings are named in the rulebook as `[name]` | data loaded at game start |
 | Scenario file (`scenarios/<id>/scenario.md`) | story, input parameters and world outcomes, effect model, world acceptance criteria | data read by the world generator and shown to players |
 
@@ -52,7 +53,7 @@ Every path runs through `nv_core`: the server, the AI player and the simulator n
 | `nv_rulebook` | The reader's edition of the rulebook: a PDF with every `[parameter]` filled in from the defaults (`nv-rulebook-pdf`) | `nv_core`, ReportLab |
 | `web/` | Browser client: plain HTML/JS, renders views, sends actions | server API only |
 | `scenarios/` | One folder per scenario: its scenario.md and generated world files | — |
-| docs/ | rules.md (exported from Google Docs), specification.md and parameter\_defaults.yaml | — |
+| docs/ | rules.md (exported from Google Docs), pieces.md, specification.md and parameter\_defaults.yaml | — |
 
 **Technology:** the latest stable Python (3.14 when this was written; the project requires at least that version), FastAPI, Pydantic models for every action and view, PyYAML for the settings and scenario files, WebSockets for live updates, SQLite (local) and Firestore (deployed) for persistence, Google Cloud Run for hosting, pytest for tests. The web client stays dependency-light (no build step in the first version).
 
@@ -277,6 +278,7 @@ The web UI's world states become icons in strips. This section records the desig
 - *Theory formulation:* "use" on a record or on the selected strip copies its states into the theory being formulated.
 - *Submission:* a submission is a box. Its top row is the theory (placed with "use"); the supporting records go below it. A box minimises to a strip showing the theory and expands back to show the records. The article processing charge is offered under the same condition as today. While something could still be submitted or revised and nothing has been in this step, Commit is grey (but works) and asks for confirmation; after a submission or revision it is blue.
 - *Peer review:* the same strips that expand to boxes, in the task panel, with the vote buttons. The player's own manuscripts come first, marked "your own" in bold.
+- *Grants row:* while allocating staff, and when choosing which students leave if some of them are on Grants, the row shows how many staff the current Grant funding position needs ("grant track needs: n").
 - *Hiring:* number boxes have a large minus and plus on either side, also when choosing which students leave. "max" next to the postdoc and student boxes fills in as many as the player can have. "Repeat" fills in the player's task allocation of the previous round, as made at hiring, and leaves the hiring numbers alone. A staff column is grey until every hired staff member of that type has a task and red when too many have; the staff allocation can be set only when both columns add up.
 - *Predictions:* under each theory, what a revealed, unpruned prediction would bring if right and if wrong, with the preregistered amounts, the citation reward or penalty when the cited theory is the player's own, and the patent. In the Reveal step each prediction shows its outcome and consequences; preregistered predictions follow at the end, read-only.
 - *Prediction report:* after scoring, each person's task panel shows every revealed prediction of the round by player: success, failed, pruned or (if the game ended during scoring) not scored, credit, the author's citation credit and the patent, with a note on a prediction that won the Nobel Prize and, in the Crisis, the missed Probes and running count. "Next", where Commit usually is, closes it. The report belongs to the player's own panel: the game does not wait for it, and a seat handed to an automated player gets none. It is skipped when nothing was revealed and no Probe was missed.
@@ -296,7 +298,7 @@ An AI seat is a language model that reads the same text view a human could and a
 1. The engine signals that an AI seat must act (a sequential turn, or its commit in a simultaneous phase).
 2. `nv_ai` builds the request:
    - **Tools** (cached): the full, fixed list of action types, one tool each, with JSON schemas generated from the action models and a short description naming the rulebook section. The list never changes between decisions, because the tools come first in a request and any change would invalidate the cache for everything after them.
-   - **System prompt** (cached): the rulebook itself (`docs/rules.md` with its Markdown escapes removed, leaving out the sections a player does not need, such as Pieces and the designer's tabletop notes), then the scenario story, then the seat's persona (section 8.3). The rulebook stays the only rules document; no separate summary is maintained. The rulebook comes before the persona, so every AI seat shares the same cached prefix.
+   - **System prompt** (cached): the rulebook itself (`docs/rules.md` with its Markdown escapes removed, leaving out the sections a player does not need, such as the designer's tabletop notes), then the scenario story, then the seat's persona (section 8.3). The rulebook stays the only rules document; no separate summary is maintained. The rulebook comes before the persona, so every AI seat shares the same cached prefix.
    - **Context:** the seat's `render_text` view, the actions legal now (from `legal_actions`: complete actions, or templates with their limits), the recent public event log, the seat's own notes (8.2), and the choices the engine has already accepted from it in the current step, with a reminder to commit when they are final (each decision is a fresh conversation, so without them a model repeats its choice instead of committing).
 3. The model replies with a tool call and a one-line reason. The engine validates it; if it is refused, the error goes back to the model for up to `ai_retry_limit` attempts.
 4. If the model still fails, goes over its token limit, or the API errors, the seat takes a safe default action (pass, or commit with no further choices), and the log records why.
@@ -484,7 +486,7 @@ Build in this order, so the rules and numbers are mostly tuned before anyone pla
 **Testing throughout:**
 
 - One or more unit tests per rule section of the rulebook, named after the section, so a rules change points to the tests to update.
-- A consistency check on every commit: every `[parameter]` named in the rulebook exists in `parameter_defaults.yaml` (as a top-level setting, or as a field of the `grant_track` or `journal_tiers` tables), every top-level setting there is named in the rulebook or in section 5.7, and every scenario file passes its schema.
+- A consistency check on every commit: every `[parameter]` named in the rulebook or `docs/pieces.md` exists in `parameter_defaults.yaml` (as a top-level setting, or as a field of the `grant_track` or `journal_tiers` tables), every top-level setting there is named in the rulebook, `docs/pieces.md` or section 5.7, and every scenario file passes its schema.
 - Saved "golden" games whose replays must not change unless a rule changes on purpose.
 - Invariant checks run after every action in tests and in the simulator.
 - A test that no player view contains hidden information belonging to someone else.

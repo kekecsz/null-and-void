@@ -8,45 +8,6 @@ Each entry gives the document and section, the exact text, the possible readings
 
 ---
 
-## Talent development track: how many positions? (needs Zoltan's answer)
-
-**Document:** `parameter_defaults.yaml` (`talent_track_max`, `talent_development_track`); rulebook, Talent development
-phase.
-
-**Text:** "The talent development track positions range between 0 and [talent_track_max]." and "The values for each
-position are in parameter_defaults.yaml in the [talent_development_track] table."
-
-**Problem:** `talent_track_max` is 3, but the table has entries for positions 0 to 6. The markers cannot go past 3, so
-the last three rows are never used.
-
-**Possible readings:**
-
-1. The track now runs to position 6: `talent_track_max` should be 6. Pieces supports this: "Six-sided dice: 7 (the most
-   students a researcher can have: [student_base_hire_cap] + 3)", and 3 is the bonus of the table's last row.
-2. The track stays at 3, and the rows for positions 4 to 6 are not needed. The largest bonus is then the one of
-   position 3, and the dice count in Pieces is one too many.
-
-**Suggestion:** reading 1. The engine works with either; only the number in the parameter file changes.
-
-## Talent development: one staff member, or any number? (needs Zoltan's answer)
-
-**Document:** rulebook, Hiring and task allocation phase; Pieces; Talent development phase.
-
-**Text:** "The number of staff members that can be allocated to the tasks is unlimited." but also "Talent development
-(postdoc only, one staff member only)" and, in Pieces, "Talent development with room for one staff member".
-
-**Problem:** the first sentence used to end with an exception for Talent development, which has been removed, while
-the other two still limit it to one. The Talent development phase advances the marker "at most by one position each
-round", so a second staff member would achieve nothing.
-
-**Possible readings:**
-
-1. One staff member only: the removal was accidental, and the sentence should get its exception back.
-2. Any number may be allocated: the other two texts should change. As written, the extra staff would be wasted, unless
-   the track is also meant to need more staff for higher positions.
-
-**Until answered:** the engine keeps the limit of one.
-
 ## Easier difficulty levels, to allow true racing (design idea)
 
 **Document:** `parameter_defaults.yaml`; specification 6.3 (the lobby's "settings preset").

@@ -5,6 +5,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS_DIR = REPO_ROOT / "docs"
 RULEBOOK = DOCS_DIR / "rules.md"
+PIECES = DOCS_DIR / "pieces.md"
 PARAMETER_DEFAULTS = DOCS_DIR / "parameter_defaults.yaml"
 SPECIFICATION = DOCS_DIR / "specification.md"
 CREDITS = DOCS_DIR / "credits.md"

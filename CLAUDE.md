@@ -9,6 +9,7 @@ not a professional software engineer). Explain design decisions briefly.
 | Document | Holds |
 | --- | --- |
 | `docs/rules.md` | Every game rule, in phase order. Values appear only as `[parameter_name]`. Google Docs export (has Markdown escapes such as `\_`, `\[`); never edit it, Zoltan re-exports it. |
+| `docs/pieces.md` | The pieces of a physical copy (split off from the rulebook; not in the PDF rulebook). Values appear only as `[parameter_name]`. |
 | `docs/parameter_defaults.yaml` | Every numeric game setting, incl. the `grant_track` and `journal_tiers` tables. |
 | `scenarios/<id>/scenario.md` | Scenario story, input parameters and world outcomes, effect model, world acceptance criteria (YAML block + prose). |
 | `docs/specification.md` | Software specification: architecture, world generator, engine, server, clients, AI, simulator, debrief, milestones. Section 5.7 holds rule clarifications the rulebook leaves to common sense. |

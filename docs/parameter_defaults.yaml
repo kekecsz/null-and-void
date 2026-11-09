@@ -22,7 +22,7 @@ unused_staff_penalty: -1                   # academic credit per staff member
 starting_academic_credit: 10
 talent_development_track_starting_position: 0
 grant_track_starting_position: 1           # position number in grant_track (1 = first entry)
-talent_track_max: 3
+talent_track_max: 6
 
 # Game Period Deck (Calm period cards per player in each part of the deck)
 calm_cards_per_player_top: 45
