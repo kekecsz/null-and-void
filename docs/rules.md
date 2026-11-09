@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.06. 19:39
+Last updated: 2026.11.09. 23:05
 
 # Summary
 
@@ -156,7 +156,7 @@ The world grid is arranged in a grid pattern, each Probe is represented by a col
 
 # Hiring and task allocation phase
 
-At the beginning of the Hiring phase, researchers can hire as many students as they want up to \[student\_base\_hire\_cap\] plus their Talent development track position.
+At the beginning of the Hiring phase, researchers can hire as many students as they want up to \[student\_base\_hire\_cap\] plus the bonus student cap value associated with the Talent development track position.
 
 At the beginning of the Hiring phase, researchers can hire or fire as many postdocs as they want, but the total amount of money it would take to pay all postdocs (\[cost\_of\_postdoc\] per postdoc) cannot exceed the total amount of money the researcher has at the moment. 
 
@@ -172,7 +172,7 @@ Each research staff member is allocated to one of the following tasks during the
 
 (Designer’s note: Students can and do develop new theories and methods, and they can train and scout staff. Restricting their allocation to these tasks was strictly a game mechanical choice, to limit too fast engine development.)
 
-The number of staff members that can be allocated to the tasks is unlimited, except for Talent development, where only one staff member can be allocated each round.
+The number of staff members that can be allocated to the tasks is unlimited.
 
 Hiring and task allocation is resolved parallel across researchers in secret.
 
@@ -180,11 +180,11 @@ Once all staff has been allocated by all researchers, the staff allocation mat i
 
 For each postdoc they fired, the researcher suffers a penalty of \[fired\_postdoc\_penalty\] academic credits. Then, the fired postdocs are removed from the task allocation mat of each researcher.
 
-At the end of the Hiring and task allocation phase, the total number of research staff across all researchers is tallied, and that many cards are revealed from the top of the Game Period Deck. (If the Crisis card is revealed, see Crisis.)
+At the end of the Hiring and task allocation phase, the research staff of each researcher are counted, a researcher with fewer than \[min\_cards\_burn\_each\_round\_per\_player\] counting as that many, and the sum of these numbers of cards is revealed from the top of the Game Period Deck. (If the Crisis card is revealed, see Crisis.)
 
 ## Student task check phase
 
-During the Student task check phase, each researcher throws as many six sided dice as many students they allocated to any task. For each die result lower than \[student\_unassigned\_base\_threshold\] minus the researcher’s marker position on the Talent development track, one student is unassigned from their task and leaves the lab. The researcher can choose which of their students are unassigned, as long as the total number of students they choose matches the number of die results below the threshold.
+During the Student task check phase, each researcher throws as many six sided dice as many students they allocated to any task. For each die result lower than \[student\_unassigned\_base\_threshold\] minus the student reliability value associated with the researcher’s marker position on the Talent development track, one student is unassigned from their task and leaves the lab. The researcher can choose which of their students are unassigned, as long as the total number of students they choose matches the number of die results below the threshold.
 
 (Designer’s note: This phase resembles the high fluctuation among student workers, and the uncertainties related to relying on a student workforce.)
 
@@ -364,7 +364,7 @@ Academic credits
 
 Patent
 
-- A patent linked to the cited theory is created, and is allocated to the researcher making the prediction (not the author of the cited theory).
+- A patent linked to the cited theory is created if that theory did not already have a linked patent, and is allocated to the researcher making the prediction (not the author of the cited theory).
 
 Counters
 
@@ -445,7 +445,7 @@ Theories and Methods need to be submitted to one of the journal tiers, and once 
 
 If the journal tier requires observational or experimental support for the theory, recorded observations or experimental findings need to be included in the submission as well. The supporting records can be taken from the Fresh records or the Stale records areas. Each supporting record takes one card per slot from the player's pool (each card can be used only once). The supporting records must not have any mismatching elements (input parameters or world outcomes) with the theory they support. (A blank card never mismatches.) 
 
-Submissions can include supporting records that are not necessary for the journal tier (this may be useful to make a submission stack look like it is going for a high tier journal). Note that method submissions can have any supporting record attached. These records are submitted as part of the manuscript submission, and they travel as part of the card stack of the manuscript during the peer review and article processing. Once the theory or method is published, the supporting records are discarded.
+Submissions can include supporting records that are not necessary for the journal tier (this may be useful to make a submission stack look like it is going for a high tier journal). Note that method submissions can have any supporting record attached. These records are submitted as part of the manuscript submission, and they travel as part of the card stack of the manuscript during the peer review and article processing. Once the theory or method is published, the supporting records are discarded. Submissions to a journal without peer review cannot include supporting records.
 
 Note, that at no time do other researchers see the cards involved in experiments of the researcher, this means that the experiment records supporting the manuscript can be mixed across cards involved in several experiments. (Although researchers must put together valid experiments, and only those cards can be used to support a publication which were part of experiments at one point.) All cards in the same supporting record stack must come from the same record area (either Fresh or Stale records), but if multiple supporting records are allowed, these multiple records can come from multiple record areas.
 
@@ -487,7 +487,7 @@ X rounds in processing means how many rounds are required for the manuscript to 
 - one more observation/experiment than required for that journal tier (can stack multiple times)  
 - one more element (input or outcome) in the theory than required for that journal tier  (can stack multiple times)  
 - pay article processing charge (APC), \[apc\] amount of money into the bank. If you do so, submit your manuscript openly (face-up).  
-- hot topic publication: at least one input parameter state of the theory matches a visible reading of the Probe that is the Hot topic this round, and none mismatches (blank readings neither match nor mismatch)(note that a theory including only a single input parameter, one that matches one of the input parameters of the hot topic Probe, can be considered a hot topic publication)
+- hot topic publication: at least one input parameter state of the theory matches a visible reading of the Probe that is the Hot topic this round, and none mismatches (blank readings neither match nor mismatch) (note that a theory including only a single input parameter, one that matches one of the input parameters of the hot topic Probe, can be considered a hot topic publication)
 
 Crisis fast-track: a manuscript that enters the Accept area during the Crisis period gets 1 additional round of reduction, which can reduce it to 0 (but not below 0). Manuscripts already in the Accept area when the Crisis starts are not affected.
 
@@ -535,7 +535,7 @@ The values for each position are in parameter\_defaults.yaml in the \[grant\_tra
 
 ## Patents
 
-Patents are awarded for successful predictions (see Predictions). Patents are always attached to a published theory.
+Patents are awarded for successful predictions (see Predictions). Patents are always attached to a published theory, and there can only be a single patent linked to each theory.
 
 During the Clean-up phase, each patent grants \[patent\_funding\] money to the owner of the patent.
 
@@ -572,6 +572,8 @@ If a researcher has allocated staff to Talent development, they can advance thei
 Staff members allocation to Talent development are always used, even if the researcher is at the maximum position on the talent development track.
 
 The talent development track positions range between 0 and \[talent\_track\_max\].
+
+The values for each position are in parameter\_defaults.yaml in the \[talent\_development\_track\] table.
 
 # Clean-up phase
 

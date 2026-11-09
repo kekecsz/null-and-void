@@ -25,8 +25,8 @@ grant_track_starting_position: 1           # position number in grant_track (1 =
 talent_track_max: 3
 
 # Game Period Deck (Calm period cards per player in each part of the deck)
-calm_cards_per_player_top: 40
-calm_cards_per_player_warning: 20
+calm_cards_per_player_top: 45
+calm_cards_per_player_warning: 25
 calm_cards_per_player_crisis: 20
 min_cards_burn_each_round_per_player: 1 
 
@@ -48,7 +48,7 @@ failed_non_prereg_pred_ac: -1
 failed_prereg_pred_ac: 0
 failed_prereg_pred_ac_crisis: -5
 crisis_failed_pred_citation_penalty: -3
-crisis_pred_base_bonus: 2
+crisis_pred_base_bonus: 0
 crisis_pred_citation_reward_bonus: 1
 
 # Nobel Prize and retraction
@@ -94,3 +94,13 @@ journal_tiers:
   - {min_records: 3, min_observations: 0, min_experiments: 0, min_elements: 3, rounds_in_processing: 2, peer_review: true,  methods_accepted: true,  submission_fee: 0, apc: 3}
   - {min_records: 3, min_observations: 0, min_experiments: 0, min_elements: 4, rounds_in_processing: 2, peer_review: true,  methods_accepted: false, submission_fee: 0, apc: 4}
   - {min_records: 4, min_observations: 2, min_experiments: 2, min_elements: 5, rounds_in_processing: 3, peer_review: true,  methods_accepted: false, submission_fee: 0, apc: 5}
+
+# Talent development track: one entry per track position, position 0 first (list position = position number).
+talent_development_track:
+  - {bonus student cap: 0, student reliability: 0}
+  - {bonus student cap: 1, student reliability: 0}
+  - {bonus student cap: 1, student reliability: 1}
+  - {bonus student cap: 2, student reliability: 1}
+  - {bonus student cap: 2, student reliability: 2}
+  - {bonus student cap: 3, student reliability: 2}
+  - {bonus student cap: 3, student reliability: 3}

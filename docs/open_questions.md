@@ -8,189 +8,44 @@ Each entry gives the document and section, the exact text, the possible readings
 
 ---
 
-## Spare supporting records for journals without peer review
+## Talent development track: how many positions? (needs Zoltan's answer)
 
-**Document:** rulebook, Publication > Supporting observational and experimental records.
+**Document:** `parameter_defaults.yaml` (`talent_track_max`, `talent_development_track`); rulebook, Talent development
+phase.
 
-**Text:** "Submissions can include supporting records that are not necessary for the journal tier (this may be
-useful to make a submission stack look like it is going for a high tier journal)."
+**Text:** "The talent development track positions range between 0 and [talent_track_max]." and "The values for each
+position are in parameter_defaults.yaml in the [talent_development_track] table."
 
-**Problem:** extra records have two uses: they shorten rounds in processing (Article processing), and they make a
-manuscript stack look bigger to the other players. Neither helps a journal without peer review with the default
-`journal_tiers`. Tier 0 already has 0 rounds in processing. The manuscript goes straight to the Accept area with
-its tier indicator card face up, so a thicker stack shows nothing. The extra records are simply lost, because the
-supporting records are discarded on publication.
+**Problem:** `talent_track_max` is 3, but the table has entries for positions 0 to 6. The markers cannot go past 3, so
+the last three rows are never used.
 
 **Possible readings:**
 
-1. Keep the rule as written: spare records are allowed for every tier, even where they are useless.
-2. Journals without peer review take no supporting records beyond the tier's minimum.
-3. Like 2, but only while extra records cannot shorten processing. This matters only if a journal without peer
-   review is given 2 or more rounds in processing, where extras could still cut it down to 1.
+1. The track now runs to position 6: `talent_track_max` should be 6. Pieces supports this: "Six-sided dice: 7 (the most
+   students a researcher can have: [student_base_hire_cap] + 3)", and 3 is the bonus of the table's last row.
+2. The track stays at 3, and the rows for positions 4 to 6 are not needed. The largest bonus is then the one of
+   position 3, and the dice count in Pieces is one too many.
 
-**Agreed with Zoltan (2026-11-07):** reading 2. The engine already applies it: it refuses such records and no
-longer offers them. **Waiting for:** the rulebook sentence above to be updated, for example to "Submissions to a
-journal with peer review can include supporting records that are not necessary for the journal tier (...);
-submissions to a journal without peer review cannot." Remove this entry once the rulebook says so.
+**Suggestion:** reading 1. The engine works with either; only the number in the parameter file changes.
 
-## One patent per theory
+## Talent development: one staff member, or any number? (needs Zoltan's answer)
 
-**Document:** rulebook, Observation and prediction phase > Scoring predictions (Successful predictions: Patent),
-and Funding > Patents.
+**Document:** rulebook, Hiring and task allocation phase; Pieces; Talent development phase.
 
-**Text:** "A patent linked to the cited theory is created, and is allocated to the researcher making the
-prediction (not the author of the cited theory)." and "Patents are always attached to a published theory."
+**Text:** "The number of staff members that can be allocated to the tasks is unlimited." but also "Talent development
+(postdoc only, one staff member only)" and, in Pieces, "Talent development with room for one staff member".
 
-**Problem:** nothing limits how many patents a theory can carry, so every successful prediction adds one. In a
-playtest one theory had 5 patents. Zoltan's intention is at most one patent per theory.
+**Problem:** the first sentence used to end with an exception for Talent development, which has been removed, while
+the other two still limit it to one. The Talent development phase advances the marker "at most by one position each
+round", so a second staff member would achieve nothing.
 
-**Possible readings once a theory has its patent, when a later successful prediction cites it:**
+**Possible readings:**
 
-1. The first patent stays with its owner, and no new patent is created.
-2. The patent moves to the researcher who made the latest successful prediction.
+1. One staff member only: the removal was accidental, and the sentence should get its exception back.
+2. Any number may be allocated: the other two texts should change. As written, the extra staff would be wasted, unless
+   the track is also meant to need more staff for higher positions.
 
-**Related:** Pieces lists 15 patent tokens. The rules don't say what happens when they run out, and the engine
-doesn't count them. With one patent per theory this matters only if more than 15 published theories carry
-patents at once.
-
-**Agreed with Zoltan (2026-11-07):** reading 2. A theory carries at most one patent, held by the researcher who
-made the latest successful prediction citing it. The rulebook already gives the patent to the researcher making
-the prediction. The engine applies this: the prediction scores as usual, the patent moves, and the event log
-says so. A retracted theory loses its patent, as the rulebook already says. **Waiting for:** the rulebook to say
-so in Scoring predictions, for example "A theory has at most one patent. If the cited theory has no patent yet, a
-patent linked to it is created; otherwise its patent moves. Either way the patent is allocated to the researcher
-making the prediction (not the author of the cited theory)." Remove this entry once the rulebook says so.
-
-
-## Talent development is a no-brainer, then forgotten (design note)
-
-**Document:** rulebook, Talent development phase, together with Hiring and task allocation phase (student cap) and
-Student task check phase (leaving students).
-
-**Text:** "If a researcher has allocated staff to Talent development, they can advance their marker on the Talent
-development track by one position. The Talent development marker can be advanced at most by one position each
-round."
-
-**Problem (Zoltan, playtest 2026-11-07):** each position raises the student cap (`student_base_hire_cap` plus the
-position) and lowers the chance that students leave (`student_unassigned_base_threshold` minus the position). That
-is so strong that a postdoc on Talent development is worth it in every opening round. Once the track is at
-`talent_track_max`, the player never thinks about it again, so the mechanism feels empty after the opening.
-
-**Ideas to try (Zoltan's):**
-
-1. **Decay:** the marker drops one position in a round in which nobody is allocated to Talent development, or
-   after a set number of such rounds. The track then needs upkeep, like the grant admin requirement.
-2. **Rising cost:** each further position needs more staff members on Talent development, for example as many as
-   the position to reach. This would also change the rule that only one staff member can be allocated to Talent
-   development.
-
-**Waiting for:** Zoltan to choose and playtest a version, then update the rulebook and `parameter_defaults.yaml`.
-The engine and the bots will follow the rulebook export. Nothing changes in the code until then.
-
-## A minimum number of Game Period cards for each researcher
-
-**Document:** rulebook, Hiring and task allocation phase.
-
-**Text:** "At the end of the Hiring and task allocation phase, the total number of research staff across all
-researchers is tallied, and that many cards are revealed from the top of the Game Period Deck."
-
-**Decided by Zoltan (2026-11-08):** a new setting, `min_cards_burn_each_round_per_player`. Each researcher counts
-for their research staff, but for at least this number. It is not a flat extra per player: it is a penalty for
-running a lab with (almost) no staff. The engine applies it, and specification 5.7 records it for now.
-
-**Waiting for:** the rulebook sentence above to be updated, for example to "At the end of the Hiring and task
-allocation phase, the research staff of each researcher are counted, a researcher with fewer than
-[min_cards_burn_each_round_per_player] counting as that many, and the sum of these numbers of cards is revealed
-from the top of the Game Period Deck." The AI players read the rulebook, so they learn this rule only from that
-export. Once the rulebook says so, remove this entry and the clarification in specification 5.7.
-
-## The Crisis is almost unwinnable with the defaults (balance)
-
-**Document:** `parameter_defaults.yaml` (`crisis_condition`, `crisis_length`); rulebook, Crisis.
-
-**Update (Zoltan, 2026-11-08):** the parameter file now has `crisis_length: 3` and `crisis_condition: 6`. The
-figures below were measured with the earlier 4 rounds and condition 5. **Rulebook:** no change is needed for these
-two values, because its Crisis section only names them as `[crisis_length]` and `[crisis_condition]` (checked on
-that date). If the values are written out anywhere else later, such as on a player aid, that text must follow.
-
-**Problem (with the earlier values):** with 3 players there are 4 Probes, so a 4-round Crisis has 16 Probe-rounds. Each failed prediction
-and each Probe without a prediction counts as unsuccessful, so surviving the Crisis allows at most 4 of 16. The
-simulator (2026-11-07, scripted bots of specification 9.4, Venus Expedition, 3 players, 100 games per table,
-`crisis_condition` set to 100 so the Crisis always runs its full length) gives these unsuccessful predictions per
-game, cumulative:
-
-| After Crisis round | 3 cooperative | 1 cooperative + 2 selfish | 3 selfish |
-| --- | --- | --- | --- |
-| 1 | 2.3 | 2.7 | 3.0 |
-| 2 | 4.5 | 5.3 | 6.0 |
-| 3 | 6.5 | 8.1 | 9.1 |
-| 4 | 8.5 | 11.1 | 12.3 |
-
-Early on, most of them are Probes nobody predicts on (selfish tables leave about 2.5 of 4 empty in the first
-Crisis round). Failures grow every round. Share of games that would survive the Crisis:
-
-| `crisis_condition` | 5 | 6 | 7 | 8 | 9 | 10 |
-| --- | --- | --- | --- | --- | --- | --- |
-| 4 rounds: 3 cooperative / mixed / 3 selfish | 4% / 1% / 0% | 12% / 1% / 0% | 27% / 3% / 0% | 36% / 10% / 3% | 55% / 22% / 9% | 64% / 33% / 22% |
-| 3 rounds: 3 cooperative / mixed / 3 selfish | 21% / 2% / 1% | 38% / 11% / 3% | 52% / 26% / 10% | 69% / 46% / 29% | 81% / 66% / 42% | 88% / 75% / 70% |
-
-With the defaults, no table has a real chance, so cooperation cannot save the field.
-
-**Suggestion (Zoltan):** `crisis_condition: 8`, or `crisis_length: 3`. The two can also be combined: a 3-round
-Crisis with `crisis_condition` 7 to 8 gives about the same odds as a 4-round Crisis with 9.
-
-**Caveats:** bots, not people; one scenario; 3 players only. With more players there are more Probes, so the best
-value probably depends on the player count, and a condition relative to the number of Probes might hold up better.
-The scripted bots do not play differently as a crash comes closer.
-
-**Waiting for:** a playtest of the new values (3 rounds, condition 6: in the table above, 38% of cooperative
-tables, 11% of mixed and 3% of selfish ones survive). A sweep with 4 and 5 players can check how the value should
-scale.
-
-## Double credit in the Crisis may be too much (balance)
-
-**Document:** rulebook, Observation and prediction phase > Scoring predictions and Formulating predictions and
-preregistration; `parameter_defaults.yaml` (`crisis_pred_base_bonus`).
-
-**Text:** "If the prediction was preregistered, the value is doubled." and "During the Crisis period all Predictions
-must be preregistered."
-
-**Problem (Zoltan, playtest 2026-11-09, game lw3IvPaP):** every successful Crisis prediction is doubled, on top of
-`crisis_pred_base_bonus`, because preregistration is compulsory then. Zoltan's view: this might be too much,
-although it is realistic. In that game the three researchers gained 25 academic credit in the 10 Calm rounds and
-140 in the 3 Crisis rounds, so the Crisis decided the ranking. In the Calm period the doubling rewards a choice;
-in the Crisis there is no choice left to reward.
-
-**Possible changes:**
-
-1. Keep the rule: a field in crisis pays for answers.
-2. No preregistration doubling in the Crisis (`crisis_pred_base_bonus` stays).
-3. Keep the doubling and lower `crisis_pred_base_bonus`.
-
-**Waiting for:** Zoltan to choose and playtest a version. The simulator can compare them, but its scripted bots
-barely score in the Calm period, so a playtest is the better test of the Calm/Crisis balance.
-
-## Data collection is a waste of staff; Experimentation is too strong (balance)
-
-**Document:** rulebook, Hiring and task allocation phase, Experimentation and equipment phase, Observation and
-prediction phase.
-
-**Text:** "During the Crisis period all Predictions must be preregistered. Hidden predictions are no longer
-allowed. So during the Crisis period a researcher can make at most as many predictions as research staff they
-allocated to data collection."
-
-**Problem (Zoltan, playtest 2026-11-09, game lw3IvPaP):** Zoltan hardly ever made predictions, because data
-collection is a waste of staff when the Crisis is so punishing. Surviving requires published theories that together
-cover the Probes' input combinations, and data collection does not help with that, especially as Probes give
-unreliable readings. Experimentation is overpowered. (Unlike Probe readings, an experiment shows the true outcome for input states the
-researcher partly chooses.)
-
-**Related, from the same game:** staff are allocated before the Crisis card is revealed, so a lab that skipped data
-collection cannot predict in the first Crisis round. In round 11 only 1 of the 4 Probes was predicted, and the other
-3 were the game's only unsuccessful predictions. Staff allocations are not in the debrief, so how much staff went
-where has not been measured; the simulator or the event log can do that.
-
-**Waiting for:** Zoltan to decide whether and how to weaken Experimentation or make data collection worth more.
+**Until answered:** the engine keeps the limit of one.
 
 ## Easier difficulty levels, to allow true racing (design idea)
 
