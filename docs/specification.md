@@ -49,6 +49,7 @@ Every path runs through `nv_core`: the server, the AI player and the simulator n
 | `nv_server` | FastAPI app: lobby, joining, WebSocket updates, persistence, host controls | `nv_core`, `nv_ai`, `nv_sim` (scripted bot seats) |
 | `nv_ai` | AI player: prompt building, tool-call action choice, token and cost tracking | `nv_core`, the model provider's SDK (OpenAI first, Anthropic later) |
 | `nv_sim` | Headless batch simulator, random bot and scripted strategy bots | `nv_core`, `nv_world`, `nv_ai` |
+| `nv_rulebook` | The reader's edition of the rulebook: a PDF with every `[parameter]` filled in from the defaults (`nv-rulebook-pdf`) | `nv_core`, ReportLab |
 | `web/` | Browser client: plain HTML/JS, renders views, sends actions | server API only |
 | `scenarios/` | One folder per scenario: its scenario.md and generated world files | — |
 | docs/ | rules.md (exported from Google Docs), specification.md and parameter\_defaults.yaml | — |

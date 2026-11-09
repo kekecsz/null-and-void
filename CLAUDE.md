@@ -27,7 +27,7 @@ Only the rulebook is an export; the other documents are maintained here and may 
 ## Layout (specification section 3)
 
 `nv_core` (rules engine, settings, decks), `nv_world` (scenario reader, World Table, screening, world files),
-`nv_server`, `nv_ai`, `nv_sim`, `web/`, `scenarios/`, `docs/`, `tests/`.
+`nv_server`, `nv_ai`, `nv_sim`, `nv_rulebook` (PDF edition of the rulebook), `web/`, `scenarios/`, `docs/`, `tests/`.
 
 ## Commands
 

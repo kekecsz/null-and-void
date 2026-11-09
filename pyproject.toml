@@ -21,14 +21,16 @@ nv-world = "nv_world.cli:main"
 nv-play = "nv_server.text_client:main"
 nv-sim = "nv_sim.run:main"
 nv-server = "nv_server.app:main"
+nv-rulebook-pdf = "nv_rulebook.pdf:main"
 
 [project.optional-dependencies]
 assets = ["pillow>=11"]  # asset_generation/make_icons.py
 cloud = ["google-cloud-firestore>=2.20"]  # the deployed server's storage
-dev = ["pytest>=8", "httpx>=0.28", "google-cloud-firestore>=2.20"]  # httpx: FastAPI's test client
+pdf = ["reportlab>=4"]  # nv-rulebook-pdf
+dev = ["pytest>=8", "httpx>=0.28", "google-cloud-firestore>=2.20", "reportlab>=4"]  # httpx: FastAPI's test client
 
 [tool.setuptools.packages.find]
-include = ["nv_core*", "nv_world*", "nv_server*", "nv_ai*", "nv_sim*"]
+include = ["nv_core*", "nv_world*", "nv_server*", "nv_ai*", "nv_sim*", "nv_rulebook*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

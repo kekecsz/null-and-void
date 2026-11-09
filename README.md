@@ -91,6 +91,20 @@ acceptance criteria, retrying until a world passes (specification, section 4).
 The same scenario and seed always give the same world. Worlds for seeds 1–5 are already in
 [`scenarios/venus_expedition/worlds/`](scenarios/venus_expedition/worlds/).
 
+## Printable rulebook
+
+`docs/rules.md` names its values as `[parameter]`, which suits tuning but not reading. This command writes a PDF
+with every parameter replaced by its value from `docs/parameter_defaults.yaml`, and the journal tier and grant
+track tables drawn where the rulebook refers to them:
+
+```sh
+.venv/Scripts/python -m pip install -e ".[pdf]"     # once
+.venv/Scripts/nv-rulebook-pdf                       # writes dist/Null_and_Void_rulebook.pdf (--out for another path)
+```
+
+Run it again after a new rulebook export or a change of the defaults. It stops with an error if the rulebook
+contains a reference it cannot fill in.
+
 ## Playing in the browser
 
 The server (specification, section 6) runs games in the browser, with any mix of people, scripted bots and
