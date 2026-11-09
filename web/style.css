@@ -182,6 +182,7 @@ input.plain { width: 3em; text-align: center; appearance: textfield; -moz-appear
 input.plain::-webkit-inner-spin-button, input.plain::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .stepper { display: inline-flex; align-items: center; gap: 2px; }
 .stepper button { margin: 0; padding: 0; width: 24px; height: 24px; font-size: 17px; line-height: 1; font-weight: 600; }
+.grant-need { margin-left: 8px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .hire-row button { margin: 0 3px; }
 .hire-row .stepper button { margin: 0; }
 .alloc.postdocs-short tr > :nth-child(3), .alloc.students-short tr > :nth-child(4) { background: #e4e4de; }

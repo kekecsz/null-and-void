@@ -261,3 +261,19 @@ def test_apply_ignores_the_preview():
     task_preview(state, 0)
     again, _ = apply(state, action)
     assert again.model_dump_json() == without.model_dump_json()
+
+
+# The Grants row ---------------------------------------------------------------------------------------
+def test_hiring_preview_names_the_admin_of_the_current_grant_position():
+    state = game()
+    state.researcher(0).grant_position = len(S.grant_track)
+    assert task_preview(state, 0)["grant_admin_needed"] == S.grant_track[-1].admin
+    assert task_preview(state, 1)["grant_admin_needed"] == S.grant_track[S.grant_track_starting_position - 1].admin
+
+
+def test_student_check_preview_names_it_too():
+    state = game()
+    state = state.clone()
+    state.phase = Phase.STUDENT_CHECK
+    assert task_preview(state, 0) == {"grant_admin_needed": S.grant_track[S.grant_track_starting_position - 1].admin}
+

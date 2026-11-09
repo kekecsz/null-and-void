@@ -99,9 +99,12 @@ def task_preview(state: GameState, seat: int) -> dict[str, Any]:
     """Only what the current step can use."""
     ctx = Ctx(state)
     r = state.researcher(seat)
+    needed = state.settings.grant_track[r.grant_position - 1].admin  # to keep the current position
     if state.phase == Phase.HIRING:
         previous = {t.value: c.model_dump() for t, c in r.last_allocation.items()}
-        return {"previous_allocation": previous or None}
+        return {"previous_allocation": previous or None, "grant_admin_needed": needed}
+    if state.phase == Phase.STUDENT_CHECK:
+        return {"grant_admin_needed": needed}
     if state.phase == Phase.PREDICTION:
         return {"theories": _theories(ctx, seat)}
     if state.phase == Phase.REVEAL:

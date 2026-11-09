@@ -454,6 +454,12 @@ function completeActions(option) {
 }
 
 // A number box with a larger - and + on either side. The box itself is in .box; read .value as usual.
+function taskLabel(name) {  // a staff task, with what the Grant funding position asks of the Grants row
+  const needed = preview().grant_admin_needed;
+  const label = name.replace("_", " ");
+  return name === "grants" && needed !== undefined ? [label, h("span", { class: "grant-need" }, `grant track needs: ${needed}`)] : label;
+}
+
 function numberInput(value, min, max, disabled) {
   const limited = max !== null && max !== undefined;
   const input = h("input", { type: "number", class: "plain", value, min, max: limited ? max : false, disabled: disabled ? true : null });
@@ -478,7 +484,7 @@ function allocateForm(t) {
     const p = numberInput(current.postdocs, 0, t.at_most_one.includes(task) ? 1 : null);
     const s = numberInput(current.students, 0, null, t.postdoc_only.includes(task));
     inputs[task] = [p, s];
-    return [task.replace("_", " "), TASK_WHEN[task] || "", p.box, s.box];
+    return [taskLabel(task), TASK_WHEN[task] || "", p.box, s.box];
   });
   const totals = { postdocs: h("b", {}), students: h("b", {}) };
   const allocationTable = table(["Task", "When", "Postdocs", "Students"], [...rows, [h("b", {}, "Allocated"), "", totals.postdocs, totals.students]]);
@@ -532,7 +538,7 @@ function leavingForm(t) {
     .map(([task, n]) => [task, numberInput(0, 0, n), n]);
   return [
     h("p", {}, `${t.count} student(s) must leave. Choose from which tasks:`),
-    table(["Task", "When", "Students there", "Leaving"], inputs.map(([task, input, n]) => [task.replace("_", " "), TASK_WHEN[task] || "", n, input.box])),
+    table(["Task", "When", "Students there", "Leaving"], inputs.map(([task, input, n]) => [taskLabel(task), TASK_WHEN[task] || "", n, input.box])),
     h("button", { onclick: () => {
       const by_task = {};
       for (const [task, input] of inputs) if (Number(input.value)) by_task[task] = Number(input.value);
