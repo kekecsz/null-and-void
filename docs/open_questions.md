@@ -147,6 +147,67 @@ The scripted bots do not play differently as a crash comes closer.
 tables, 11% of mixed and 3% of selfish ones survive). A sweep with 4 and 5 players can check how the value should
 scale.
 
+## Double credit in the Crisis may be too much (balance)
+
+**Document:** rulebook, Observation and prediction phase > Scoring predictions and Formulating predictions and
+preregistration; `parameter_defaults.yaml` (`crisis_pred_base_bonus`).
+
+**Text:** "If the prediction was preregistered, the value is doubled." and "During the Crisis period all Predictions
+must be preregistered."
+
+**Problem (Zoltan, playtest 2026-11-09, game lw3IvPaP):** every successful Crisis prediction is doubled, on top of
+`crisis_pred_base_bonus`, because preregistration is compulsory then. Zoltan's view: this might be too much,
+although it is realistic. In that game the three researchers gained 25 academic credit in the 10 Calm rounds and
+140 in the 3 Crisis rounds, so the Crisis decided the ranking. In the Calm period the doubling rewards a choice;
+in the Crisis there is no choice left to reward.
+
+**Possible changes:**
+
+1. Keep the rule: a field in crisis pays for answers.
+2. No preregistration doubling in the Crisis (`crisis_pred_base_bonus` stays).
+3. Keep the doubling and lower `crisis_pred_base_bonus`.
+
+**Waiting for:** Zoltan to choose and playtest a version. The simulator can compare them, but its scripted bots
+barely score in the Calm period, so a playtest is the better test of the Calm/Crisis balance.
+
+## Data collection is a waste of staff; Experimentation is too strong (balance)
+
+**Document:** rulebook, Hiring and task allocation phase, Experimentation and equipment phase, Observation and
+prediction phase.
+
+**Text:** "During the Crisis period all Predictions must be preregistered. Hidden predictions are no longer
+allowed. So during the Crisis period a researcher can make at most as many predictions as research staff they
+allocated to data collection."
+
+**Problem (Zoltan, playtest 2026-11-09, game lw3IvPaP):** Zoltan hardly ever made predictions, because data
+collection is a waste of staff when the Crisis is so punishing. Surviving requires published theories that together
+cover the Probes' input combinations, and data collection does not help with that, especially as Probes give
+unreliable readings. Experimentation is overpowered. (Unlike Probe readings, an experiment shows the true outcome for input states the
+researcher partly chooses.)
+
+**Related, from the same game:** staff are allocated before the Crisis card is revealed, so a lab that skipped data
+collection cannot predict in the first Crisis round. In round 11 only 1 of the 4 Probes was predicted, and the other
+3 were the game's only unsuccessful predictions. Staff allocations are not in the debrief, so how much staff went
+where has not been measured; the simulator or the event log can do that.
+
+**Waiting for:** Zoltan to decide whether and how to weaken Experimentation or make data collection worth more.
+
+## Easier difficulty levels, to allow true racing (design idea)
+
+**Document:** `parameter_defaults.yaml`; specification 6.3 (the lobby's "settings preset").
+
+**Problem (Zoltan, playtest 2026-11-09):** easier difficulty levels are needed to allow true racing. If the game is
+this hard, selfish players will just drive the field into a loss all the time. The simulator agrees for scripted
+bots: see the survival rates in "The Crisis is almost unwinnable with the defaults" above. Game lw3IvPaP was
+Zoltan's first win; all earlier games Zoltan played or watched AI players play ended in a Crisis Crash.
+
+**To decide:** which settings define a level (`crisis_condition` and `crisis_length` are the obvious ones; the
+number of cards in the Game Period Deck sets how long the Calm period lasts), how many levels there are, what they
+are called, and where the named presets are kept.
+
+**Waiting for:** Zoltan's choice of levels. The simulator can then measure each level's survival rate for
+cooperative, mixed and selfish tables.
+
 ## Early pullout: averting the Crisis by scaling down (design idea)
 
 **Document:** a new rule for the rulebook (after the Warning shot, before the Crisis), a new `public_support`
