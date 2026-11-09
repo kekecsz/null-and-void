@@ -6,7 +6,7 @@ the rulebook section each field belongs to is named in the comments.
 
 import copy
 from enum import StrEnum
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -128,6 +128,8 @@ class Researcher(_Model):
     # This round's staff allocation mat, and how many staff of each task have been used.
     staff: dict[Task, StaffCount] = {}
     used: dict[Task, int] = {}
+    # The allocation made at the latest Hiring, for the web client's "repeat" button.
+    last_allocation: dict[Task, StaffCount] = {}
     fired: int = 0
     leaving_students: int = 0  # Student task check: how many must leave
     unpaid: int = 0
@@ -223,6 +225,13 @@ class Prediction(_Model):
     status: Literal["hidden", "revealed", "pruned", "scored", "discarded"] = "hidden"
     success: bool | None = None  # set for every prediction once outcomes are revealed
     readings: dict[str, str | None] = {}  # hidden bookkeeping: the Probe's visible readings (debrief)
+    # What scoring or pruning did, for the prediction report (specification 7.4).
+    author: int | None = None  # of the cited theory
+    credit_change: int | None = None
+    author_credit_change: int | None = None
+    patent: Literal["new", "held"] | None = None  # "held": the theory already had its patent
+    patent_holder: int | None = None
+    won_nobel: bool = False
 
 
 class GameResult(_Model):
@@ -339,6 +348,7 @@ class GameState(_Model):
     proposals: list[list[int]] = []  # [from, to]
     # Hidden bookkeeping (never in player views)
     prediction_log: list[Prediction] = []
+    prediction_report: dict[str, Any] | None = None  # the latest round's, public (specification 7.4)
     paper_log: list[PaperLog] = []
     review_log: list[ReviewLog] = []
     round_log: list[RoundLog] = []

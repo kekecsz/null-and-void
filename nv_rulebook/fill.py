@@ -11,7 +11,7 @@ from typing import Any
 
 from nv_core.markdown_text import parameter_references
 
-TABLES = ("journal_tiers", "grant_track")
+TABLES = ("journal_tiers", "grant_track", "talent_development_track")
 _TABLE_MARKER = "<<table:{}>>"
 TABLE_LINE = re.compile(r"^<<table:(\w+)>>$")
 
@@ -27,8 +27,8 @@ _ORDINAL = re.compile(r"\[(\w+)\]th\b")
 _ARITHMETIC = re.compile(r"\[(\w+)\]\s*([*+/])\s*(\d+)(, rounded down,?)?")
 _REFERENCE = re.compile(r"\[(\w+)\](?!\()")
 
-_TIER_FIRST_NUMBER = {"journal_tiers": 0, "grant_track": 1}  # see the comments in the parameter file
-_FIRST_COLUMN = {"journal_tiers": "Tier", "grant_track": "Position"}
+_TIER_FIRST_NUMBER = {"journal_tiers": 0, "grant_track": 1, "talent_development_track": 0}  # see the comments in the parameter file
+_FIRST_COLUMN = {"journal_tiers": "Tier", "grant_track": "Position", "talent_development_track": "Position"}
 _COLUMN_LABELS = {"apc": "APC"}
 
 

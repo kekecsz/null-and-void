@@ -78,7 +78,7 @@ def test_hiring_limits():
     r = state.researcher(0)
     too_many = r.money // s.cost_of_postdoc + 1
     _refused(state, a.AllocateStaff(seat=0, hire_postdocs=too_many, allocation={Task.GRANTS: StaffCount(postdocs=too_many)}), "cost")
-    cap = s.student_base_hire_cap + r.talent_position
+    cap = s.student_base_hire_cap + s.talent_development_track[r.talent_position].bonus_student_cap
     _refused(state, a.AllocateStaff(seat=0, hire_students=cap + 1, allocation={Task.GRANTS: StaffCount(students=cap + 1)}), "at most")
     _refused(state, a.AllocateStaff(seat=0, hire_students=1, allocation={Task.DEVELOPMENT: StaffCount(students=1)}), "postdoc-only")
     _refused(state, a.AllocateStaff(seat=0, hire_students=2, allocation={Task.GRANTS: StaffCount(students=1)}), "allocate every")
@@ -130,9 +130,9 @@ def test_crisis_card_starts_crisis():
 
 # Student task check -----------------------------------------------------------------------
 def test_student_task_check_threshold(monkeypatch):
-    """Dice below [student_unassigned_base_threshold] minus the Talent position send students away."""
+    """Dice below [student_unassigned_base_threshold] minus the position's student reliability send students away."""
     s = settings()
-    threshold = s.student_unassigned_base_threshold - 1
+    threshold = s.student_unassigned_base_threshold - s.talent_development_track[1].student_reliability
     monkeypatch.setattr("nv_core.rng.Rng.dice", lambda self, stream, count, sides=6: [threshold - 1, threshold] * (count // 2))
     state = game()
     for r in state.researchers:

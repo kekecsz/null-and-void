@@ -34,7 +34,7 @@ def check_allocation(ctx: Ctx, r: Researcher, a: AllocateStaff) -> None:
         raise IllegalAction(
             f"paying {postdocs} postdoc(s) would cost {postdocs * s.cost_of_postdoc}, you have {r.money} money"
         )
-    cap = s.student_base_hire_cap + r.talent_position
+    cap = s.student_hire_cap(r.talent_position)
     if a.hire_students > cap:
         raise IllegalAction(f"you can hire at most {cap} students")
     if any(c.postdocs < 0 or c.students < 0 for c in a.allocation.values()):
@@ -74,6 +74,7 @@ def finish(ctx: Ctx) -> None:
         r.postdocs = r.postdocs + a.hire_postdocs - a.fire_postdocs
         r.students = a.hire_students
         r.staff = {task: StaffCount(**dict(count)) for task, count in a.allocation.items() if count.total}
+        r.last_allocation = {task: count.model_copy() for task, count in r.staff.items()}
         r.used = {}
         r.fired = a.fire_postdocs
         r.unpaid = 0
@@ -152,7 +153,7 @@ def start_student_check(ctx: Ctx) -> None:
         students = sum(c.students for c in r.staff.values())
         if not students:
             continue
-        threshold = s.student_unassigned_base_threshold - r.talent_position
+        threshold = s.student_leave_threshold(r.talent_position)
         dice = ctx.rng.dice("dice", students)
         leaving = sum(1 for d in dice if d < threshold)
         r.leaving_students = leaving

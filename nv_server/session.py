@@ -29,6 +29,7 @@ from nv_core.engine.context import Event
 from nv_core.settings import Settings
 from nv_core.state import GameState
 from nv_core.text import render_text
+from nv_core.preview import task_preview
 from nv_core.views import player_view, spectator_view, visible_events
 from nv_core.world_data import WorldData
 from nv_server.storage import Storage
@@ -502,6 +503,7 @@ class GameSession:
             data["text"] = render_text(view)
             if self.status == "running" and self.meta["seats"][seat] == HUMAN:
                 data["options"] = [o.model_dump(mode="json") for o in legal_actions(self.state, seat)]
+                data["preview"] = to_jsonable_python(task_preview(self.state, seat))
             data["events"] = [e.text for e in visible_events(self.events, seat)[-EVENTS_SENT:]]
         elif self.state is not None and conn.spectator:  # everything (specification 7.3)
             view = spectator_view(self.state)

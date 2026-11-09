@@ -382,7 +382,7 @@ class StrategyBot:
         return wilson_lower(n - s, n) >= self.bot.confidence_threshold
 
     def _leave_chance(self, view) -> float:
-        below = self.settings.student_unassigned_base_threshold - self._me(view)["talent_position"] - 1
+        below = self.settings.student_leave_threshold(self._me(view)["talent_position"]) - 1
         return min(1.0, max(0, below) / 6)
 
     # Hiring and task allocation -----------------------------------------------------------------

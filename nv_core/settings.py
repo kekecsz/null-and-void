@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, ValidationError, model_validator
 
 from nv_core.paths import PARAMETER_DEFAULTS
 
@@ -38,6 +38,15 @@ class JournalTier(_Strict):
     methods_accepted: StrictBool
     submission_fee: StrictInt
     apc: StrictInt
+
+
+class TalentPosition(BaseModel):
+    """One position of the Talent development track; the parameter file names its columns in words."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True, serialize_by_alias=True)
+
+    bonus_student_cap: StrictInt = Field(alias="bonus student cap")
+    student_reliability: StrictInt = Field(alias="student reliability")
 
 
 class Settings(_Strict):
@@ -98,6 +107,19 @@ class Settings(_Strict):
     # Tables
     grant_track: list[GrantPosition]
     journal_tiers: list[JournalTier]
+    # A game saved before this table existed keeps the rule it was started under, in which the
+    # track position itself was both values. The parameter file must still list it: see _validate.
+    talent_development_track: list[TalentPosition] | None = None
+
+    def student_hire_cap(self, talent_position: int) -> int:
+        """Hiring and task allocation phase: the most students a researcher may hire."""
+        track = self.talent_development_track
+        return self.student_base_hire_cap + (track[talent_position].bonus_student_cap if track is not None else talent_position)
+
+    def student_leave_threshold(self, talent_position: int) -> int:
+        """Student task check phase: a die result lower than this sends a student away."""
+        track = self.talent_development_track
+        return self.student_unassigned_base_threshold - (track[talent_position].student_reliability if track is not None else talent_position)
 
     @model_validator(mode="after")
     def _check_tables(self) -> "Settings":
@@ -114,6 +136,10 @@ class Settings(_Strict):
                 )
         if not 1 <= self.grant_track_starting_position <= len(self.grant_track):
             raise ValueError("grant_track_starting_position: not a position of grant_track")
+        if self.talent_development_track is not None:
+            highest = max(self.talent_track_max, self.talent_development_track_starting_position)
+            if len(self.talent_development_track) <= highest:
+                raise ValueError(f"talent_development_track: no entry for position {highest}")
         if self.min_players > self.max_players:
             raise ValueError("min_players: larger than max_players")
         return self

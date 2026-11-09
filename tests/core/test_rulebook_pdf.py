@@ -124,6 +124,7 @@ def test_real_rulebook_fills_completely_and_can_be_printed():
     assert {m.group(1) for line in filled.splitlines() if (m := TABLE_LINE.match(line))} == {
         "journal_tiers",
         "grant_track",
+        "talent_development_track",
     }
     check_printable(filled)
 

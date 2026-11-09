@@ -9,7 +9,7 @@ import pytest
 import yaml
 
 from nv_core import actions as a
-from nv_core.engine import IllegalAction, apply, validate
+from nv_core.engine import IllegalAction, apply, legal_actions, validate
 from nv_core.paths import PARAMETER_DEFAULTS
 from nv_core.settings import Settings, SettingsError, load_settings
 from nv_core.state import Phase, StaffCount, Task
@@ -33,13 +33,14 @@ def test_postdoc_pay_may_equal_the_money_but_not_exceed_it():
     assert validate(state, a.AllocateStaff(seat=0, hire_postdocs=2, allocation=_postdocs(4))) is not None
 
 
-def test_student_cap_includes_talent_position_exactly():
-    """Hiring and task allocation phase: students up to [student_base_hire_cap] plus the Talent position."""
+def test_student_cap_includes_the_bonus_of_the_talent_position_exactly():
+    """Hiring and task allocation phase: students up to [student_base_hire_cap] plus the bonus student
+    cap value of the Talent development track position."""
     state = game()
     r = state.researcher(0)
     r.talent_position = min(2, S.talent_track_max)
     r.money = 0  # students need no funding
-    cap = S.student_base_hire_cap + r.talent_position
+    cap = S.student_base_hire_cap + S.talent_development_track[r.talent_position].bonus_student_cap
     ok = a.AllocateStaff(seat=0, hire_students=cap, allocation={Task.GRANTS: StaffCount(students=cap)})
     assert validate(state, ok) is None
     over = a.AllocateStaff(seat=0, hire_students=cap + 1, allocation={Task.GRANTS: StaffCount(students=cap + 1)})
@@ -178,3 +179,51 @@ def test_warning_shot_without_alliances_needs_no_last_chance_stage():
     )
     assert state.warning_revealed
     assert state.phase != Phase.LAST_CHANCE
+
+
+# The [talent_development_track] table --------------------------------------------------------------
+_TRACK = [{"bonus student cap": b, "student reliability": r} for b, r in [(0, 0), (2, 0), (2, 3), (5, 1)]]
+
+
+def test_student_cap_and_threshold_come_from_the_table():
+    """Hiring and task allocation phase, Student task check phase: the values of the track position,
+    not the position itself."""
+    s = settings(talent_development_track=_TRACK, talent_track_max=3)
+    assert [s.student_hire_cap(p) - s.student_base_hire_cap for p in range(4)] == [0, 2, 2, 5]
+    assert [s.student_unassigned_base_threshold - s.student_leave_threshold(p) for p in range(4)] == [0, 0, 3, 1]
+
+
+def test_legal_actions_offer_the_cap_of_the_table():
+    state = game(talent_development_track=_TRACK, talent_track_max=3)
+    state.researcher(0).talent_position = 1
+    option = next(o for o in legal_actions(state, 0) if o.type == "allocate_staff")
+    assert option.template["max_students"] == state.settings.student_base_hire_cap + 2
+
+
+def test_a_game_saved_before_the_table_keeps_its_old_rule():
+    """A saved game's settings have no table: the position itself is the bonus and the reliability."""
+    saved = settings().model_dump(mode="json")
+    del saved["talent_development_track"]
+    old = Settings.model_validate(saved)
+    assert old.student_hire_cap(2) == old.student_base_hire_cap + 2
+    assert old.student_leave_threshold(2) == old.student_unassigned_base_threshold - 2
+
+
+def test_settings_survive_being_saved_and_loaded():
+    s = settings()
+    assert Settings.model_validate(s.model_dump(mode="json")) == s
+    assert Settings.model_validate_json(s.model_dump_json()) == s
+
+
+def test_the_table_must_cover_every_reachable_position():
+    with pytest.raises(SettingsError, match="talent_development_track: no entry for position 3"):
+        settings(talent_development_track=_TRACK[:3], talent_track_max=3)
+
+
+def test_the_parameter_file_must_list_the_table(tmp_path):
+    data = yaml.safe_load(PARAMETER_DEFAULTS.read_text(encoding="utf-8"))
+    del data["talent_development_track"]
+    path = tmp_path / "parameters.yaml"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    with pytest.raises(SettingsError, match="talent_development_track: missing"):
+        load_settings(path=path)

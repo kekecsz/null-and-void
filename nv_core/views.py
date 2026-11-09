@@ -202,6 +202,7 @@ def _view(state: GameState, seat: int | None) -> dict[str, Any]:
         "hidden_predictions": hidden_counts,
         "review_cards": {str(s): cards for s, cards in state.review_cards.items()},
         "result": state.result.model_dump() if state.result else None,
+        "prediction_report": state.prediction_report,
     }
     if seat is not None:
         view["lab"] = _lab(state, seat)

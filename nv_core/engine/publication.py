@@ -150,8 +150,7 @@ def check_submission(ctx: Ctx, r: Researcher, idea: Idea, tier_number: int, reco
         raise IllegalAction(f"tier {tier_number} needs at least {tier.min_observations} observation record(s)")
     if experiments < tier.min_experiments:
         raise IllegalAction(f"tier {tier_number} needs at least {tier.min_experiments} experiment record(s)")
-    # Pending a rulebook change (docs/open_questions.md): records beyond the minimum only shorten
-    # processing and make a stack look bigger, which a journal without peer review cannot use.
+    # Supporting observational and experimental records: none in a journal without peer review.
     if not tier.peer_review and len(records) > max(tier.min_records, tier.min_observations + tier.min_experiments):
         raise IllegalAction(f"tier {tier_number} has no peer review, so it takes no records beyond its minimum")
     cost = tier.submission_fee + (tier.apc if pay_apc else 0)
@@ -321,22 +320,30 @@ def check_commit_submission(ctx: Ctx, seat: int) -> None:
 
 
 # Article processing --------------------------------------------------------------------------
-def rounds_in_processing(ctx: Ctx, manuscript: Manuscript) -> int:
-    tier = ctx.settings.journal_tiers[manuscript.tier]
+def processing_time(ctx: Ctx, tier_number: int, idea: Idea, records: int, open_access: bool) -> dict[str, int]:
+    """Rounds in processing, if accepted now, with each bonus that went into it (Article processing)."""
+    tier = ctx.settings.journal_tiers[tier_number]
     base = tier.rounds_in_processing
-    reduction = 1 if manuscript.open_access else 0
-    idea = manuscript.idea
+    extra_records = extra_elements = hot_topic = 0
     if idea.kind == "theory":
-        reduction += max(0, len(manuscript.records) - tier.min_records)
-        reduction += max(0, _elements(idea) - tier.min_elements)
+        extra_records = max(0, records - tier.min_records)
+        extra_elements = max(0, _elements(idea) - tier.min_elements)
         hot = ctx.state.probes[ctx.state.hot_topic].readings
         matches = any(var in hot and hot[var].state == value for var, value in idea.inputs.items())
         if matches and not mismatch(idea.inputs, hot):  # hot topic publication
-            reduction += 1
+            hot_topic = 1
+    reduction = (1 if open_access else 0) + extra_records + extra_elements + hot_topic
     value = max(min(base, 1), base - reduction)
-    if ctx.state.period == "crisis":
-        value = max(0, value - 1)  # Crisis fast-track
-    return value
+    crisis = 0
+    if ctx.state.period == "crisis":  # Crisis fast-track
+        crisis = min(1, value)
+        value -= crisis
+    return {"rounds": value, "base": base, "extra_records": extra_records, "extra_elements": extra_elements,
+            "hot_topic": hot_topic, "crisis": crisis}
+
+
+def rounds_in_processing(ctx: Ctx, manuscript: Manuscript) -> int:
+    return processing_time(ctx, manuscript.tier, manuscript.idea, len(manuscript.records), manuscript.open_access)["rounds"]
 
 
 def to_accept(ctx: Ctx, manuscript: Manuscript) -> None:

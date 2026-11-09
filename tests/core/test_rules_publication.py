@@ -156,8 +156,8 @@ def test_full_portal_refuses_peer_review_tiers_but_not_tier_0():
 
 
 def test_journals_without_peer_review_take_no_records_beyond_their_minimum():
-    """docs/open_questions.md (pending rulebook change): spare records cannot help a submission to
-    a journal without peer review, so they are refused there, and not offered."""
+    """Supporting observational and experimental records: a submission to a journal without peer
+    review cannot include them, so they are refused there, and not offered."""
     from nv_core.engine import legal_actions
 
     state = _submission()

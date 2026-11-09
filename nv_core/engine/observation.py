@@ -3,6 +3,7 @@
 from nv_core.actions import CancelPrediction, MakePrediction, OrderPredictions, RevealPrediction, SetPreregistered
 from nv_core.engine.context import Ctx, IllegalAction, stack_cards
 from nv_core.engine.ending import allies, check_crisis_crash, end_game
+from nv_core.settings import Settings
 from nv_core.state import Card, Idea, Observation, Paper, Prediction, Probe, Task
 
 
@@ -178,7 +179,9 @@ def _prune(ctx: Ctx, predictions: list[Prediction], step: int) -> None:
                 f"{ctx.name(loser.seat)}'s prediction Q{loser.id} on T{theory} is discarded "
                 f"({ctx.name(group[0].seat)} is earlier in turn order)",
             )
-            ctx.credit(ctx.state.paper(theory).author, ctx.settings.citation_reward, f"T{theory} cited")
+            loser.author = ctx.state.paper(theory).author
+            loser.author_credit_change = ctx.settings.citation_reward
+            ctx.credit(loser.author, loser.author_credit_change, f"T{theory} cited")
 
 
 def _public_prediction(ctx: Ctx, p: Prediction) -> str:
@@ -343,6 +346,39 @@ def check_commit_order(ctx: Ctx, seat: int) -> None:
 
 
 def finish_scoring(ctx: Ctx) -> None:
+    missed: list[int] = []
+    _score_round(ctx, missed)
+    ctx.state.prediction_report = _prediction_report(ctx, missed)
+
+
+def _prediction_report(ctx: Ctx, missed: list[int]) -> dict | None:
+    """What the round's predictions did, for the web client's report (specification 7.4). Only
+    revealed predictions, so all of it is public. None when there is nothing to report."""
+    state = ctx.state
+    shown = [p for p in state.prediction_log + state.predictions
+             if p.round == state.round and p.status in ("scored", "pruned", "revealed")]
+    if not shown and not missed:
+        return None
+    shown.sort(key=lambda p: (p.seat, p.probe, p.id))
+    outcome = {"pruned": lambda p: "pruned", "revealed": lambda p: "unscored",
+               "scored": lambda p: "success" if p.success else "failed"}
+    return {
+        "round": state.round,
+        "crisis": state.period == "crisis",
+        "missed": missed,
+        "unsuccessful": state.unsuccessful_predictions,
+        "crisis_condition": ctx.settings.crisis_condition,
+        "predictions": [
+            {"id": p.id, "seat": p.seat, "probe": p.probe, "theory": p.cited, "inputs": p.inputs, "outcomes": p.outcomes,
+             "preregistered": p.preregistered, "outcome": outcome[p.status](p), "credit": p.credit_change,
+             "author": p.author, "author_credit": p.author_credit_change, "patent": p.patent,
+             "patent_holder": p.patent_holder, "nobel": p.won_nobel}
+            for p in shown
+        ],
+    }
+
+
+def _score_round(ctx: Ctx, missed: list[int]) -> None:
     state = ctx.state
     for group in _scoring_groups(ctx):
         chosen = state.pending[group[0].seat].scoring_order
@@ -358,10 +394,23 @@ def finish_scoring(ctx: Ctx) -> None:
         for probe in state.probes:
             if not any(p.probe == probe.index and p.status == "scored" for p in state.predictions):
                 state.unsuccessful_predictions += 1
+                missed.append(probe.index)
                 ctx.log("crisis_miss", f"No prediction on P{probe.index + 1}: one unsuccessful prediction", probe=probe.index)
                 if check_crisis_crash(ctx):
                     return
     record_observations(ctx)
+
+
+def credit_changes(s: Settings, crisis: bool, inputs: int, outcomes: int, preregistered: bool, success: bool) -> tuple[int, int]:
+    """Academic credit for the researcher who predicted and for the cited theory's author
+    (Scoring predictions)."""
+    if success:
+        base = inputs + (s.crisis_pred_base_bonus if crisis else 0)
+        return (base * outcomes * (2 if preregistered else 1),
+                s.citation_reward + (s.crisis_pred_citation_reward_bonus if crisis else 0))
+    if crisis:
+        return s.failed_prereg_pred_ac_crisis, s.crisis_failed_pred_citation_penalty
+    return s.failed_prereg_pred_ac if preregistered else s.failed_non_prereg_pred_ac, 0
 
 
 def score(ctx: Ctx, p: Prediction) -> None:
@@ -372,35 +421,33 @@ def score(ctx: Ctx, p: Prediction) -> None:
     p.status = "scored"
     crisis = state.period == "crisis"
     ctx.log("scored", f"Q{p.id} ({ctx.name(p.seat)}, T{paper.id} on P{p.probe + 1}): {'success' if success else 'failed'}")
+    gained, author_gained = credit_changes(s, crisis, len(p.inputs), len(p.outcomes), p.preregistered, success)
+    p.author, p.credit_change, p.author_credit_change = paper.author, gained, author_gained
     if success:
-        base = len(p.inputs) + (s.crisis_pred_base_bonus if crisis else 0)
-        value = base * len(p.outcomes) * (2 if p.preregistered else 1)
-        ctx.credit(p.seat, value, "successful prediction")
-        reward = s.citation_reward + (s.crisis_pred_citation_reward_bonus if crisis else 0)
-        ctx.credit(paper.author, reward, f"T{paper.id} cited")
-        # At most one patent per theory, held by the latest successful predictor: pending a
-        # rulebook change (docs/open_questions.md).
-        if not paper.patents:
+        ctx.credit(p.seat, gained, "successful prediction")
+        ctx.credit(paper.author, author_gained, f"T{paper.id} cited")
+        # Funding > Patents: one patent per theory, kept by the first successful predictor.
+        if paper.patents:
+            p.patent, p.patent_holder = "held", paper.patents[0]
+        else:
+            p.patent, p.patent_holder = "new", p.seat
+            paper.patents = [p.seat]
             ctx.log("patent", f"{ctx.name(p.seat)} gets a patent on T{paper.id}", seat=p.seat, theory=paper.id)
-        elif paper.patents[0] != p.seat:
-            ctx.log("patent", f"The patent on T{paper.id} moves from {ctx.name(paper.patents[0])} to {ctx.name(p.seat)}",
-                    seat=p.seat, theory=paper.id)
-        paper.patents = [p.seat]
         if not crisis:
             paper.nobel += 1
             paper.retraction = 0
             if paper.nobel >= s.nobel_condition:
+                p.won_nobel = True
                 ctx.log("nobel", f"T{paper.id} reaches {paper.nobel} on its Nobel Prize counter")
                 end_game(ctx, "nobel", [paper.author], theory=paper.id)
         return
     if crisis:
-        ctx.credit(p.seat, s.failed_prereg_pred_ac_crisis, "failed prediction in the Crisis")
-        ctx.credit(paper.author, s.crisis_failed_pred_citation_penalty, f"T{paper.id} failed in the Crisis")
+        ctx.credit(p.seat, gained, "failed prediction in the Crisis")
+        ctx.credit(paper.author, author_gained, f"T{paper.id} failed in the Crisis")
         state.unsuccessful_predictions += 1
         check_crisis_crash(ctx)
         return
-    penalty = s.failed_prereg_pred_ac if p.preregistered else s.failed_non_prereg_pred_ac
-    ctx.credit(p.seat, penalty, "failed prediction")
+    ctx.credit(p.seat, gained, "failed prediction")
     paper.nobel = 0
     paper.retraction += 1
     if paper.retraction >= s.retraction_threshold:

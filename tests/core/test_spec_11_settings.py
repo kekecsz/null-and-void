@@ -12,7 +12,7 @@ import yaml
 from nv_core.paths import PARAMETER_DEFAULTS
 from nv_core.settings import SettingsError, load_settings
 
-TABLES = ("grant_track", "journal_tiers")
+TABLES = ("grant_track", "journal_tiers", "talent_development_track")
 
 
 def _defaults() -> dict:

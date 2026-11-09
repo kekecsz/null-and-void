@@ -65,7 +65,7 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
                 template={
                     "postdocs_now": r.postdocs,
                     "postdocs_after": [min_postdocs, max_postdocs],
-                    "max_students": ctx.settings.student_base_hire_cap + r.talent_position,
+                    "max_students": ctx.settings.student_hire_cap(r.talent_position),
                     "tasks": [t.value for t in Task],
                     "postdoc_only": [t.value for t in POSTDOC_ONLY],
                     "at_most_one": [Task.TALENT_DEVELOPMENT.value],
