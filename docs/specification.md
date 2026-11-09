@@ -289,6 +289,23 @@ The web UI's world states become icons in strips. This section records the desig
 - *Hot topic:* the Hot topic Probe carries a fire icon.
 - The numbers in these previews come from `nv_core.preview`, which reuses the functions that score and process, so the client holds no game rule. Bots and AI players do not use them.
 
+### 7.5 Rulebook PDF
+
+`nv-rulebook-pdf` writes the reader's edition of the rulebook: every `[parameter]` filled in from the defaults, styled as an issue of a scholarly journal. It is built from `docs/rules.md`, so a new export restyles itself; `docs/pieces.md` is not included. The Summary section becomes the abstract, the other main sections are numbered in order, and the text runs in two columns. Designer's notes are boxes in the column. A table too wide for a column is printed with rows and columns swapped.
+
+The round overview page is drawn from this table. A heading that is not a main heading of the rulebook stops the build.
+
+| Rulebook heading | Short name | Who decides | Staff at work |
+| --- | --- | --- | --- |
+| Hiring and task allocation phase | Hiring | Everyone, in secret | None: you hire and assign |
+| Experimentation and equipment phase | Experimentation | In turn order | Experimentation |
+| Probe time | Probe time | In order of academic credit | None |
+| Observation and prediction phase | Observation and prediction | Everyone, in secret | Data collection |
+| Development phase | Development | Everyone, in secret | Development |
+| Publication | Publication | Everyone, then secret votes | Write-up, Peer-review |
+| Talent development phase | Talent development | Automatic | Talent development |
+| Clean-up phase | Clean-up | Automatic | Grants |
+
 ## 8. AI opponents (`nv_ai`)
 
 An AI seat is a language model that reads the same text view a human could and answers each decision with a tool call naming one legal action. It never sees hidden information it isn't entitled to. The provider and model are settings (section 11): the first version uses OpenAI's GPT-6 Luna, which is cheap enough for testing; Claude models can be added through the same interface.

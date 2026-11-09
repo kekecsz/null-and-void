@@ -6,7 +6,7 @@ from nv_core.markdown_text import parameter_references, read_markdown
 from nv_core.paths import RULEBOOK
 from nv_core.settings import load_settings
 from nv_rulebook.fill import TABLE_LINE, FillError, fill_rulebook, table_rows
-from nv_rulebook.pdf import check_printable, make_pdf
+from nv_rulebook.pdf import COLUMN, _register_fonts as make_fonts, blocks, check_printable, column_table, make_pdf, round_overview, structure
 
 # Hand-made settings: the numbers are this test's own, not the game's.
 SETTINGS = {
@@ -136,9 +136,66 @@ def test_uses_the_values_it_is_given():
 
 def test_character_the_fonts_cannot_draw_is_refused():
     with pytest.raises(ValueError, match="cannot print"):
-        check_printable("arrow → here")
+        check_printable(f"private use {chr(0xE000)} here")
 
 
 def test_pdf_is_written(tmp_path):
     out = make_pdf(tmp_path / "sub" / "rulebook.pdf")
     assert out.read_bytes().startswith(b"%PDF")
+
+
+APOSTROPHE = chr(0x2019)
+# The layout: what the export only shows typographically ---------------------------------------------
+def _structured(text):
+    return structure(list(blocks(text)))
+
+
+def test_a_whole_paragraph_note_becomes_a_note():
+    assert _structured("(Designer's note: this resembles life.)") == [("note", (f"Designer{APOSTROPHE}s note", "This resembles life."))]
+
+
+def test_a_note_at_the_end_of_a_paragraph_is_split_off():
+    found = _structured(f"Unspent funds are returned. (Designer{APOSTROPHE}s note: this is anti-slippery.)")
+    assert found == [("p", "Unspent funds are returned."), ("note", (f"Designer{APOSTROPHE}s note", "This is anti-slippery."))]
+
+
+@pytest.mark.parametrize("text", ["[Designer note: it trundles along.]", "(Designer notes: it is insatiable)."])
+def test_other_spellings_of_notes_are_found(text):
+    assert _structured(text)[0][0] == "note"
+
+
+def test_a_developer_note_keeps_its_name():
+    assert _structured("(Developer note: constant innovation.)")[0][1][0] == f"Developer{APOSTROPHE}s note"
+
+
+def test_prose_in_parentheses_stays_prose():
+    assert _structured("(Note that this means something.)") == [("p", "(Note that this means something.)")]
+
+
+def test_a_short_line_before_a_list_is_a_label():
+    assert _structured("Patent\n\n- no patent;")[0] == ("label", "Patent")
+
+
+def test_a_short_paragraph_without_a_list_stays_a_paragraph():
+    assert _structured("Short line\n\nA paragraph.")[0] == ("p", "Short line")
+
+
+def test_an_italic_line_ending_in_a_colon_is_a_subheading():
+    assert _structured("*Successful predictions:*") == [("h2", "Successful predictions")]
+
+
+def test_a_subheading_loses_its_colon():
+    assert _structured("## Failed predictions: ") == [("h2", "Failed predictions")]
+
+
+def test_round_overview_names_main_headings_of_the_rulebook():
+    headings = {c for k, c in blocks(read_markdown(RULEBOOK)) if k == "h1"}
+    phases = round_overview()
+    assert phases and all(p.heading in headings for p in phases)
+
+
+def test_every_parameter_table_fits_a_column():
+    settings = load_settings().model_dump()
+    make_fonts()
+    for name in ("journal_tiers", "grant_track", "talent_development_track"):
+        assert sum(column_table(name, settings)._colWidths) <= COLUMN + 0.01, name
