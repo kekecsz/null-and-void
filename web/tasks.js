@@ -82,6 +82,29 @@ function useIdeaButton(idea) {
   });
 }
 
+// What a choice would lead to: the numbers are the server's (msg.preview, nv_core/preview.py).
+const preview = () => msg.preview || {};
+const signed = (n) => (n > 0 ? `+${n}` : String(n));
+const authorPart = (n) => (n ? `, ${signed(n)} as author` : "");
+function patentPart(x) {
+  if (x.patent === "new") return ", patent";
+  return x.patent_holder === msg.you ? ", you already hold its patent" : `, no patent (${nameOf(x.patent_holder)} holds it)`;
+}
+function payoffLine(paper) {
+  const x = (preview().theories || {})[paper.id];
+  if (!x) return null;
+  const amounts = (key) => (x.plain ? `${signed(x.plain[key])} AC (preregistered ${signed(x.preregistered[key])})` : `${signed(x.preregistered[key])} AC`);
+  return h("div", { class: "payoff" },
+    h("span", { class: "good" }, `If right: ${amounts("success")}${authorPart(x.author_success)}${patentPart(x)}.`), " ",
+    h("span", { class: "bad" }, `If wrong: ${amounts("failure")}${authorPart(x.author_failure)}, no patent.`));
+}
+function outcomeNote(x) {  // what a prediction does once revealed
+  if (!x) return null;
+  if (x.pruned) return h("span", { class: "muted" }, "Pruned: not scored");
+  return h("span", { class: x.success ? "good" : "bad" },
+    `${x.success ? "Success" : "Failed"}: ${signed(x.credit)} AC${authorPart(x.author_credit)}${x.success ? patentPart(x) : ", no patent"}`);
+}
+
 // Predictions: one strip per eligible theory, with a choice for each Probe --------------------------------
 function predictionRows(option) {
   const v = view();
@@ -105,18 +128,26 @@ function predictionRows(option) {
       };
       return h("span", { class: "pair" }, h("b", {}, `P${probe + 1}`), choice(false, "Predict"), choice(true, "Preregister"));
     };
-    return theoryStrip(p, [info(`Nobel ${p.nobel}/${v.nobel_condition}`), probes.map(pair)]);
+    return [theoryStrip(p, [info(`Nobel ${p.nobel}/${v.nobel_condition}`), probes.map(pair)]), payoffLine(p)];
   });
 }
 
+const predictionStrip = (q, tail) => strip({ key: `Q${q.id}`, head: `Q${q.id}`, sub: `T${q.theory} on P${q.probe + 1}`, slots: { ...q.inputs, ...q.outcomes }, tail });
 function revealRows(option) {
   const v = view();
+  const reveals = preview().reveals || {};
   return option.actions.map((a) => {
     const q = v.predictions.find((x) => x.id === a.prediction);
     if (!q) return h("button", { onclick: () => send(a) }, describe(a));
-    return strip({ key: `Q${q.id}`, head: `Q${q.id}`, sub: `T${q.theory} on P${q.probe + 1}`, slots: { ...q.inputs, ...q.outcomes },
-      tail: h("button", { class: a.reveal ? "primary" : "", onclick: () => send(a) }, a.reveal ? "Reveal" : "Keep hidden after all") });
+    return predictionStrip(q, [outcomeNote(reveals[q.id]),
+      h("button", { class: a.reveal ? "primary" : "", onclick: () => send(a) }, a.reveal ? "Reveal" : "Keep hidden after all")]);
   });
+}
+function preregisteredRows() {  // they need no decision, so they come last
+  const reveals = preview().reveals;
+  const mine = reveals ? view().predictions.filter((q) => q.seat === msg.you && q.preregistered) : [];
+  if (!mine.length) return null;
+  return h("div", { class: "rows" }, groupLabel("Preregistered: revealed automatically"), mine.map((q) => predictionStrip(q, outcomeNote(reveals[q.id]))));
 }
 
 // Citations -----------------------------------------------------------------------------------------
@@ -307,7 +338,22 @@ function chargeControl(box, t) {  // offered only when the fee and the charge to
   const text = h("span", {}, `fee ${fee}; you can spend ${t.spendable}`);
   if (!charge) return text;
   if (fee + charge > t.spendable) return [text, h("span", { class: "muted" }, ` (article processing charge ${charge}: not enough money)`)];
-  return [text, h("label", {}, h("input", { type: "checkbox", checked: box.payApc ? true : null, onchange: (e) => { box.payApc = e.target.checked; } }), ` pay the article processing charge (${charge})`)];
+  return [text, h("label", {}, h("input", { type: "checkbox", checked: box.payApc ? true : null, onchange: (e) => { box.payApc = e.target.checked; redraw(); } }), ` pay the article processing charge (${charge})`)];
+}
+
+function processingLine(box) {  // the projected rounds in processing (nv_core.preview)
+  const p = (preview().processing || {})[`${box.manuscript}/${box.tier}`];
+  if (!p) return null;
+  const i = Math.min(Math.max(0, box.records.length - p.first_records), p.rounds.length - 1);
+  const rounds = (box.payApc ? p.rounds_with_apc : p.rounds)[i];
+  const bonuses = [
+    [p.extra_records[i], "extra record"], [p.extra_elements, "extra element"], [box.payApc ? 1 : 0, "article processing charge"],
+    [p.hot_topic, "hot topic"], [p.crisis, "Crisis fast-track"],
+  ].filter(([n]) => n);
+  const shortened = bonuses.reduce((sum, [n]) => sum + n, 0);
+  const parts = p.base ? [`${p.base} for this journal tier`, ...bonuses.map(([n, name]) => `\u2212${n} ${name}`)] : ["none at this journal tier"];
+  return h("span", { class: "processing" }, h("b", {}, `Projected processing: ${rounds} round(s)`),
+    ` (${parts.join(", ")}${p.base && p.base - shortened !== rounds ? "; cannot be shortened further" : ""}), if accepted this round`);
 }
 
 function submitBox(box, index, option) {
@@ -345,6 +391,7 @@ function submitBox(box, index, option) {
       warnings.map((w) => h("div", { class: "warn" }, w)),
       h("span", {}, "Journal tier: ", tiersFor(idea.id).map((n) => h("button", { class: box.tier === n ? "on" : "", onclick: () => { chooseTier(box, n); redraw(); } }, String(n)))),
       listed ? chargeControl(box, t) : h("span", { class: "muted" }, "choose a tier"),
+      listed ? processingLine(box) : null,
       short > 0 ? h("span", { class: "note-bad" }, `at least ${short} more record(s) needed`) : null,
       others.length ? h("span", {}, "Add a record: ", others.map((c) => h("button", { onclick: () => { box.records.push(c); redraw(); } }, recordRow(c).head))) : null,
     ],
@@ -370,14 +417,17 @@ function manuscriptActionRows(option, label) {  // revising and withdrawing: the
 
 function reviewRows(option) {
   const votes = view().lab.pending.votes || {};
-  return [...new Set(option.actions.map((a) => a.card))].map((card) => {
+  const isOwn = (card) => { const m = manuscriptUnderReview(myReviewCards()[card]); return Boolean(m && m.author === msg.you); };
+  const cards = [...new Set(option.actions.map((a) => a.card))].sort((a, b) => isOwn(b) - isOwn(a) || a - b);  // your own on top
+  return cards.map((card) => {
     const position = myReviewCards()[card];
     const m = manuscriptUnderReview(position);
     const twice = myReviewCards().filter((c) => c === position).length > 1 ? `, your card ${card + 1}` : "";
     const tail = option.actions.filter((a) => a.card === card).map((a) =>
       h("button", { class: votes[String(card)] === a.vote ? "primary" : "", onclick: () => send(a) }, a.vote));
     if (!m) return h("div", { class: "form-row" }, `awaiting peer review #${position}${twice} `, tail);
-    return manuscriptBox(m, { id: `review${card}`, sub: `#${position}${twice}, tier ${m.tier}, ${authorLabel(m)}`, tail });
+    const own = isOwn(card);
+    return manuscriptBox(m, { id: `review${card}`, sub: `#${position}${twice}, tier ${m.tier}, ${own ? "" : authorLabel(m)}`, subStrong: own ? authorLabel(m) : null, tail });
   });
 }
 
@@ -403,8 +453,17 @@ function completeActions(option) {
   return [select, h("button", { onclick: () => send(items[Number(select.value)]) }, "Do it")];
 }
 
-function numberInput(value, min, max) {
-  return h("input", { type: "number", value, min, max: max === null || max === undefined ? false : max });
+// A number box with a larger - and + on either side. The box itself is in .box; read .value as usual.
+function numberInput(value, min, max, disabled) {
+  const limited = max !== null && max !== undefined;
+  const input = h("input", { type: "number", class: "plain", value, min, max: limited ? max : false, disabled: disabled ? true : null });
+  const step = (by) => {
+    input.value = Math.min(limited ? max : Infinity, Math.max(min, (Number(input.value) || 0) + by));
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  const button = (text, by, title) => h("button", { type: "button", title, disabled: disabled ? true : null, onclick: () => step(by) }, text);
+  input.box = h("span", { class: "stepper" }, button("\u2212", -1, "One less"), input, button("+", 1, "One more"));
+  return input;
 }
 
 function allocateForm(t) {
@@ -416,12 +475,14 @@ function allocateForm(t) {
   const inputs = {};
   const rows = [...t.tasks].sort((a, b) => taskOrder(a) - taskOrder(b)).map((task) => {
     const current = pending && pending.allocation[task] ? pending.allocation[task] : { postdocs: 0, students: 0 };
-    const p = numberInput(current.postdocs, 0, task === "talent_development" ? 1 : null);
-    const s = numberInput(current.students, 0, null);
-    if (t.postdoc_only.includes(task)) s.disabled = true;
+    const p = numberInput(current.postdocs, 0, t.at_most_one.includes(task) ? 1 : null);
+    const s = numberInput(current.students, 0, null, t.postdoc_only.includes(task));
     inputs[task] = [p, s];
-    return [task.replace("_", " "), TASK_WHEN[task] || "", p, s];
+    return [task.replace("_", " "), TASK_WHEN[task] || "", p.box, s.box];
   });
+  const totals = { postdocs: h("b", {}), students: h("b", {}) };
+  const allocationTable = table(["Task", "When", "Postdocs", "Students"], [...rows, [h("b", {}, "Allocated"), "", totals.postdocs, totals.students]]);
+  allocationTable.classList.add("alloc");
   const button = h("button", { onclick: () => {
     const after = Number(postdocs.value);
     const allocation = {};
@@ -432,10 +493,35 @@ function allocateForm(t) {
     send({ type: "allocate_staff", hire_postdocs: Math.max(0, after - now), fire_postdocs: Math.max(0, now - after),
       hire_students: Number(students.value) || 0, allocation });
   } }, "Set staff allocation");
+  // Each staff column: grey until every hired staff member of that type has a task, red if too many do.
+  const update = () => {
+    const wanted = { postdocs: Number(postdocs.value) || 0, students: Number(students.value) || 0 };
+    const given = { postdocs: 0, students: 0 };
+    for (const [p, s] of Object.values(inputs)) { given.postdocs += Number(p.value) || 0; given.students += Number(s.value) || 0; }
+    for (const kind of Object.keys(wanted)) {
+      allocationTable.classList.toggle(`${kind}-over`, given[kind] > wanted[kind]);
+      allocationTable.classList.toggle(`${kind}-short`, given[kind] < wanted[kind]);
+      totals[kind].textContent = `${given[kind]} of ${wanted[kind]}`;
+    }
+    button.disabled = given.postdocs !== wanted.postdocs || given.students !== wanted.students;
+  };
+  for (const input of [postdocs, students, ...Object.values(inputs).flat()]) input.oninput = update;
+  const maxButton = (input, limit) => (limit === null ? null : h("button", { type: "button", title: "As many as you can", onclick: () => { input.value = limit; update(); } }, "max"));
+  const previous = preview().previous_allocation;
+  const repeat = () => {
+    for (const [name, [p, s]] of Object.entries(inputs)) {
+      const count = previous[name] || { postdocs: 0, students: 0 };
+      p.value = count.postdocs;
+      if (!s.disabled) s.value = count.students;
+    }
+    update();
+  };
+  update();
   return [
-    h("div", { class: "form-row" }, `You have ${now} postdoc(s). Postdocs after hiring/firing: `, postdocs,
-      ` (${low} to ${high === null ? "any" : high}) \u00b7 students to hire: `, students, ` (at most ${t.max_students})`),
-    table(["Task", "When", "Postdocs", "Students"], rows),
+    h("div", { class: "form-row hire-row" }, `You have ${now} postdoc(s). Postdocs after hiring/firing: `, postdocs.box, maxButton(postdocs, high),
+      ` (${low} to ${high === null ? "any" : high}) \u00b7 students to hire: `, students.box, maxButton(students, t.max_students), ` (at most ${t.max_students}) `,
+      h("button", { type: "button", disabled: previous ? null : true, title: "Fill in the task allocation of your last round", onclick: repeat }, "Repeat")),
+    allocationTable,
     h("div", { class: "small muted" }, "Every staff member needs a task; Development and Talent development take postdocs only; at most one on Talent development."),
     button,
   ];
@@ -446,7 +532,7 @@ function leavingForm(t) {
     .map(([task, n]) => [task, numberInput(0, 0, n), n]);
   return [
     h("p", {}, `${t.count} student(s) must leave. Choose from which tasks:`),
-    table(["Task", "When", "Students there", "Leaving"], inputs.map(([task, input, n]) => [task.replace("_", " "), TASK_WHEN[task] || "", n, input])),
+    table(["Task", "When", "Students there", "Leaving"], inputs.map(([task, input, n]) => [task.replace("_", " "), TASK_WHEN[task] || "", n, input.box])),
     h("button", { onclick: () => {
       const by_task = {};
       for (const [task, input] of inputs) if (Number(input.value)) by_task[task] = Number(input.value);
@@ -476,13 +562,13 @@ const FORMS = {
 const TITLES = {
   allocate_staff: "Hiring and task allocation", choose_leaving_students: "Student task check", claim_probe_time: "Probe time",
   order_predictions: "Scoring order", develop_method: "Develop a method", revise: "Revise a manuscript",
-  withdraw_submission: "Undo this step's submission or revision", alliance: "Alliances", leave_alliance: "Last chance to leave an alliance",
+  withdraw_submission: "Undo this step's submission or revision", leave_alliance: "Last chance to leave an alliance",
   stay_in_alliance: "Stay in an alliance",
 };
 const TASK_NAMES = {
-  make_prediction: ["make predictions", 'your own theories first, then those closest to the Nobel Prize. Click a Probe in the World Grid to see which theories fit it.'],
+  make_prediction: ["make predictions", 'your own theories first, then those closest to the Nobel Prize. Click a Probe in the World Grid to see which theories fit it. Amounts apply if revealed and not pruned.'],
   cancel_prediction: ["make predictions", ""],
-  reveal_prediction: ["reveal predictions", ""],
+  reveal_prediction: ["reveal predictions", "what each would bring, if it is not pruned"],
   run_experiment: ["experiments and sensors", 'press "+" on a Probe tile to install or upgrade its sensor'],
   formulate_theory: ["formulate a theory", 'press "use" on a record, or on the selected strip, to copy its states here'],
   submit: ["submit manuscripts", 'the blue box receives what you "use"'],
@@ -497,30 +583,76 @@ const COMMIT_HELP = { commit: "My choices for this step are final", pass: "Stop 
 let actionsShown = null;
 function actionsKey() {
   const v = view();
+  const report = pendingReport();
   return JSON.stringify([msg.status, msg.you, msg.seats[msg.you] && msg.seats[msg.you].kind, Boolean(v.result), v.round, v.phase,
-    msg.options, v.lab, myReviewCards(), v.published.map((p) => p.id), v.manuscripts.map((m) => [m.id, m.area, m.position])]);
+    msg.options, v.lab, myReviewCards(), v.published.map((p) => p.id), v.manuscripts.map((m) => [m.id, m.area, m.position]), report && report.round]);
 }
 
 // While something could still be submitted or revised, and nothing has been, Commit is grey and
 // asks first: committing ends the step. (Whatever was done this step can be withdrawn, so
 // "withdraw_submission" being on offer means something was.)
+// Likewise in the Development phase, while staff are there and nothing has been developed
+// ("cancel_development" being on offer means something was).
 const nothingSubmittedYet = () => Boolean(optionOf("submit") || optionOf("revise")) && !optionOf("withdraw_submission");
+const nothingDevelopedYet = () => Boolean(optionOf("formulate_theory")) && !optionOf("cancel_development");
+function commitWarning() {
+  if (nothingSubmittedYet()) return "You have not submitted or revised a manuscript in this step.";
+  if (nothingDevelopedYet()) return "You have staff on Development but have not formulated a theory or developed a method.";
+  return null;
+}
 function titleButton(option) {
-  const unsubmitted = option.type === "commit" && nothingSubmittedYet();
+  const warning = option.type === "commit" ? commitWarning() : null;
   return h("button", {
-    class: unsubmitted ? "commit-waiting" : option.type === "commit" ? "primary" : "",
-    title: unsubmitted ? "You have not submitted or revised a manuscript in this step" : COMMIT_HELP[option.type],
+    class: warning ? "commit-waiting" : option.type === "commit" ? "primary" : "",
+    title: warning || COMMIT_HELP[option.type],
     onclick: () => {
-      if (unsubmitted && !window.confirm("You have not submitted or revised a manuscript in this step.\n\nCommit anyway?")) return;
+      if (warning && !window.confirm(`${warning}\n\nCommit anyway?`)) return;
       send(option.actions[0]);
     },
   }, IN_THE_TITLE[option.type]);
 }
 
 function setTaskHeading(name, note, buttons) {
-  $("actions-title").textContent = name ? `What you can do now: ${name}` : "What you can do now";
+  const phase = view() ? view().phase : null;
+  $("actions-title").textContent = [phase, name].filter(Boolean).join(" \u00b7 ") || "What you can do now";
   $("actions-note").textContent = note || "";
   fill($("task-buttons"), buttons || []);
+}
+
+// The prediction report (specification 7.4): each person's own, until they press Next. The game
+// does not wait for it; only this panel does. A seat handed to an automated player gets none.
+function pendingReport() {
+  const report = view().prediction_report;
+  if (!report || msg.spectator || msg.you === null || store.get("report") === String(report.round)) return null;
+  return msg.seats[msg.you] && msg.seats[msg.you].kind === "human" ? report : null;
+}
+const REPORT_OUTCOMES = { success: ["good", "Success"], failed: ["bad", "Failed"], pruned: ["muted", "Pruned"], unscored: ["muted", "Not scored: the game ended"] };
+function reportEntry(p) {
+  const [cls, label] = REPORT_OUTCOMES[p.outcome];
+  const patent = p.patent === "new" ? "patent" : p.patent === "held" ? (p.patent_holder === p.seat ? "already holds its patent" : `no patent (${nameOf(p.patent_holder)} holds it)`) : null;
+  const row = strip({ key: `report${p.id}`, head: `T${p.theory}`, sub: `P${p.probe + 1}${p.preregistered ? ", preregistered" : ""}`, slots: { ...p.inputs, ...p.outcomes }, tail: [
+    h("b", { class: cls }, label),
+    p.credit === null ? null : info(`${signed(p.credit)} AC`),
+    p.author_credit ? info(`${nameOf(p.author)} ${signed(p.author_credit)} as author`) : null,
+    patent ? info(patent) : null,
+  ] });
+  if (!p.nobel) return row;
+  return h("div", { class: "report-nobel" }, row, h("div", { class: "nobel-note" }, `Nobel Prize! This prediction completed the streak of T${p.theory}: ${nameOf(p.author)} wins the Nobel Prize.`));
+}
+function showReport(box, report) {
+  $("actions-title").textContent = `Prediction report, round ${report.round}`;
+  fill($("task-buttons"), h("button", { class: "primary", title: "Go on with the game", onclick: () => {
+    store.set("report", String(report.round));
+    actionsShown = null;
+    renderActions();
+  } }, "Next"));
+  const seats = [...new Set(report.predictions.map((p) => p.seat))].sort((a, b) => a - b);
+  const missed = report.missed.map((p) => `P${p + 1}`).join(", ");
+  fill(box,
+    report.crisis ? h("p", { class: "small bad" }, `Crisis: ${report.unsuccessful} of ${report.crisis_condition} unsuccessful predictions so far.`,
+      missed ? ` No prediction on ${missed}: each counts as unsuccessful.` : "") : null,
+    seats.length ? h("div", { class: "report" }, seats.map((seat) => recordArea(chip(seat), "", report.predictions.filter((p) => p.seat === seat).map(reportEntry))))
+      : h("p", { class: "muted" }, "Nobody revealed a prediction."));
 }
 
 function renderActions() {
@@ -544,24 +676,29 @@ function renderActions() {
   actionsShown = shown;
   const scrolled = box.scrollTop;
   box.innerHTML = "";
-  box.classList.toggle("whole", Boolean(optionOf("allocate_staff")));  // this form should fit without scrolling
+  const report = pendingReport();
+  box.classList.toggle("whole", Boolean(report || optionOf("allocate_staff")));  // these should fit without scrolling
   setTaskHeading();
+  if (report) { showReport(box, report); refreshHighlights(); return; }
   if (v.result || msg.status !== "running") { box.append(h("p", { class: "muted" }, "Nothing to do.")); return; }
-  if (!msg.options.length) {
+  if (msg.options.every((o) => o.type === "alliance")) {  // alliances have their own panel
     box.append(h("p", { class: "muted" }, msg.seats[msg.you] && msg.seats[msg.you].kind !== "human"
       ? `Your seat is played by an automated player (${msg.seats[msg.you].kind}) for now.` : "Nothing to do right now; others are deciding."));
+    const preregistered = preregisteredRows();
+    if (preregistered) box.append(preregistered);
     return;
   }
   const named = msg.options.find((o) => TASK_NAMES[o.type]);
   const [name, note] = named ? TASK_NAMES[named.type] : [null, null];
   setTaskHeading(name, note, msg.options.filter((o) => IN_THE_TITLE[o.type]).map(titleButton));
-  const last = (o) => (o.type === "alliance" ? 1 : 0);
   // The sensor choices are drawn with the experiment; withdrawing is done on the prediction strips.
-  const listed = msg.options.filter((o) => !IN_THE_TITLE[o.type] && o.type !== "install_sensor" && o.type !== "cancel_prediction");
+  const listed = msg.options.filter((o) => !IN_THE_TITLE[o.type] && !["install_sensor", "cancel_prediction", "alliance"].includes(o.type));
   if (optionOf("cancel_prediction") && !optionOf("make_prediction")) box.append(h("div", { class: "rows" }, predictionRows(null)));
-  for (const option of listed.sort((a, b) => last(a) - last(b))) {
+  for (const option of listed) {
     if (TASK_ROWS[option.type]) box.append(h("div", { class: "rows" }, TASK_ROWS[option.type](option)));
-    else box.append(h("div", { class: option.type === "alliance" ? "option inline" : "option" }, h("h3", {}, TITLES[option.type] || option.type), FORMS[option.type] ? FORMS[option.type](option) : completeActions(option)));
+    else box.append(h("div", { class: "option" }, h("h3", {}, TITLES[option.type] || option.type), FORMS[option.type] ? FORMS[option.type](option) : completeActions(option)));
   }
+  const preregistered = preregisteredRows();
+  if (preregistered) box.append(preregistered);
   box.scrollTop = scrolled;
 }

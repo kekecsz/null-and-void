@@ -102,7 +102,8 @@ body.tiles-compact { --head: 92px; --cell: 122px; --tile: 21px; }
 .swatch.same { background: var(--same); }
 .group-label { font-size: 11px; color: var(--muted); padding: 3px 2px 1px; }
 .rows, #grid, #records, #ideas, #literature, #portal, #world, .record-area { display: flex; flex-direction: column; gap: 2px; }
-#records { gap: 6px; }
+#records, #portal, .report { gap: 6px; }
+.report { display: flex; flex-direction: column; }
 .record-area { border: 1px solid var(--blank); border-radius: 5px; margin-inline: -1px; padding-bottom: 2px; }
 .record-area .group-label { font-weight: 700; font-size: 12px; color: var(--ink); padding: 3px 5px 1px; }
 
@@ -114,6 +115,8 @@ body.tiles-compact { --head: 92px; --cell: 122px; --tile: 21px; }
 .head { min-width: 0; padding-left: 4px; line-height: 1.15; }
 .head b { font-size: 13px; }
 .head .sub { font-size: 11px; color: var(--muted); display: block; }
+.head .sub b { font-size: inherit; color: var(--ink); }
+.hot-topic { width: 22px; height: 22px; vertical-align: -5px; margin-left: 4px; }
 .arrow { text-align: center; color: var(--muted); }
 .tail { min-width: 0; font-size: 11.5px; display: flex; flex-wrap: wrap; gap: 2px 6px; align-items: center; padding-right: 3px; line-height: 1.2; }
 .tail button { padding: 0 7px; font-size: 11.5px; }
@@ -172,9 +175,22 @@ button.commit-waiting, button.commit-waiting:hover { background: #e4e4de; border
 .side td, .side th { padding: 1px 3px; }
 .side p { margin: 4px 0; }
 .side .chip { white-space: nowrap; }
-.option.inline { display: flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; }
-.option.inline h3 { margin: 0; }
-.option.inline button { margin: 0; padding: 0 7px; font-size: 11.5px; }
+#alliances button { padding: 0 7px; font-size: 11.5px; }
+
+/* Number boxes with - and + (specification 7.4), and the staff allocation columns */
+input.plain { width: 3em; text-align: center; appearance: textfield; -moz-appearance: textfield; }
+input.plain::-webkit-inner-spin-button, input.plain::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper { display: inline-flex; align-items: center; gap: 2px; }
+.stepper button { margin: 0; padding: 0; width: 24px; height: 24px; font-size: 17px; line-height: 1; font-weight: 600; }
+.hire-row button { margin: 0 3px; }
+.hire-row .stepper button { margin: 0; }
+.alloc.postdocs-short tr > :nth-child(3), .alloc.students-short tr > :nth-child(4) { background: #e4e4de; }
+.alloc.postdocs-over tr > :nth-child(3), .alloc.students-over tr > :nth-child(4) { background: #f6c9c5; }
+
+.payoff { font-size: 11.5px; padding: 0 4px 3px calc(var(--head) + 3px); }
+.processing { flex-basis: 100%; }
+.report-nobel { background: #fff3c4; border: 2px solid #d8a800; border-radius: 5px; }
+.nobel-note { font-weight: 700; padding: 2px 6px 4px; color: #7a4f00; }
 
 @media (max-width: 1400px) { .tiles-compact #board { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 1060px) {

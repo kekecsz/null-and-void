@@ -169,7 +169,7 @@ function render() {
   const v = view();
   if (spectator || !v) actionsShown = null;  // the actions panel shows something else now
   if (!v) {
-    for (const id of ["actions", "grid", "records", "ideas", "literature", "portal", "methods", "predictions", "lab", "tracks"]) $(id).innerHTML = "";
+    for (const id of ["actions", "grid", "records", "ideas", "literature", "portal", "methods", "predictions", "lab", "tracks", "alliances"]) $(id).innerHTML = "";
     selected = null;
     setTaskHeading();
     refreshHighlights();
@@ -189,6 +189,7 @@ function render() {
   renderMethods();
   renderPredictions();
   renderTracks();
+  renderAlliances();
   refreshHighlights();
   layoutPins();
 }
@@ -315,11 +316,17 @@ function renderTracks() {
     h("span", {}, chip(r.seat), r.committed ? h("span", { class: "muted" }, " ready") : null),
     r.credit, r.money, r.grant_position, r.talent_position, `${r.postdocs}p ${r.students}s`, r.patents,
   ]);
+  fill($("tracks"), table(["", "Credit", "Money", "Grant", "Talent", "Staff", "Pat."], rows));
+}
+
+function renderAlliances() {
+  const v = view();
   const allies = v.alliances.map((pair) => `${nameOf(pair[0])} + ${nameOf(pair[1])}`);
-  fill($("tracks"),
-    table(["", "Credit", "Money", "Grant", "Talent", "Staff", "Pat."], rows),
-    allies.length ? h("p", { class: "small" }, `Alliances: ${allies.join(", ")}`) : null,
-    v.proposals.length ? h("p", { class: "small" }, "Alliance proposals: " + v.proposals.map(([a, b]) => `${nameOf(a)} -> ${nameOf(b)}`).join(", ")) : null,
+  const option = msg.options.find((o) => o.type === "alliance");
+  fill($("alliances"),
+    h("p", { class: allies.length ? "" : "muted" }, allies.length ? allies.join(", ") : "No alliances."),
+    v.proposals.length ? h("p", {}, "Proposed: " + v.proposals.map(([a, b]) => `${nameOf(a)} -> ${nameOf(b)}`).join(", ")) : null,
+    option ? completeActions(option) : null,
   );
 }
 

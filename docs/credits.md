@@ -14,6 +14,7 @@ Icons from [Flaticon](https://www.flaticon.com/), by these creators:
 - Magnific
 - Eklip Studio
 - ALTOP7
+- Bahu Icons
 
 ## Images
 

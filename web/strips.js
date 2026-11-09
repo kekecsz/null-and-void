@@ -62,7 +62,8 @@ const CONTROLS = "button, input, select, label, a";
 
 // o: head, sub, slots, tail; key (what makes two strips "the same strip", default head);
 // cellFor(variable) to draw a cell differently; hide (ids shown as "?"); text (a line instead of
-// the cells, for what has no world states); toggle (control before the head); inert (no selecting).
+// the cells, for what has no world states); toggle (control before the head); inert (no selecting);
+// icon (after the head); subStrong (bold text after sub).
 function strip(o) {
   const key = o.key || o.head;
   const selectable = !o.inert && hasStates(o.slots);
@@ -71,11 +72,11 @@ function strip(o) {
     return cell(tile((o.slots || {})[variable.id], o.hide && o.hide.includes(variable.id) ? "hidden" : null));
   };
   const node = h("div", { class: `strip cols${selectable ? " can-select" : ""}`, tabindex: selectable ? 0 : null, role: selectable ? "button" : null },
-    h("div", { class: "head" }, o.toggle, h("b", {}, o.head), o.sub ? h("span", { class: "sub" }, o.sub) : null),
+    h("div", { class: "head" }, o.toggle, h("b", {}, o.head), o.icon, o.sub || o.subStrong ? h("span", { class: "sub" }, o.sub, o.subStrong ? h("b", {}, o.subStrong) : null) : null),
     o.text ? h("div", { class: "row-text" }, o.text) : [inputVars().map(draw), h("div", { class: "arrow" }, "\u2192"), outcomeVars().map(draw)],
     h("div", { class: "tail" }, o.tail));
   if (selectable) {
-    node.stripInfo = { id: key, slots: o.slots, label: o.head, sub: o.sub };
+    node.stripInfo = { id: key, slots: o.slots, label: o.head, sub: `${o.sub || ""}${o.subStrong || ""}` };
     const select = () => { selected = selected && selected.id === key ? null : node.stripInfo; refreshHighlights(); };
     node.onclick = (e) => { if (!e.target.closest(CONTROLS)) select(); };
     node.onkeydown = (e) => { if (e.key === "Enter" && e.target === node) select(); };
@@ -213,7 +214,8 @@ function probeStrip(p) {
   const choices = sensorOption ? sensorOption.template.choices.filter((c) => c.probe === p.index) : [];
   return strip({
     key: `R${v.round}P${p.index}`,  // a new round's Probe is a different strip
-    head: `P${p.index + 1}`, sub: p.hot_topic ? "hot topic" : "", slots: seen,
+    head: `P${p.index + 1}`, slots: seen,
+    icon: p.hot_topic ? h("img", { class: "hot-topic", src: "/web/icons/fire.png", alt: "Hot topic", title: "Hot topic" }) : null,
     cellFor: (variable) => {
       if (variable.kind !== "input") return cell(tile(seen[variable.id], "hidden"));
       const level = p.sensors[variable.id];
@@ -312,21 +314,27 @@ function manuscriptBox(m, o) {
   const content = m.content;
   return boxView({
     id: o.id, onclick: o.onclick,
-    top: { key: `D${m.id}`, head: `D${m.id}`, sub: o.sub, slots: content && content.kind === "theory" ? ideaSlots(content) : {},
+    top: { key: `D${m.id}`, head: `D${m.id}`, sub: o.sub, subStrong: o.subStrong, slots: content && content.kind === "theory" ? ideaSlots(content) : {},
       text: !content ? "(face down)" : content.kind === "method" ? `method for ${content.parameter}` : null, tail: o.tail },
     records: (m.record_cards || []).map((r, n) => ({ key: `D${m.id}/${n}`, head: r.kind === "observation" ? "Observation" : "Experiment", slots: r.cards })),
   });
 }
 function renderPortal() {
   const reviewing = new Set(myReviewCards().filter(Boolean));
-  const boxes = view().manuscripts.map((m) => manuscriptBox(m, {
-    id: `portal${m.id}`, sub: `${AREA_NAMES[m.area] || m.area}${m.position ? ` #${m.position}` : ""}`, tail: [
+  const row = (m) => manuscriptBox(m, {
+    id: `portal${m.id}`, sub: m.position ? `#${m.position}` : "", tail: [
       chip(m.author), info(`tier ${m.tier}`), m.area === "accept" ? info(`${m.tokens} round(s) to go`) : null,
       info(`${m.votes} vote(s)`), info(`${m.records} record(s)`),
       m.area === "review" && reviewing.has(m.position) ? h("b", {}, "you review this") : null,
     ],
-  }));
-  fill($("portal"), boxes.length ? boxes : h("p", { class: "muted" }, "No manuscripts."));
+  });
+  const inArea = (area) => view().manuscripts.filter((m) => m.area === area);
+  const areas = [
+    ["Awaiting peer review", inArea("review").sort((a, b) => a.position - b.position)],
+    ["Revise", inArea("revise")],
+    ["Accept", inArea("accept").sort((a, b) => b.tokens - a.tokens)],  // the next to be published last
+  ].filter(([, manuscripts]) => manuscripts.length);
+  fill($("portal"), areas.length ? areas.map(([title, manuscripts]) => recordArea([], title, manuscripts.map(row))) : h("p", { class: "muted" }, "No manuscripts."));
 }
 
 // World Table (spectators) ----------------------------------------------------------------------------

@@ -158,7 +158,6 @@ All randomness comes from one seeded generator per game, split into named stream
 
 The rulebook is written for human readers and leaves some details to common sense. The designer's answers on those details are listed here, by rulebook section, so the engine and its tests read them the same way. The rulebook still wins where it says otherwise.
 
-- **Hiring and task allocation phase (Game Period cards).** Each researcher counts for their research staff, but for at least `[min_cards_burn_each_round_per_player]`, and the sum of these numbers is revealed from the Game Period Deck. So the minimum adds nothing for a lab with that many staff or more; it is a penalty for a lab with fewer. (Decided by Zoltan; waiting for the rulebook, see `open_questions.md`.)
 - **Preregistration pruning (identical theories).** Only theories the predictor may use are candidates (not someone else's theory with a Fresh out of print marker). When the rulebook's preferences still leave a tie (theories published in the same round), the one whose author is earlier in turn order is cited.
 - **Outcome and Prediction Reveal (one researcher, one theory twice).** A researcher must discard all but one of their own revealed predictions that are based on the same theory. The engine applies this when the choice is made: it does not let a researcher preregister or reveal a second prediction based on a theory they already preregistered or revealed that round.
 - **Supporting observational and experimental records.** Every record stack has exactly one card per input parameter and world outcome. An observation record is always a full, intact Probe column. An experiment record is built from the experiment cards of one record area. Observation and experiment cards are never mixed in one stack.
@@ -277,7 +276,16 @@ The web UI's world states become icons in strips. This section records the desig
 - *Sensors:* "+" fills an eligible sensor slot, for installing and upgrading alike, and is transparent so what is under it stays visible. Pressing it opens the same citation choice, with auto-cite.
 - *Theory formulation:* "use" on a record or on the selected strip copies its states into the theory being formulated.
 - *Submission:* a submission is a box. Its top row is the theory (placed with "use"); the supporting records go below it. A box minimises to a strip showing the theory and expands back to show the records. The article processing charge is offered under the same condition as today. While something could still be submitted or revised and nothing has been in this step, Commit is grey (but works) and asks for confirmation; after a submission or revision it is blue.
-- *Peer review:* the same strips that expand to boxes, in the task panel, with the vote buttons.
+- *Peer review:* the same strips that expand to boxes, in the task panel, with the vote buttons. The player's own manuscripts come first, marked "your own" in bold.
+- *Hiring:* number boxes have a large minus and plus on either side, also when choosing which students leave. "max" next to the postdoc and student boxes fills in as many as the player can have. "Repeat" fills in the player's task allocation of the previous round, as made at hiring, and leaves the hiring numbers alone. A staff column is grey until every hired staff member of that type has a task and red when too many have; the staff allocation can be set only when both columns add up.
+- *Predictions:* under each theory, what a revealed, unpruned prediction would bring if right and if wrong, with the preregistered amounts, the citation reward or penalty when the cited theory is the player's own, and the patent. In the Reveal step each prediction shows its outcome and consequences; preregistered predictions follow at the end, read-only.
+- *Prediction report:* after scoring, each person's task panel shows every revealed prediction of the round by player: success, failed, pruned or (if the game ended during scoring) not scored, credit, the author's citation credit and the patent, with a note on a prediction that won the Nobel Prize and, in the Crisis, the missed Probes and running count. "Next", where Commit usually is, closes it. The report belongs to the player's own panel: the game does not wait for it, and a seat handed to an automated player gets none. It is skipped when nothing was revealed and no Probe was missed.
+- *Submission:* the box shows the projected rounds in processing and the bonuses behind it, assuming acceptance this round.
+- *Development:* like Submission, Commit is grey (but works) and asks for confirmation while staff are on Development and neither a theory nor a method has been developed.
+- *Task panel title:* it names the current phase or sub-phase. Alliance controls are in their own panel in the right column; only the "last chance to leave" stage is in the task panel.
+- *Submission Portal:* three bordered groups, from top to bottom Awaiting peer review, Revise and Accept. The Accept area is sorted by rounds left, the next to be published at the bottom.
+- *Hot topic:* the Hot topic Probe carries a fire icon.
+- The numbers in these previews come from `nv_core.preview`, which reuses the functions that score and process, so the client holds no game rule. Bots and AI players do not use them.
 
 ## 8. AI opponents (`nv_ai`)
 
@@ -421,6 +429,7 @@ Sabotage is inferred, not certain: the debrief labels it "failed despite contrar
 Game settings come from `docs/parameter_defaults.yaml`, then the scenario's `parameter_overrides`, then any changes the host makes in the lobby before the game starts. Every game stores the full settings it was played with. The settings loader:
 
 - reads the YAML file and validates it against a schema: value types (whole-number settings must be written as integers, e.g. `4`, not `4.0`), required settings, and the shape of `grant_track` and `journal_tiers`;
+- checks that `talent_development_track` has an entry for every position a researcher can reach;
 - applies overrides by replacing whole top-level settings (an override of `grant_track` or `journal_tiers` replaces the entire table);
 - stops with an error naming any setting that is missing, unknown (e.g. a misspelled override) or has the wrong type.
 
