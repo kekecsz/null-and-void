@@ -159,6 +159,7 @@ function render() {
   renderBanner();
   renderHost();
   renderLog();
+  renderPhaseBar();
   renderColumns();
   const spectator = Boolean(msg.spectator);
   if (spectator) { setTaskHeading(); $("actions-title").textContent = "Replay"; }
@@ -244,13 +245,32 @@ function renderBanner() {
   }
 }
 
-// The engine's steps in round order (nv_core.state.Phase), and the steps where each staff task
-// works. Talent development and Grants work after the last step (Talent development and
-// Clean-up phases), so they are never "past" within a round.
-const STEP_ORDER = ["Hiring and task allocation phase", "Alliance: last chance to leave", "Student task check phase",
-  "Experimentation and equipment phase", "Probe time", "Formulating predictions and preregistration",
-  "Outcome and Prediction Reveal", "Scoring predictions: order", "Development phase",
-  "Publication: submission and revisions", "Publication: peer review"];
+// The phases of a round, as the phase bar shows them, each with the engine's steps (nv_core.state.Phase)
+// that belong to it. The last two have no step: they run by themselves at the end of the round.
+const ROUND_PHASES = [
+  ["Hiring", ["Hiring and task allocation phase", "Alliance: last chance to leave", "Student task check phase"]],
+  ["Experimentation", ["Experimentation and equipment phase"]],
+  ["Probe time", ["Probe time"]],
+  ["Observation and prediction", ["Formulating predictions and preregistration", "Outcome and Prediction Reveal", "Scoring predictions: order"]],
+  ["Development", ["Development phase"]],
+  ["Publication", ["Publication: submission and revisions", "Publication: peer review"]],
+  ["Talent development", []],
+  ["Clean-up", []],
+];
+// The engine's steps in round order, and the steps where each staff task works. Talent development
+// and Grants work after the last step (Talent development and Clean-up phases), so they are never
+// "past" within a round.
+const STEP_ORDER = ROUND_PHASES.flatMap(([, steps]) => steps);
+
+function renderPhaseBar() {
+  const v = view();
+  const bar = $("phase-bar");
+  bar.style.display = v ? "" : "none";
+  if (!v) return;
+  const now = v.result ? -1 : ROUND_PHASES.findIndex(([, steps]) => steps.includes(v.phase));
+  fill(bar, h("span", { class: "phase-label" }, "This round"), ROUND_PHASES.map(([name], i) =>
+    h("span", { class: `phase-step${now < 0 ? "" : i < now ? " done" : i === now ? " now" : ""}`, title: i === now ? "The current phase" : null }, h("b", {}, String(i + 1)), name)));
+}
 const TASK_STEPS = {
   experimentation: ["Experimentation and equipment phase"],
   data_collection: ["Formulating predictions and preregistration", "Outcome and Prediction Reveal", "Scoring predictions: order"],

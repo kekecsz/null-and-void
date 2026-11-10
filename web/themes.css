@@ -1,0 +1,205 @@
+/* The two looks of the web client (specification 7.4). style.css holds the layout, with plain fallback
+   colours; this file holds the looks. The page's <html> element carries theme-light (the default, in the
+   style of the rulebook) or theme-dark; theme.js sets it from the player's choice. The fonts are Latin
+   subsets (see fonts/README.md). */
+
+/* Light: paper, serif headings and a rust accent, like the rulebook --------------------------------- */
+@font-face { font-family: "NV Serif"; font-weight: 400; font-style: italic; font-display: swap; src: url("/web/fonts/nv-serif-italic.woff2") format("woff2"); }
+@font-face { font-family: "NV Serif"; font-weight: 700; font-style: normal; font-display: swap; src: url("/web/fonts/nv-serif-bold.woff2") format("woff2"); }
+@font-face { font-family: "NV Display"; font-weight: 600; font-style: normal; font-display: swap; src: url("/web/fonts/nv-display-semibold.woff2") format("woff2"); }
+@font-face { font-family: "NV Sans"; font-weight: 400; font-style: normal; font-display: swap; src: url("/web/fonts/nv-sans-regular.woff2") format("woff2"); }
+@font-face { font-family: "NV Sans"; font-weight: 400; font-style: italic; font-display: swap; src: url("/web/fonts/nv-sans-italic.woff2") format("woff2"); }
+@font-face { font-family: "NV Sans"; font-weight: 600; font-style: normal; font-display: swap; src: url("/web/fonts/nv-sans-semibold.woff2") format("woff2"); }
+html.theme-light {
+  --bg: #FAF6EC; --panel: #FFFDF7; --ink: #1C1A17; --muted: #6B655B; --line: #D8CEBB; --accent: #A8481F;
+  --act: #F4EAD3; --bad: #9B1C31; --good: #2E6B3F; --fits: #E1EBF0; --same: #9CC0D6; --head-bg: #F1E9D8;
+  --hover: #F4EEDF; --blank: #BDB29D; --hair: #ECE3D0;
+  background: #FAF6EC;
+}
+.theme-light body { font: 13.5px/1.4 "NV Sans", system-ui, sans-serif; }
+
+/* Masthead */
+.theme-light header { background: var(--bg); border-top: 4px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 7px 20px 6px; gap: 18px; }
+.theme-light header h1 { font: 600 28px/1 "NV Display", serif; letter-spacing: -.2px; white-space: nowrap; }
+.theme-light header h1::after { content: "Proceedings of the Venus Expedition"; font: italic 400 12.5px "NV Serif", serif; color: var(--muted); margin-left: 12px; letter-spacing: 0; }
+.theme-light header .status { font-size: 12.5px; }
+@media (max-width: 1650px) { .theme-light header:has(.status) h1::after { display: none; } }  /* the game's status line needs the room */
+.theme-light header .status > b:first-child { font: 700 14px "NV Serif", serif; }
+.theme-light header .you-act { background: var(--accent); color: #FFFDF7; font: 600 10.5px "NV Sans"; letter-spacing: .09em; text-transform: uppercase; border-radius: 2px; padding: 3px 8px; }
+.theme-light header .warn-shot { background: #F3DFC4; border-radius: 2px; }
+.theme-light .banner { background: #E7EEDD; }
+.theme-light .error-bar { background: #F6DDD9; }
+
+.theme-light .phase-bar { display: flex; flex-wrap: wrap; gap: 3px 26px; align-items: baseline; padding: 5px 20px; border-bottom: 1px solid var(--line); background: var(--bg); font-size: 12px; }
+.theme-light .phase-label { font: 600 10px "NV Sans"; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.theme-light .phase-step { color: var(--ink); padding-bottom: 1px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.theme-light .phase-step b { font: 700 12.5px "NV Serif", serif; color: var(--accent); margin-right: 6px; }
+.theme-light .phase-step.done, .theme-light .phase-step.done b { color: #A39A8A; }
+.theme-light .phase-step.now { font-weight: 600; border-bottom-color: var(--accent); }
+
+.theme-light .columns { background: var(--bg); border-top: 1.5px solid var(--ink); border-bottom: 1px solid var(--ink); padding-top: 4px; padding-bottom: 4px; }
+.theme-light .columns .c { font-size: 10.5px; color: var(--muted); }
+.theme-light .columns .c b { font: 600 11px "NV Sans"; letter-spacing: .06em; color: var(--ink); }
+
+/* Panels */
+.theme-light h2 { font: 600 17px/1.2 "NV Display", serif; }
+.theme-light .panel { background: var(--panel); border: 1px solid var(--line); border-top: 2px solid var(--ink); border-radius: 0; }
+.theme-light #board .panel > h2 { font: 600 17px/1.2 "NV Display", serif; border-radius: 0; padding-top: 6px; }
+.theme-light #board .side .panel > h2 { font-size: 15.5px; }
+.theme-light .h-note { font: 400 11.5px "NV Sans"; }
+.theme-light #actions-panel { background: #F7F0E0; border-top: 3px solid var(--accent); }
+.theme-light #actions-panel.act { background: var(--act); border-color: #D9C9A6; border-top-color: var(--accent); box-shadow: 0 5px 14px rgba(60, 40, 10, .13); }
+.theme-light #board .selection { border: 1px solid var(--accent); border-top-width: 2px; }
+.theme-light h3 { font: 600 10.5px "NV Sans"; letter-spacing: .09em; color: var(--accent); }
+.theme-light .side { font-size: 12px; }
+
+/* Strips and tiles */
+.theme-light .strip { border-radius: 2px; border-bottom-color: var(--hair); }
+.theme-light .head b { font: 700 13.5px "NV Serif", serif; }
+.theme-light .head .sub { font-size: 10.5px; }
+.theme-light .head .sub b { font: 600 10.5px "NV Sans"; }
+.theme-light .n { font-size: 10px; }
+.theme-light .strip.is-sel { outline: 2.5px solid var(--accent); background: var(--panel); }
+.theme-light .strip.is-fits { background: var(--fits); border-color: #C3D5DF; }
+.theme-light .strip.is-same { background: var(--same); border-color: #3E6C89; }
+.theme-light .t.is-specialty .ph { background: #E4EEDD; }
+.theme-light .t.is-sensor .ph { background: #DFE8EE; }
+.theme-light .badge { background: var(--ink); border-radius: 2px; }
+.theme-light .record-area { border-color: transparent; border-top: 1px solid var(--ink); border-radius: 0; }
+.theme-light .record-area .group-label, .theme-light .group-label { font: 600 10.5px "NV Sans"; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
+.theme-light .box { border-radius: 2px; }
+.theme-light .box.is-target { outline-color: var(--accent); }
+.theme-light .payoff .good, .theme-light .payoff .bad { font-weight: 600; }
+
+/* Tables: ruled like the rulebook's */
+.theme-light th { background: transparent; border: 0; border-top: 1.5px solid var(--ink); border-bottom: 1px solid var(--ink); font: 600 10.5px "NV Sans"; letter-spacing: .05em; }
+.theme-light td { border: 0; border-bottom: 1px solid var(--hair); }
+.theme-light tr:last-child td { border-bottom: 1.5px solid var(--ink); }
+.theme-light .alloc.postdocs-short tr > :nth-child(3), .theme-light .alloc.students-short tr > :nth-child(4) { background: #E9E1CF; }
+.theme-light .alloc.postdocs-over tr > :nth-child(3), .theme-light .alloc.students-over tr > :nth-child(4) { background: #F1C6BD; }
+.theme-light tr.past td { color: #A39A8A; }
+
+/* Controls */
+.theme-light button { font: 400 12.5px "NV Sans"; background: transparent; color: var(--ink); border: 1px solid var(--ink); border-radius: 2px; }
+.theme-light button:hover { background: #EFE6D2; }
+.theme-light button.primary { background: var(--accent); border-color: var(--accent); color: #FFFDF7; font-weight: 600; }
+.theme-light button.primary:hover { background: #8A3A17; }
+.theme-light button.on, .theme-light button.on:hover { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+.theme-light button.commit-waiting, .theme-light button.commit-waiting:hover { background: #E6DFCF; border-color: var(--blank); color: var(--muted); }
+.theme-light .flip, .theme-light .pin { border: 0; background: transparent; color: var(--muted); }
+.theme-light .pin.on, .theme-light .flip:hover, .theme-light .pin:hover { background: transparent; color: var(--accent); }
+.theme-light .plus { border: 1px solid transparent; background: transparent; color: var(--accent); font-size: 26px; font-weight: 300; }
+.theme-light .plus:hover { background: rgba(168, 72, 31, .12); border-color: var(--accent); }
+.theme-light .picker { border-color: var(--accent); background: var(--panel); }
+.theme-light .toggle { border-color: var(--line); }
+.theme-light .cite button.auto { background: var(--fits); }
+.theme-light .tail button, .theme-light .cite button { font-size: 11.5px; }
+.theme-light input, .theme-light select, .theme-light textarea { font: 12.5px "NV Sans"; border: 1px solid var(--blank); border-radius: 2px; background: #FFFDF7; color: var(--ink); }
+.theme-light .chip { border-radius: 2px; font: 600 10.5px "NV Sans"; letter-spacing: .04em; padding: 1px 6px; filter: saturate(.72) brightness(.9); }
+.theme-light .warn { background: #F3E6C4; color: #6B4A00; border-radius: 2px; }
+.theme-light .warn-bad { background: #F6DDD9; border-radius: 2px; }
+.theme-light .log div { border-bottom-color: var(--hair); }
+.theme-light .report-nobel { background: #F6E9BE; border-color: #C99A1B; border-radius: 2px; }
+
+@media (min-width: 1500px) { .theme-light #board { grid-template-columns: minmax(0, 1fr) 400px; } }
+
+/* Dark: a control room in amber and gold ---------------------------------------------------------- */
+@font-face { font-family: "NV Condensed"; font-weight: 600; font-style: normal; font-display: swap; src: url("/web/fonts/nv-condensed-semibold.woff2") format("woff2"); }
+@font-face { font-family: "NV Condensed"; font-weight: 700; font-style: normal; font-display: swap; src: url("/web/fonts/nv-condensed-bold.woff2") format("woff2"); }
+@font-face { font-family: "NV Text"; font-weight: 400; font-style: normal; font-display: swap; src: url("/web/fonts/nv-text-regular.woff2") format("woff2"); }
+@font-face { font-family: "NV Text"; font-weight: 400; font-style: italic; font-display: swap; src: url("/web/fonts/nv-text-italic.woff2") format("woff2"); }
+@font-face { font-family: "NV Text"; font-weight: 600; font-style: normal; font-display: swap; src: url("/web/fonts/nv-text-semibold.woff2") format("woff2"); }
+html.theme-dark {
+  --bg: #120E0A; --panel: #1D1711; --ink: #EFE6D6; --muted: #A39582; --line: #3A2E22; --accent: #E08A2E; --gold: #F2C14E;
+  --act: #2A1F12; --bad: #FF8674; --good: #86CF8B; --fits: #3B3218; --same: #7C6115; --head-bg: #0A0705;
+  --hover: #2A2118; --blank: #6E5F4E; --hair: #2A2118;
+  background: #120E0A; color-scheme: dark;
+}
+.theme-dark body { font: 14px/1.4 "NV Text", system-ui, sans-serif; }
+
+/* Header */
+.theme-dark header { background: #0A0705; border-bottom: 2px solid var(--accent); padding: 7px 20px; gap: 18px; }
+.theme-dark header h1 { font: 700 27px/1 "NV Condensed", sans-serif; letter-spacing: 2.5px; text-transform: uppercase; color: #FBF6EC; white-space: nowrap; }
+.theme-dark header h1::before { content: ""; display: inline-block; width: 27px; height: 27px; margin-right: 11px; vertical-align: -5px; border-radius: 50%; background: url("/web/images/venus_small.png") center / cover; }
+.theme-dark header .status > b:first-child { font: 600 16px "NV Condensed"; letter-spacing: 1.2px; text-transform: uppercase; color: var(--gold); }
+.theme-dark header .you-act { background: var(--gold); color: #120E0A; font: 700 12.5px "NV Condensed"; letter-spacing: 1.4px; text-transform: uppercase; border-radius: 3px; padding: 3px 9px; }
+.theme-dark header .warn-shot { background: #5A3A12; }
+.theme-dark .banner { background: #1F2E1F; }
+.theme-dark .error-bar { background: #4A1D17; color: #FFB3A6; }
+
+.theme-dark .phase-bar { display: flex; gap: 4px; padding: 6px 20px; background: #0A0705; border-bottom: 1px solid var(--line); }
+.theme-dark .phase-label { display: none; }
+.theme-dark .phase-step { flex: 1 1 auto; min-width: 0; font: 600 12.5px "NV Condensed"; letter-spacing: 1.1px; text-transform: uppercase; padding: 3px 9px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.theme-dark .phase-step b { margin-right: 7px; color: var(--accent); }
+.theme-dark .phase-step.done { background: #2A1F12; border-color: #4A3920; color: #C9B089; }
+.theme-dark .phase-step.now { background: var(--gold); border-color: var(--gold); color: #120E0A; font-weight: 700; }
+.theme-dark .phase-step.now b { color: #120E0A; }
+
+.theme-dark .columns { background: #0A0705; border-bottom: 1px solid var(--line); padding-top: 4px; padding-bottom: 4px; }
+.theme-dark .columns .c { font-size: 10.5px; color: var(--muted); }
+.theme-dark .columns .c b { font: 600 12.5px "NV Condensed"; letter-spacing: 1.3px; color: var(--gold); }
+
+/* Panels */
+.theme-dark h2 { font: 600 16px/1.2 "NV Condensed", sans-serif; letter-spacing: 1.4px; text-transform: uppercase; color: var(--gold); }
+.theme-dark .panel { background: var(--panel); border-color: var(--line); border-radius: 6px; }
+.theme-dark #board .panel > h2 { font: 600 15.5px/1.2 "NV Condensed", sans-serif; letter-spacing: 1.4px; text-transform: uppercase; color: var(--gold); }
+.theme-dark .h-note { font: 400 11.5px "NV Text"; letter-spacing: 0; text-transform: none; }
+.theme-dark #actions-panel { background: #221A11; border-color: #6B4A1E; }
+.theme-dark #actions-panel.act { background: var(--act); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 20px rgba(0, 0, 0, .5); }
+.theme-dark #board .selection { border-color: var(--gold); }
+.theme-dark h3 { font: 600 12.5px "NV Condensed"; letter-spacing: 1.3px; color: var(--accent); }
+.theme-dark .legend { text-transform: none; letter-spacing: 0; font-family: "NV Text"; }
+
+/* Strips and tiles */
+.theme-dark .strip { border-bottom-color: var(--hair); }
+.theme-dark .head b { font: 600 15px "NV Condensed"; letter-spacing: .8px; color: #FBF6EC; }
+.theme-dark .n { color: #D8CCB8; }
+.theme-dark .t.empty .n { color: var(--muted); }
+.theme-dark .strip.is-sel { outline: 2.5px solid #FBF6EC; background: #221A11; }
+.theme-dark .strip.is-fits { background: var(--fits); border-color: #6A571F; }
+.theme-dark .strip.is-same { background: var(--same); border-color: var(--gold); }
+.theme-dark .strip.is-off { opacity: .28; }
+.theme-dark #actions-panel .strip.is-off { opacity: .4; }
+.theme-dark .t.is-specialty .ph { background: #22301F; }
+.theme-dark .t.is-sensor .ph { background: #1D2A36; }
+.theme-dark .tiles-compact .t { background: var(--c, #3A2E22); }
+.theme-dark .badge { background: var(--accent); color: #120E0A; font-weight: 700; }
+.theme-dark .record-area { border-color: var(--line); }
+.theme-dark .record-area .group-label, .theme-dark .group-label { font: 600 12.5px "NV Condensed"; letter-spacing: 1.2px; text-transform: uppercase; color: var(--gold); }
+.theme-dark .box { background: #221A11; border-color: var(--line); }
+.theme-dark .box.is-target { outline-color: var(--accent); }
+.theme-dark .box-rows .head { border-left-color: var(--line); }
+
+/* Tables */
+.theme-dark th { background: #261D13; border-color: var(--line); color: var(--gold); font: 600 12.5px "NV Condensed"; letter-spacing: 1px; text-transform: uppercase; }
+.theme-dark td { border-color: var(--line); }
+.theme-dark tr.past td { color: #7A6B5A; }
+.theme-dark .alloc.postdocs-short tr > :nth-child(3), .theme-dark .alloc.students-short tr > :nth-child(4) { background: #2F2B27; }
+.theme-dark .alloc.postdocs-over tr > :nth-child(3), .theme-dark .alloc.students-over tr > :nth-child(4) { background: #5E211A; }
+
+/* Controls */
+.theme-dark button { font: 600 13px "NV Condensed"; letter-spacing: .9px; text-transform: uppercase; background: #2A2118; color: var(--ink); border: 1px solid #5B4A38; border-radius: 3px; }
+.theme-dark button:hover { background: #3A2E22; border-color: var(--accent); }
+.theme-dark button.primary { background: var(--accent); border-color: var(--accent); color: #120E0A; font-weight: 700; }
+.theme-dark button.primary:hover { background: var(--gold); border-color: var(--gold); }
+.theme-dark button.on, .theme-dark button.on:hover { background: var(--gold); border-color: var(--gold); color: #120E0A; }
+.theme-dark button.commit-waiting, .theme-dark button.commit-waiting:hover { background: #2F2B27; border-color: #4A4038; color: var(--muted); }
+.theme-dark .flip, .theme-dark .pin { border: 0; background: transparent; color: var(--muted); }
+.theme-dark .pin.on, .theme-dark .flip:hover, .theme-dark .pin:hover { background: transparent; color: var(--gold); }
+.theme-dark .plus { border: 1px solid transparent; background: transparent; color: var(--gold); font: 300 26px "NV Text"; letter-spacing: 0; }
+.theme-dark .plus:hover { background: rgba(224, 138, 46, .18); border-color: var(--accent); }
+.theme-dark .picker { border-color: var(--accent); background: #221A11; text-transform: none; letter-spacing: 0; }
+.theme-dark .toggle { border-color: var(--line); background: transparent; }
+.theme-dark .cite button.auto { background: var(--fits); }
+.theme-dark .tail button, .theme-dark .cite button { font-size: 12.5px; }
+.theme-dark .stepper button { font-size: 17px; }
+.theme-dark input, .theme-dark select, .theme-dark textarea { font: 13px "NV Text"; border: 1px solid #5B4A38; border-radius: 3px; background: #120E0A; color: var(--ink); }
+.theme-dark .chip { border-radius: 3px; font: 600 12.5px "NV Condensed"; letter-spacing: .7px; padding: 0 7px; filter: saturate(.78); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); }
+.theme-dark .warn { background: #3A2C12; color: var(--gold); }
+.theme-dark .warn-bad { background: #4A1D17; color: #FFB3A6; }
+.theme-dark .log div { border-bottom-color: var(--hair); }
+.theme-dark .report-nobel { background: #3A2C12; border-color: var(--gold); }
+.theme-dark .nobel-note { color: var(--gold); }
+.theme-dark .swatch { border-color: var(--blank); }
+
+@media (min-width: 1500px) { .theme-dark #board { grid-template-columns: minmax(0, 1fr) 400px; } }

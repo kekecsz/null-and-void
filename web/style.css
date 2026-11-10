@@ -1,4 +1,5 @@
-/* Null & Void web client: plain and functional (specification 7.2). */
+/* Null & Void web client (specification 7.2): the layout, with plain fallback colours. The looks the
+   players see, light and dark, are in themes.css. */
 :root {
   --bg: #f6f6f3;
   --panel: #ffffff;
@@ -36,7 +37,7 @@ pre { white-space: pre-wrap; font: 12px/1.35 Consolas, "Cascadia Mono", monospac
 header { display: flex; gap: 16px; align-items: center; padding: 8px 14px; background: #fff; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 2; flex-wrap: wrap; }
 header .status { flex: 1; }
 header .warn-shot { background: #ffe3c2; padding: 0 4px; border-radius: 3px; }
-header .you-act { background: var(--act); padding: 2px 8px; border-radius: 3px; font-weight: 600; }
+header .you-act { margin-left: 6px; background: var(--act); padding: 2px 8px; border-radius: 3px; font-weight: 600; }
 .error-bar { background: #fde8e6; color: var(--bad); padding: 6px 14px; display: none; }
 .banner { background: #e6f0e6; padding: 8px 14px; font-weight: 600; }
 

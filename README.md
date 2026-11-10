@@ -126,6 +126,8 @@ A browser remembers its seat, so a refresh rejoins it. To play the same seat fro
 link with `#seat=<token>`; on your first device the token is in the browser's local storage under
 `nv:<game>:seat`. With `--host 0.0.0.0`, Windows may ask once whether to allow Python through the firewall.
 
+**Look.** The header's "Theme" setting switches between the light look (the default, in the style of the rulebook) and a dark one. The browser remembers the choice for every page.
+
 **Spectating and replay** (specification 7.3). The host link always opens the spectator view: every lab, the true
 Probe states, every hidden prediction, the World Table and the AI players' notes. A host who also plays a seat in
 the same browser can switch with "Watch as spectator" in the host controls. Anyone else can watch with the

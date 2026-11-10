@@ -130,6 +130,37 @@ def test_the_game_page_can_load_the_board_scripts_and_the_tile_colours(tmp_path)
         assert client.get("/web/icons/venus_expedition/colours.json").status_code == 200
 
 
+def test_every_page_loads_the_themes_and_everything_they_refer_to(tmp_path):
+    """Specification 7.4, Look: both themes on every page; their fonts and images are served."""
+    import re
+
+    web = REPO_ROOT / "web"
+    css = (web / "themes.css").read_text(encoding="utf-8")
+    assert "html.theme-light" in css and "html.theme-dark" in css
+    referred = set(re.findall(r'url\("(/web/[^"]+)"\)', css))
+    assert any(r.endswith(".woff2") for r in referred) and any(r.endswith(".png") for r in referred)
+    with TestClient(create_app(db=tmp_path / "g.sqlite")) as client:
+        for page in ("game.html", "index.html", "debrief.html", "credits.html"):
+            text = (web / page).read_text(encoding="utf-8")
+            assert 'class="theme-light"' in text, page  # the default look, even before a script runs
+            assert 'href="/web/themes.css"' in text and 'src="/web/theme.js"' in text, page
+        for address in ("/web/themes.css", "/web/theme.js", *sorted(referred)):
+            assert client.get(address).status_code == 200, address
+
+
+def test_the_phase_bar_names_every_step_of_the_engine_in_order():
+    """Specification 7.4, Phase bar: a step the client does not know would leave the bar unmarked."""
+    import re
+
+    from nv_core.engine import ORDER
+
+    script = (REPO_ROOT / "web" / "game.js").read_text(encoding="utf-8")
+    block = script[script.index("const ROUND_PHASES = [") : script.index("const STEP_ORDER")]
+    lists = re.findall(r'\["[^"]+",\s*\[(.*?)\]\]', block, flags=re.S)  # the steps of each phase
+    named = [text for steps in lists for text in re.findall(r'"([^"]+)"', steps)]
+    assert named == [phase.value for phase in ORDER]
+
+
 # Deployment: the API key never leaves this computer in the upload or the container -----------------
 def test_the_deployment_files_keep_local_secrets_out():
     for name in (".dockerignore", ".gcloudignore"):

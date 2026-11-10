@@ -577,7 +577,7 @@ const TASK_NAMES = {
   reveal_prediction: ["reveal predictions", "what each would bring, if it is not pruned"],
   run_experiment: ["experiments and sensors", 'press "+" on a Probe tile to install or upgrade its sensor'],
   formulate_theory: ["formulate a theory", 'press "use" on a record, or on the selected strip, to copy its states here'],
-  submit: ["submit manuscripts", 'the blue box receives what you "use"'],
+  submit: ["submit manuscripts", 'the outlined box receives what you "use"'],
   review_vote: ["peer review", "open a box to see the manuscript's supporting records"],
 };
 const IN_THE_TITLE = { commit: "Commit", pass: "Pass" };
@@ -594,7 +594,7 @@ function actionsKey() {
     msg.options, v.lab, myReviewCards(), v.published.map((p) => p.id), v.manuscripts.map((m) => [m.id, m.area, m.position]), report && report.round]);
 }
 
-// While something could still be submitted or revised, and nothing has been, Commit is grey and
+// While something could still be submitted or revised, and nothing has been, Commit is greyed and
 // asks first: committing ends the step. (Whatever was done this step can be withdrawn, so
 // "withdraw_submission" being on offer means something was.)
 // Likewise in the Development phase, while staff are there and nothing has been developed

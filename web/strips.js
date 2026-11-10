@@ -3,11 +3,11 @@
 // are lists of strips; tasks.js draws what the player can do now; game.js connects them.
 "use strict";
 
-// Remembered for each player in this browser, across games: tile style, pinning, minimised panels.
+// Remembered for each player in this browser, across games: theme, tile style, pinning, minimised panels.
 const prefs = (() => {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem("nv:board") || "{}") || {}; } catch { /* private window */ }
-  return { tiles: saved.tiles === "compact" ? "compact" : "tall", pinTask: saved.pinTask !== false, pinSelection: saved.pinSelection !== false, closed: saved.closed || {} };
+  return { theme: saved.theme === "dark" ? "dark" : "light", tiles: saved.tiles === "compact" ? "compact" : "tall", pinTask: saved.pinTask !== false, pinSelection: saved.pinSelection !== false, closed: saved.closed || {} };
 })();
 function savePrefs() {
   try { localStorage.setItem("nv:board", JSON.stringify(prefs)); } catch { /* private window */ }
@@ -167,6 +167,9 @@ function initPanels() {
     button.onclick = () => { prefs[setting] = !prefs[setting]; savePrefs(); show(); };
     show();
   }
+  const themes = $("theme-choice");
+  themes.value = prefs.theme;
+  themes.onchange = () => { prefs.theme = themes.value; savePrefs(); theme.apply(prefs.theme); layoutPins(); };
   const tiles = $("tile-style");
   tiles.value = prefs.tiles;
   tiles.onchange = () => { prefs.tiles = tiles.value; savePrefs(); applyTileStyle(); };

@@ -1,10 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="theme-light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Null &amp; Void</title>
   <link rel="stylesheet" href="/web/style.css">
+  <link rel="stylesheet" href="/web/themes.css">
+  <script src="/web/theme.js"></script>
 </head>
 <body>
   <div class="top" id="top">
@@ -12,9 +14,11 @@
       <h1><a href="/" style="color:inherit;text-decoration:none">Null &amp; Void</a></h1>
       <div class="status" id="status">Connecting...</div>
       <a href="/credits" target="_blank">Credits</a>
+      <label class="small">Theme <select id="theme-choice"><option value="light">light</option><option value="dark">dark</option></select></label>
       <label class="small">Tiles <select id="tile-style"><option value="tall">tall</option><option value="compact">compact</option></select></label>
       <label class="small"><input type="checkbox" id="as-text"> show as text</label>
     </header>
+    <div class="phase-bar" id="phase-bar" style="display:none"></div>
     <div class="error-bar" id="error"></div>
     <div id="banner"></div>
     <div class="columns" id="columns" style="display:none"></div>
