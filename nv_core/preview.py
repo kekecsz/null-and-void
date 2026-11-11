@@ -106,7 +106,9 @@ def task_preview(state: GameState, seat: int) -> dict[str, Any]:
     if state.phase == Phase.STUDENT_CHECK:
         return {"grant_admin_needed": needed}
     if state.phase == Phase.PREDICTION:
-        return {"theories": _theories(ctx, seat)}
+        limit = state.settings.prediction_limit(r.allocated(Task.DATA_COLLECTION))
+        made = sum(1 for p in state.predictions if p.seat == seat)
+        return {"theories": _theories(ctx, seat), "prediction_limit": None if limit is None else {"made": made, "allowed": limit}}
     if state.phase == Phase.REVEAL:
         return {"reveals": _reveals(ctx, seat)}
     if state.phase == Phase.SUBMISSION:

@@ -134,6 +134,9 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
         preregistered = [p for p in mine if p.preregistered]
         crisis = s.period == "crisis"
         theories = [p for p in s.published if p.kind == "theory" and ctx.usable_by(p, seat)]
+        limit = ctx.settings.prediction_limit(staff)
+        if limit is not None and len(mine) >= limit:
+            theories = []  # Formulating predictions and preregistration: no room for another
         makes = []
         for paper in theories:
             same = any(p.inputs == paper.idea.inputs and p.outcomes == paper.idea.outcomes for p in preregistered)

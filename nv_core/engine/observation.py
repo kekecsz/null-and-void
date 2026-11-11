@@ -89,8 +89,14 @@ def _check_preregister(ctx: Ctx, seat: int, prediction: Prediction) -> None:
 
 def make_prediction(ctx: Ctx, action: MakePrediction) -> None:
     state, seat = ctx.state, action.seat
-    if state.researcher(seat).allocated(Task.DATA_COLLECTION) < 1:
+    staff = state.researcher(seat).allocated(Task.DATA_COLLECTION)
+    if staff < 1:
         raise IllegalAction("making predictions needs at least one staff member on data collection")
+    limit = ctx.settings.prediction_limit(staff)
+    if limit is not None and sum(1 for p in state.predictions if p.seat == seat) >= limit:
+        raise IllegalAction(
+            f"you can make at most {limit} prediction(s): {ctx.settings.predictions_per_staff} per staff member on data collection"
+        )
     try:
         paper = state.paper(action.theory)
     except KeyError:

@@ -627,6 +627,12 @@ class StrategyBot:
 
     # Predictions --------------------------------------------------------------------------------
     def _predictions(self, view, by_type) -> list[BaseModel]:
+        """The plan, cut to the number of predictions allowed (the first ones are the most wanted)."""
+        plan = self._prediction_plan(view, by_type)
+        limit = self.settings.prediction_limit(self._staff(view, Task.DATA_COLLECTION))
+        return plan if limit is None else plan[:limit]
+
+    def _prediction_plan(self, view, by_type) -> list[BaseModel]:
         seat = view["seat"]
         crisis = view["period"] == "crisis"
         capacity = self._staff(view, Task.DATA_COLLECTION)

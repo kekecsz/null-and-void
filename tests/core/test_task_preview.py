@@ -277,3 +277,11 @@ def test_student_check_preview_names_it_too():
     state.phase = Phase.STUDENT_CHECK
     assert task_preview(state, 0) == {"grant_admin_needed": S.grant_track[S.grant_track_starting_position - 1].admin}
 
+
+def test_prediction_preview_counts_against_the_limit():
+    state = _at_prediction(dc=1)
+    t = _theory(state, 1, *RIGHT)
+    assert task_preview(state, 0)["prediction_limit"] == {"made": 0, "allowed": S.predictions_per_staff}
+    state, _ = _predict(state, 0, t.id, 0)
+    assert task_preview(state, 0)["prediction_limit"]["made"] == 1
+

@@ -695,7 +695,9 @@ function renderActions() {
     return;
   }
   const named = msg.options.find((o) => TASK_NAMES[o.type]);
-  const [name, note] = named ? TASK_NAMES[named.type] : [null, null];
+  let [name, note] = named ? TASK_NAMES[named.type] : [null, null];
+  const limit = preview().prediction_limit;  // Formulating predictions and preregistration
+  if (limit) note = `${limit.made} of ${limit.allowed} predictions made${limit.made >= limit.allowed ? " (no room for more)" : ""}. ${note || ""}`;
   setTaskHeading(name, note, msg.options.filter((o) => IN_THE_TITLE[o.type]).map(titleButton));
   // The sensor choices are drawn with the experiment; withdrawing is done on the prediction strips.
   const listed = msg.options.filter((o) => !IN_THE_TITLE[o.type] && !["install_sensor", "cancel_prediction", "alliance"].includes(o.type));

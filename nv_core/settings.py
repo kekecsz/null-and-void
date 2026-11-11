@@ -90,6 +90,9 @@ class Settings(_Strict):
     crisis_failed_pred_citation_penalty: StrictInt
     crisis_pred_base_bonus: StrictInt
     crisis_pred_citation_reward_bonus: StrictInt
+    # A game saved before this setting existed keeps the rule it was started under (no limit).
+    # The parameter file must still list it: see _validate.
+    predictions_per_staff: StrictInt | None = None
     # Nobel Prize and retraction
     nobel_condition: StrictInt
     retraction_threshold: StrictInt
@@ -110,6 +113,13 @@ class Settings(_Strict):
     # A game saved before this table existed keeps the rule it was started under, in which the
     # track position itself was both values. The parameter file must still list it: see _validate.
     talent_development_track: list[TalentPosition] | None = None
+
+    def prediction_limit(self, data_collection_staff: int) -> int | None:
+        """Formulating predictions and preregistration: the most predictions a researcher may make
+        (None: no limit, in a game saved before the rule existed)."""
+        if self.predictions_per_staff is None:
+            return None
+        return self.predictions_per_staff * data_collection_staff
 
     def student_hire_cap(self, talent_position: int) -> int:
         """Hiring and task allocation phase: the most students a researcher may hire."""

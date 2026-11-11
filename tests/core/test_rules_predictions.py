@@ -13,7 +13,7 @@ import itertools
 import pytest
 
 from nv_core import actions as a
-from nv_core.engine import IllegalAction, apply
+from nv_core.engine import IllegalAction, apply, legal_actions
 from nv_core.state import Card, Phase, Task
 from nv_core.world_data import Variable, WorldData, WorldRow
 from tests.core.engine_helpers import do, game, publish, settings, to_phase
@@ -410,3 +410,37 @@ def test_crisis_crash_exactly_at_the_condition(below):
         assert state.result is not None and state.result.ending == "crisis_crash" and state.result.winners == []
     else:
         assert state.result is None and state.unsuccessful_predictions == S.crisis_condition - 1
+
+
+# Formulating predictions and preregistration: [predictions_per_staff] per data collection staff member
+def test_predictions_are_limited_per_data_collection_staff_member():
+    state = _at_prediction(dc=1)
+    theories = [_theory(state, 1, {"IP1": "a"}, {"WO1": "up"}), _theory(state, 1, {"IP2": "x"}, {"WO2": "big"}),
+                _theory(state, 1, {"IP3": "p"}, {"WO1": "up"})]
+    allowed = S.predictions_per_staff * 1
+    for paper in (theories * allowed)[:allowed]:
+        state, _ = _predict(state, 0, paper.id, 0)
+    assert not any(o.type == "make_prediction" for o in legal_actions(state, 0))
+    with pytest.raises(IllegalAction, match="at most"):
+        apply(state, a.MakePrediction(seat=0, theory=theories[0].id, probe=1))
+    # withdrawing one makes room again
+    state = do(state, a.CancelPrediction(seat=0, prediction=state.predictions[-1].id))
+    assert any(o.type == "make_prediction" for o in legal_actions(state, 0))
+
+
+def test_the_limit_grows_with_the_staff():
+    state = _at_prediction(dc=2)
+    t = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"})
+    for _ in range(S.predictions_per_staff * 2):
+        state, _ = _predict(state, 0, t.id, 0)
+    with pytest.raises(IllegalAction, match="at most"):
+        apply(state, a.MakePrediction(seat=0, theory=t.id, probe=0))
+
+
+def test_a_game_saved_before_the_limit_has_none():
+    from nv_core.settings import Settings
+
+    saved = S.model_dump(mode="json")
+    del saved["predictions_per_staff"]
+    assert Settings.model_validate(saved).prediction_limit(3) is None
+
