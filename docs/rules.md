@@ -231,7 +231,7 @@ Theories with the Fresh out of print marker can only be used by their authors.
 
 The specified Input Parameter states of the predictions are taken from the State Cards directly (not the Input Parameter Deck or the Probes).
 
-Any number of predictions can be made in the same round (number of predictions tested is not restricted by how many research staff members are assigned to data collection as long as there is at least one). Multiple predictions per probe are allowed, as long as each prediction uses an eligible theory.
+\[predictions\_per\_staff\] predictions can be made per research staff allocated to data collection. Multiple predictions per probe are allowed, as long as each prediction uses an eligible theory.
 
 Once a prediction is formulated, it is turned face down (the researcher can check their own predictions at any time).
 

@@ -50,6 +50,7 @@ failed_prereg_pred_ac_crisis: -5
 crisis_failed_pred_citation_penalty: -3
 crisis_pred_base_bonus: 0
 crisis_pred_citation_reward_bonus: 1
+predictions_per_staff: 2
 
 # Nobel Prize and retraction
 nobel_condition: 6                         # consecutive successful predictions
