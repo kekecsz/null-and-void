@@ -45,7 +45,6 @@ def _paper(state: GameState, paper: Paper) -> dict[str, Any]:
         "nobel": paper.nobel,
         "retraction": paper.retraction,
         "fresh": paper.fresh,
-        "sideways": paper.sideways,
         "patents": list(paper.patents),
     }
 

@@ -100,7 +100,6 @@ function payoffLine(paper) {
 }
 function outcomeNote(x) {  // what a prediction does once revealed
   if (!x) return null;
-  if (x.pruned) return h("span", { class: "muted" }, "Pruned: not scored");
   return h("span", { class: x.success ? "good" : "bad" },
     `${x.success ? "Success" : "Failed"}: ${signed(x.credit)} AC${authorPart(x.author_credit)}${x.success ? patentPart(x) : ", no patent"}`);
 }
@@ -572,9 +571,9 @@ const TITLES = {
   stay_in_alliance: "Stay in an alliance",
 };
 const TASK_NAMES = {
-  make_prediction: ["make predictions", 'your own theories first, then those closest to the Nobel Prize. Click a Probe in the World Grid to see which theories fit it. Amounts apply if revealed and not pruned.'],
+  make_prediction: ["make predictions", 'your own theories first, then those closest to the Nobel Prize. Click a Probe in the World Grid to see which theories fit it. Amounts apply if revealed.'],
   cancel_prediction: ["make predictions", ""],
-  reveal_prediction: ["reveal predictions", "what each would bring, if it is not pruned"],
+  reveal_prediction: ["reveal predictions", "what each would bring"],
   run_experiment: ["experiments and sensors", 'press "+" on a Probe tile to install or upgrade its sensor'],
   formulate_theory: ["formulate a theory", 'press "use" on a record, or on the selected strip, to copy its states here'],
   submit: ["submit manuscripts", 'the outlined box receives what you "use"'],
@@ -632,7 +631,7 @@ function pendingReport() {
   if (!report || msg.spectator || msg.you === null || store.get("report") === String(report.round)) return null;
   return msg.seats[msg.you] && msg.seats[msg.you].kind === "human" ? report : null;
 }
-const REPORT_OUTCOMES = { success: ["good", "Success"], failed: ["bad", "Failed"], pruned: ["muted", "Pruned"], unscored: ["muted", "Not scored: the game ended"] };
+const REPORT_OUTCOMES = { success: ["good", "Success"], failed: ["bad", "Failed"], pruned: ["muted", "Pruned"] /* older games */, unscored: ["muted", "Not scored: the game ended"] };
 function reportEntry(p) {
   const [cls, label] = REPORT_OUTCOMES[p.outcome];
   const patent = p.patent === "new" ? "patent" : p.patent === "held" ? (p.patent_holder === p.seat ? "already holds its patent" : `no patent (${nameOf(p.patent_holder)} holds it)`) : null;

@@ -4,7 +4,7 @@ equipment, Probe time, Sensor installation and upgrade, Revealing input paramete
 import pytest
 
 from nv_core import actions as a
-from nv_core.engine import IllegalAction, apply, new_game
+from nv_core.engine import IllegalAction, apply, new_game, validate
 from nv_core.engine.context import Ctx
 from nv_core.engine.observation import deal_probes
 from nv_core.engine.setup import specialty_parameters
@@ -173,7 +173,7 @@ def test_experiment_specifies_free_parameters_and_reads_the_world_table():
 
 
 def test_experiment_method_citation():
-    """A cited method adds its own input parameter, rewards its author, and turns sideways."""
+    """A cited method adds its own input parameter and rewards its author; it can be cited again."""
     s = settings()
     state = _experiment_state()
     seat, other = state.current, 1 - state.current
@@ -184,8 +184,8 @@ def test_experiment_method_citation():
     credit = state.researcher(other).credit
     state = do(state, a.RunExperiment(seat=seat, specified=spec, cited_methods=[method.id]))
     assert state.researcher(other).credit == credit + s.experiment_method_citation_AC_reward
-    assert state.paper(method.id).sideways
-    _refused(state, a.RunExperiment(seat=state.current, cited_methods=[method.id], specified={"IP3": "q"}), "already been cited")
+    again = a.RunExperiment(seat=state.current, cited_methods=[method.id], specified={"IP3": "q"})
+    assert validate(state, again) is None
 
 
 def test_fresh_out_of_print_method_only_for_its_author():

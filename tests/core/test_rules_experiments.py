@@ -73,7 +73,8 @@ def test_each_cited_method_adds_its_own_parameter_and_pays_its_author():
     credit = state.researcher(other).credit
     state = do(state, a.RunExperiment(seat=seat, specified=spec, cited_methods=[m2.id, m3.id]))
     assert state.researcher(other).credit == credit + 2 * S.experiment_method_citation_AC_reward
-    assert state.paper(m2.id).sideways and state.paper(m3.id).sideways
+    # Methods can be cited any number of times.
+    assert validate(state, a.RunExperiment(seat=state.current, specified=spec, cited_methods=[m2.id, m3.id])) is None
 
 
 def test_author_may_cite_own_fresh_out_of_print_method():

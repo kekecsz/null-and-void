@@ -8,6 +8,30 @@ Each entry gives the document and section, the exact text, the possible readings
 
 ---
 
+## Rule changes of 2026-11-12: open points (review before implementing)
+
+### R3. Buying lab capacity
+- **Where:** Experimentation and equipment phase: "Each round during the Experimentation and equipment phase the researcher may choose to spend money to increase their Lab capacity by 1 (and only 1 per round)".
+- **Questions:** (a) Is buying a turn of its own in the sequential phase, or done alongside an action? (b) Does it need, or use up, an Experimentation staff member? Can a researcher with no Experimentation staff (who must pass) still buy? (c) The new capacity can only matter from the next Hiring phase on, since staff were allocated before; is that intended?
+- **Also:** "up to a maximum of [starting_lab_capacity_advanced]+3" and the "+1", "+2", "+3" lines write numbers into the rulebook. The maximum follows from the three costs, so the text could say "up to the last capacity in the cost list", or the costs could become a table like `[talent_development_track]`.
+
+### R4. What is one record, for the Records capacity?
+- **Where:** Recording experimental findings; Recording observations; Supporting observational and experimental records; Clean-up phase.
+- **Text:** "New records always enter at the first record position, and push older records one position higher." and "each card can be used only once"; experiment records "can be mixed across cards involved in several experiments".
+- **Questions:** (a) Is one experiment one record (all its cards in one position), and one Probe observation one record? (b) When some cards of an experiment are used in a submission (a mixed stack), does the rest of that experiment keep its position and count toward the capacity? (c) When a record leaves (used in a submission, or archived), do the older records close the gap, moving one position lower?
+- **Suggestion:** (a) yes; (b) yes, until all its cards are used; (c) yes.
+
+### R6. Archiving
+- **Where:** Development phase; Archiving records.
+- **Questions:** (a) Do other players see that someone archived (as they see that someone developed something), or is it hidden behind the lab shield? (b) The archive has no limit, so over many rounds a lab can still build up a large table of experiments, the behaviour the change is meant to stop, at the price of Development staff. Intended? (c) The Development list says "Archive a record", while the section allows up to [max_archive_per_staff_member] records per staff member: "Archive records" would match.
+
+### R8. A theory retracted during scoring
+- **Where:** Scoring predictions; Failed predictions; Retraction.
+- **Text:** "Increases the retraction counter of the cited theory by 1." and, from Retraction, the theory is unpublished once the counter reaches `[retraction_threshold]`.
+- **Problem:** without pruning, several revealed predictions can cite the same theory on different Probes. If an earlier one retracts the theory, the later ones cite a theory that is no longer published.
+- **Readings:** (a) the later predictions are still scored for the researchers who made them (credit for success or failure), but nothing happens to the retracted theory or its author (no counters, citation reward or patent); (b) they are discarded unscored, and their staff members are still used; (c) they are scored in full, as if the theory were still published.
+- **The engine now:** (a).
+
 ## Easier difficulty levels, to allow true racing (design idea)
 
 **Document:** `parameter_defaults.yaml`; specification 6.3 (the lobby's "settings preset").

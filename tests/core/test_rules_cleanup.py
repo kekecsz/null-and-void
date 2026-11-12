@@ -184,15 +184,12 @@ def test_hot_topic_advances_and_wraps_to_the_leftmost_probe():
     assert state.hot_topic == 0
 
 
-def test_probe_time_markers_and_sideways_papers_are_reset():
-    """Clean-up phase: Probe time markers return; sideways Methods and Theories are turned upright."""
+def test_probe_time_markers_are_reset():
+    """Clean-up phase: Probe time markers return."""
     state = _quiet(game())
     state.probes[0].probe_time = 1
-    paper = publish(state, 1, parameter="IP2")
-    paper.sideways = True
     cleanup(Ctx(state))
     assert all(p.probe_time is None for p in state.probes)
-    assert not state.paper(paper.id).sideways
 
 
 def test_first_researcher_token_moves_to_the_next_player():

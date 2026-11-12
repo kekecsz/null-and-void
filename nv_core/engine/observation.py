@@ -83,8 +83,15 @@ def _check_preregister(ctx: Ctx, seat: int, prediction: Prediction) -> None:
             f"you can preregister at most {r.allocated(Task.DATA_COLLECTION)} prediction(s) "
             "(staff on data collection)"
         )
-    if any(p.inputs == prediction.inputs and p.outcomes == prediction.outcomes for p in mine):
-        raise IllegalAction("you already preregistered a prediction based on this theory (specification 5.7)")
+
+
+def same_theory_on_probe(ctx: Ctx, seat: int, inputs: dict, outcomes: dict, probe: int) -> bool:
+    """Formulating predictions and preregistration: one theory (identical copies included) only
+    once by the same researcher on the same Probe in a round."""
+    return any(
+        p.seat == seat and p.probe == probe and p.inputs == inputs and p.outcomes == outcomes
+        for p in ctx.state.predictions
+    )
 
 
 def make_prediction(ctx: Ctx, action: MakePrediction) -> None:
@@ -109,6 +116,8 @@ def make_prediction(ctx: Ctx, action: MakePrediction) -> None:
         raise IllegalAction(f"there is no Probe P{action.probe + 1}")
     if mismatch(paper.idea.inputs, state.probes[action.probe].readings):
         raise IllegalAction(f"T{paper.id} mismatches the readings of P{action.probe + 1}")
+    if same_theory_on_probe(ctx, seat, paper.idea.inputs, paper.idea.outcomes, action.probe):
+        raise IllegalAction(f"you already predict with this theory on P{action.probe + 1} this round")
     preregister = action.preregister or state.period == "crisis"
     prediction = Prediction(
         id=state.new_id(),
@@ -144,9 +153,10 @@ def set_preregistered(ctx: Ctx, action: SetPreregistered) -> None:
     prediction.preregistered = action.preregister
 
 
-# Preregistration pruning ---------------------------------------------------------------------
+# The cited theory ---------------------------------------------------------------------------
 def cited_theory(ctx: Ctx, prediction: Prediction) -> int:
-    """The cited theory among identical published theories (Preregistration pruning; 5.7)."""
+    """The cited theory among identical published theories (Formulating predictions and
+    preregistration; specification 5.7)."""
     state = ctx.state
     order = state.turn_order()
     candidates = [
@@ -166,28 +176,11 @@ def cited_theory(ctx: Ctx, prediction: Prediction) -> int:
     return candidates[0].id
 
 
-def _prune(ctx: Ctx, predictions: list[Prediction], step: int) -> None:
-    """Discard revealed predictions based on the same theory (Preregistration pruning)."""
-    order = ctx.state.turn_order()
-    by_theory: dict[int, list[Prediction]] = {}
+def _reveal(predictions: list[Prediction], step: int) -> None:
     for prediction in predictions:
         prediction.revealed = True
         prediction.reveal_step = step
-        by_theory.setdefault(prediction.cited, []).append(prediction)
-    for theory, group in by_theory.items():
-        group.sort(key=lambda p: (order.index(p.seat), p.probe, p.id))
-        group[0].status = "revealed"
-        ctx.state.paper(theory).sideways = True
-        for loser in group[1:]:
-            loser.status = "pruned"
-            ctx.log(
-                "pruned",
-                f"{ctx.name(loser.seat)}'s prediction Q{loser.id} on T{theory} is discarded "
-                f"({ctx.name(group[0].seat)} is earlier in turn order)",
-            )
-            loser.author = ctx.state.paper(theory).author
-            loser.author_credit_change = ctx.settings.citation_reward
-            ctx.credit(loser.author, loser.author_credit_change, f"T{theory} cited")
+        prediction.status = "revealed"
 
 
 def _public_prediction(ctx: Ctx, p: Prediction) -> str:
@@ -212,7 +205,7 @@ def finish_prediction(ctx: Ctx) -> None:
     preregistered = [p for p in state.predictions if p.preregistered]
     for p in preregistered:
         ctx.log("preregistered", "Preregistered: " + _public_prediction(ctx, p), seat=p.seat, prediction=p.id)
-    _prune(ctx, preregistered, step=1)
+    _reveal(preregistered, step=1)
     for probe in state.probes:
         probe.outcomes_revealed = True
         shown = ", ".join(f"{k}={c.state}" for k, c in probe.outcomes.items())
@@ -232,13 +225,8 @@ def _capacity(ctx: Ctx, seat: int) -> int:
     return staff - sum(1 for p in ctx.state.predictions if p.seat == seat and p.preregistered)
 
 
-def _preregistered_theories(ctx: Ctx) -> set[int]:
-    return {p.cited for p in ctx.state.predictions if p.preregistered}
-
-
 def _revealable(ctx: Ctx, seat: int) -> list[Prediction]:
-    blocked = _preregistered_theories(ctx)
-    return [p for p in ctx.state.predictions if p.seat == seat and not p.preregistered and p.cited not in blocked]
+    return [p for p in ctx.state.predictions if p.seat == seat and not p.preregistered]
 
 
 def start_reveal(ctx: Ctx) -> None:
@@ -255,15 +243,11 @@ def reveal_prediction(ctx: Ctx, action: RevealPrediction) -> None:
         return
     if prediction.preregistered:
         raise IllegalAction("preregistered predictions are revealed already")
-    if prediction not in _revealable(ctx, seat):
-        raise IllegalAction("a preregistered prediction is based on the same theory")
     chosen = [p for p in ctx.state.predictions if p.seat == seat and not p.preregistered and p.revealed]
     if prediction in chosen:
         return
     if len(chosen) >= _capacity(ctx, seat):
         raise IllegalAction(f"you can reveal at most {_capacity(ctx, seat)} more prediction(s)")
-    if any(p.cited == prediction.cited for p in chosen):
-        raise IllegalAction("you already reveal a prediction based on this theory (specification 5.7)")
     if ctx.state.researcher(seat).credit == 0 and not _success(ctx, prediction):
         raise IllegalAction("at 0 academic credit you cannot reveal a failed non-preregistered prediction")
     prediction.revealed = True
@@ -275,8 +259,7 @@ def check_commit_reveal(ctx: Ctx, seat: int) -> None:
     chosen = [p for p in ctx.state.predictions if p.seat == seat and not p.preregistered and p.revealed]
     if len(chosen) >= _capacity(ctx, seat):
         return
-    theories = {p.cited for p in chosen}
-    if any(p.cited not in theories and _success(ctx, p) for p in _revealable(ctx, seat) if not p.revealed):
+    if any(_success(ctx, p) for p in _revealable(ctx, seat) if not p.revealed):
         raise IllegalAction("at 0 academic credit you must use every staff member that can still be used")
 
 
@@ -285,10 +268,10 @@ def finish_reveal(ctx: Ctx) -> None:
     newly = [p for p in state.predictions if not p.preregistered and p.revealed]
     for p in newly:
         ctx.log("revealed", "Revealed: " + _public_prediction(ctx, p), seat=p.seat, prediction=p.id)
-    _prune(ctx, newly, step=2)
+    _reveal(newly, step=2)
     for seat in state.turn_order():
         r = state.researcher(seat)
-        # As many staff are used as predictions revealed, pruned ones included.
+        # As many staff are used as predictions revealed.
         r.used[Task.DATA_COLLECTION] = sum(1 for p in state.predictions if p.seat == seat and p.revealed)
 
 
@@ -312,21 +295,27 @@ def _scoring_groups(ctx: Ctx) -> list[list[Prediction]]:
     return groups
 
 
-def _would_win_nobel(ctx: Ctx, p: Prediction) -> bool:
-    return (
-        ctx.state.period == "calm"
-        and _success(ctx, p)
-        and ctx.state.paper(p.cited).nobel + 1 >= ctx.settings.nobel_condition
-    )
-
-
 def _order_choices(ctx: Ctx) -> dict[int, list[list[Prediction]]]:
-    """Groups whose order decides who wins the Nobel Prize: the predictor chooses the order."""
+    """Groups whose order decides who wins the Nobel Prize: the predictor chooses the order.
+    The Nobel Prize counters are followed through the round's scoring, as scoring will move them."""
+    state = ctx.state
     choices: dict[int, list[list[Prediction]]] = {}
+    if state.period != "calm":
+        return choices
+    counters = {p.id: p.nobel for p in state.published if p.kind == "theory"}
+    adjusted: set[tuple[int, int]] = set()
     for group in _scoring_groups(ctx):
-        winners = {ctx.state.paper(p.cited).author for p in group if _would_win_nobel(ctx, p)}
+        moving = [p for p in group if p.cited in counters and (p.cited, p.probe) not in adjusted]
+        winners = {
+            state.paper(p.cited).author
+            for p in moving
+            if _success(ctx, p) and counters[p.cited] + 1 >= ctx.settings.nobel_condition
+        }
         if len(winners) > 1:
             choices.setdefault(group[0].seat, []).append(group)
+        for p in moving:
+            counters[p.cited] = counters[p.cited] + 1 if _success(ctx, p) else 0
+            adjusted.add((p.cited, p.probe))
     return choices
 
 
@@ -362,7 +351,7 @@ def _prediction_report(ctx: Ctx, missed: list[int]) -> dict | None:
     revealed predictions, so all of it is public. None when there is nothing to report."""
     state = ctx.state
     shown = [p for p in state.prediction_log + state.predictions
-             if p.round == state.round and p.status in ("scored", "pruned", "revealed")]
+             if p.round == state.round and p.status in ("scored", "pruned", "revealed")]  # "pruned": older games
     if not shown and not missed:
         return None
     shown.sort(key=lambda p: (p.seat, p.probe, p.id))
@@ -386,12 +375,13 @@ def _prediction_report(ctx: Ctx, missed: list[int]) -> dict | None:
 
 def _score_round(ctx: Ctx, missed: list[int]) -> None:
     state = ctx.state
+    adjusted: set[tuple[int, int]] = set()  # (theory, Probe): counters already adjusted this round
     for group in _scoring_groups(ctx):
         chosen = state.pending[group[0].seat].scoring_order
         if chosen:
             group.sort(key=lambda p: chosen.index(p.id) if p.id in chosen else p.id)
         for prediction in group:
-            score(ctx, prediction)
+            score(ctx, prediction, adjusted)
             if state.result:
                 return
     for seat in state.turn_order():
@@ -419,16 +409,30 @@ def credit_changes(s: Settings, crisis: bool, inputs: int, outcomes: int, prereg
     return s.failed_prereg_pred_ac if preregistered else s.failed_non_prereg_pred_ac, 0
 
 
-def score(ctx: Ctx, p: Prediction) -> None:
+def score(ctx: Ctx, p: Prediction, adjusted: set[tuple[int, int]] | None = None) -> None:
+    """Score one prediction. ``adjusted`` holds the (theory, Probe) pairs whose counters this
+    round's scoring has already adjusted: they are adjusted once per theory per Probe per round."""
     state, s = ctx.state, ctx.settings
-    paper = state.paper(p.cited)
     success = _success(ctx, p)
     p.success = success
     p.status = "scored"
     crisis = state.period == "crisis"
-    ctx.log("scored", f"Q{p.id} ({ctx.name(p.seat)}, T{paper.id} on P{p.probe + 1}): {'success' if success else 'failed'}")
+    ctx.log("scored", f"Q{p.id} ({ctx.name(p.seat)}, T{p.cited} on P{p.probe + 1}): {'success' if success else 'failed'}")
     gained, author_gained = credit_changes(s, crisis, len(p.inputs), len(p.outcomes), p.preregistered, success)
-    p.author, p.credit_change, p.author_credit_change = paper.author, gained, author_gained
+    p.credit_change = gained
+    try:
+        paper = state.paper(p.cited)
+    except KeyError:
+        # Retracted earlier in this scoring (open question R8): only the predictor is scored.
+        ctx.credit(p.seat, gained, "successful prediction" if success else "failed prediction")
+        if crisis and not success:
+            state.unsuccessful_predictions += 1
+            check_crisis_crash(ctx)
+        return
+    p.author, p.author_credit_change = paper.author, author_gained
+    first = adjusted is None or (paper.id, p.probe) not in adjusted
+    if adjusted is not None:
+        adjusted.add((paper.id, p.probe))
     if success:
         ctx.credit(p.seat, gained, "successful prediction")
         ctx.credit(paper.author, author_gained, f"T{paper.id} cited")
@@ -439,7 +443,7 @@ def score(ctx: Ctx, p: Prediction) -> None:
             p.patent, p.patent_holder = "new", p.seat
             paper.patents = [p.seat]
             ctx.log("patent", f"{ctx.name(p.seat)} gets a patent on T{paper.id}", seat=p.seat, theory=paper.id)
-        if not crisis:
+        if not crisis and first:
             paper.nobel += 1
             paper.retraction = 0
             if paper.nobel >= s.nobel_condition:
@@ -454,6 +458,8 @@ def score(ctx: Ctx, p: Prediction) -> None:
         check_crisis_crash(ctx)
         return
     ctx.credit(p.seat, gained, "failed prediction")
+    if not first:
+        return
     paper.nobel = 0
     paper.retraction += 1
     if paper.retraction >= s.retraction_threshold:

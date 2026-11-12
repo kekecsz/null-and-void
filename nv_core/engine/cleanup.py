@@ -33,8 +33,6 @@ def cleanup(ctx: Ctx) -> None:
         if r.unpaid:
             ctx.log("unpaid", f"{ctx.name(seat)} cannot pay {r.unpaid} postdoc(s)", seat=seat)
 
-    for paper in state.published:
-        paper.sideways = False
     state.hot_topic = (state.hot_topic + 1) % len(state.probes)
     for probe in state.probes:
         probe.probe_time = None

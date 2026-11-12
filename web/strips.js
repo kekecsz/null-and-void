@@ -300,7 +300,7 @@ function theoryStrip(p, tail) {
     chip(p.author), info(`tier ${p.tier}${p.open_access ? " (open access)" : ""}`),
     info(`Nobel ${p.nobel}/${v.nobel_condition}`), info(`retraction ${p.retraction}/${v.retraction_threshold}`),
     p.patents.length ? info(`patent: ${p.patents.map(nameOf).join(", ")}`) : null,
-    p.fresh ? info("fresh out of print") : null, p.sideways ? info("cited this round") : null,
+    p.fresh ? info("fresh out of print") : null,
   ] });
 }
 function renderLiterature() {

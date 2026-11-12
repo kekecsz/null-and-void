@@ -353,7 +353,7 @@ function renderAlliances() {
 function renderMethods() {
   const methods = view().published.filter((p) => p.kind === "method").sort((a, b) => ownFirst(a, b) || a.id - b.id);
   fill($("methods"), methods.length ? methods.map((m) => h("div", {}, `M${m.id} ${m.parameter} `, chip(m.author), ` tier ${m.tier}`,
-    m.open_access ? " open access" : "", m.fresh ? " fresh" : "", m.sideways ? " cited this round" : "")) : h("span", { class: "muted" }, "None published yet."));
+    m.open_access ? " open access" : "", m.fresh ? " fresh" : "")) : h("span", { class: "muted" }, "None published yet."));
 }
 
 function renderPredictions() {

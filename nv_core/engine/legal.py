@@ -15,7 +15,7 @@ from nv_core import actions as a
 from nv_core.engine.context import Ctx, IllegalAction
 from nv_core.engine.experimentation import MAX_SENSOR_LEVEL
 from nv_core.engine.hiring import POSTDOC_ONLY
-from nv_core.engine.observation import _capacity, _revealable, _success, mismatch
+from nv_core.engine.observation import _capacity, _revealable, _success, mismatch, same_theory_on_probe
 from nv_core.engine.publication import possible_submissions
 from nv_core.state import GameState, Phase, Task
 
@@ -92,7 +92,7 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
         )
     elif phase == Phase.EXPERIMENTATION and s.current == seat:
         methods = [
-            p for p in s.published if p.kind == "method" and not p.sideways and ctx.usable_by(p, seat)
+            p for p in s.published if p.kind == "method" and ctx.usable_by(p, seat)
         ]
         options.append(
             Option(
@@ -139,10 +139,11 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
             theories = []  # Formulating predictions and preregistration: no room for another
         makes = []
         for paper in theories:
-            same = any(p.inputs == paper.idea.inputs and p.outcomes == paper.idea.outcomes for p in preregistered)
-            can_prereg = len(preregistered) < staff and not same
+            can_prereg = len(preregistered) < staff
             for probe in s.probes:
                 if mismatch(paper.idea.inputs, probe.readings):
+                    continue
+                if same_theory_on_probe(ctx, seat, paper.idea.inputs, paper.idea.outcomes, probe.index):
                     continue
                 if crisis:
                     if can_prereg:
@@ -160,12 +161,11 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
     elif phase == Phase.REVEAL and waiting:
         chosen = [p for p in s.predictions if p.seat == seat and not p.preregistered and p.revealed]
         room = len(chosen) < _capacity(ctx, seat)
-        theories = {p.cited for p in chosen}
         reveals = []
         for p in _revealable(ctx, seat):
             if p.revealed:
                 reveals.append(a.RevealPrediction(seat=seat, prediction=p.id, reveal=False))
-            elif room and p.cited not in theories and (r.credit > 0 or _success(ctx, p)):
+            elif room and (r.credit > 0 or _success(ctx, p)):
                 reveals.append(a.RevealPrediction(seat=seat, prediction=p.id))
         if reveals:
             options.append(Option(type="reveal_prediction", actions=reveals))

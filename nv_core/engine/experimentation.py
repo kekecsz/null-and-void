@@ -52,8 +52,6 @@ def _cited_methods(ctx: Ctx, seat: int, ids: list[int]) -> list[Paper]:
             raise IllegalAction(f"M{paper_id} is not a published method") from None
         if paper.kind != "method":
             raise IllegalAction(f"T{paper_id} is a theory, not a method")
-        if paper.sideways:
-            raise IllegalAction(f"M{paper_id} has already been cited this round")
         if not ctx.usable_by(paper, seat):
             raise IllegalAction(f"M{paper_id} is Fresh out of print: only its author can use it")
         papers.append(paper)
@@ -62,7 +60,6 @@ def _cited_methods(ctx: Ctx, seat: int, ids: list[int]) -> list[Paper]:
 
 def _cite(ctx: Ctx, papers: list[Paper], citing: int) -> None:
     for paper in papers:
-        paper.sideways = True
         ctx.credit(paper.author, ctx.settings.experiment_method_citation_AC_reward, f"M{paper.id} cited")
 
 

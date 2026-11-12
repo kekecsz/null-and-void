@@ -1,6 +1,6 @@
 """Rulebook "Observation and prediction phase": "Formulating predictions and preregistration",
-"Preregistration pruning", "Outcome and Prediction Reveal", "Scoring predictions", "Failed
-predictions"; "Nobel Prize"; "Retraction"; "Crisis"; specification 5.7 (pruning, missed Probes).
+"Outcome and Prediction Reveal", "Scoring predictions", "Failed predictions"; "Nobel Prize";
+"Retraction"; "Crisis"; specification 5.7 (identical theories).
 
 The test world has two world outcomes so the outcome multiplier can be checked:
 IP1 (a, b), IP2 (x, y), IP3 (p, q); WO1 (up, down) is "up" exactly when IP1 = a, WO2 (big, small)
@@ -133,25 +133,25 @@ def test_reveal_limited_by_data_collection_staff_including_preregistered():
     with pytest.raises(IllegalAction):
         apply(state, a.RevealPrediction(seat=0, prediction=hidden))
     state = _finish(state)
-    assert _log(state, hidden).status not in ("revealed", "scored", "pruned")
+    assert _log(state, hidden).status not in ("revealed", "scored")
 
 
-def test_cannot_reveal_a_prediction_on_someone_elses_preregistered_theory():
-    """Outcome and Prediction Reveal: only predictions not based on the same theory as any
-    Preregistered prediction can be revealed."""
+def test_a_prediction_on_someone_elses_preregistered_theory_can_be_revealed():
+    """Outcome and Prediction Reveal: any prediction can be revealed, up to the staff on data collection."""
     state = _at_prediction()
     t = _theory(state, 0, {"IP1": "a"}, {"WO1": "up"})
     state, _ = _predict(state, 1, t.id, 1, prereg=True)
     state, hidden = _predict(state, 0, t.id, 0)
     state = _to_reveal(state)
-    with pytest.raises(IllegalAction):
-        apply(state, a.RevealPrediction(seat=0, prediction=hidden))
+    state = do(state, a.RevealPrediction(seat=0, prediction=hidden))
+    state = _finish(state)
+    assert _log(state, hidden).status == "scored"
 
 
-def test_reveal_pruning_keeps_turn_order_and_pruned_prediction_uses_staff():
-    """Outcome and Prediction Reveal: of two revealed predictions on one theory the one earlier in
-    turn order stays, the author gets [citation_reward] for the discarded one, and a pruned
-    prediction still uses a data collection staff member."""
+def test_revealed_predictions_on_one_theory_are_all_scored():
+    """Outcome and Prediction Reveal; Scoring predictions: two researchers reveal predictions on the
+    same theory on different Probes. Both are scored, both use a staff member, and the retraction
+    counter moves once for each Probe."""
     state = _at_prediction()
     first, second = state.turn_order()[:2]
     t = _theory(state, second, {"IP1": "a"}, {"WO1": "down"})  # fails on every Probe
@@ -161,10 +161,93 @@ def test_reveal_pruning_keeps_turn_order_and_pruned_prediction_uses_staff():
     state = _to_reveal(state)
     state = do(state, a.RevealPrediction(seat=first, prediction=p_first), a.RevealPrediction(seat=second, prediction=p_second))
     state = _finish(state)
-    assert _log(state, p_first).status == "scored" and _log(state, p_second).status == "pruned"
+    assert _log(state, p_first).status == "scored" and _log(state, p_second).status == "scored"
     assert state.researcher(first).credit - before[first] == S.failed_non_prereg_pred_ac
-    assert state.researcher(second).credit - before[second] == S.citation_reward
+    assert state.researcher(second).credit - before[second] == S.failed_non_prereg_pred_ac
     assert state.researcher(second).used.get(Task.DATA_COLLECTION, 0) == 1
+    if S.retraction_threshold > 2:
+        assert state.paper(t.id).retraction == 2
+
+
+def test_one_theory_once_by_a_researcher_on_a_probe():
+    """Formulating predictions and preregistration: one theory can only be used once by the same
+    researcher on the same Probe in a round, identical copies included."""
+    state = _at_prediction()
+    t = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"})
+    copy = _theory(state, 0, {"IP1": "a"}, {"WO1": "up"})
+    state, _ = _predict(state, 0, t.id, 0)
+    for theory in (t.id, copy.id):
+        with pytest.raises(IllegalAction, match="already predict"):
+            apply(state, a.MakePrediction(seat=0, theory=theory, probe=0))
+        assert not any(o.type == "make_prediction" and any(x.theory == theory and x.probe == 0 for x in o.actions)
+                       for o in legal_actions(state, 0))
+    state, _ = _predict(state, 0, t.id, 1)  # another Probe
+    state, _ = _predict(state, 1, t.id, 0)  # another researcher
+
+
+def test_success_counters_move_once_per_theory_per_probe():
+    """Successful predictions: the Nobel Prize counter is adjusted once for each theory per Probe per
+    round; each prediction still earns its credit and the author's citation reward. The patent goes to
+    the first successful predictor in scoring order."""
+    state = _at_prediction(n=3)
+    first, second, third = state.turn_order()
+    t = _theory(state, third, {"IP1": "a"}, {"WO1": "up"})
+    before = _credits(state)
+    state, _ = _predict(state, first, t.id, 0, prereg=True)
+    state, _ = _predict(state, second, t.id, 0, prereg=True)
+    state = _finish(state)
+    assert state.paper(t.id).nobel == 1
+    assert state.paper(t.id).patents == [first]
+    gained = 1 * 1 * 2  # one input, one outcome, preregistered
+    assert state.researcher(second).credit - before[second] == gained
+    assert state.researcher(third).credit - before[third] == 2 * S.citation_reward
+
+
+def test_failure_counters_move_once_per_theory_per_probe():
+    """Failed predictions: the retraction counter is adjusted once for each theory per Probe per round."""
+    state = _at_prediction(n=3)
+    first, second, third = state.turn_order()
+    t = _theory(state, third, {"IP1": "a"}, {"WO1": "down"}, nobel=2)
+    state, _ = _predict(state, first, t.id, 0, prereg=True)
+    state, _ = _predict(state, second, t.id, 0, prereg=True)
+    state = _finish(state)
+    assert (state.paper(t.id).retraction, state.paper(t.id).nobel) == (1, 0)
+
+
+def test_a_theory_retracted_during_scoring_still_scores_the_later_predictions():
+    """Open question R8: a theory retracted by an earlier failed prediction; a later prediction that
+    cited it is scored for the researcher who made it."""
+    state = _at_prediction()
+    first, second = state.turn_order()[:2]
+    t = _theory(state, second, {"IP1": "a"}, {"WO1": "down"}, retraction=S.retraction_threshold - 1)
+    before = _credits(state)
+    state, _ = _predict(state, first, t.id, 0, prereg=True)
+    state, late = _predict(state, second, t.id, 1, prereg=True)
+    state = _finish(state)
+    assert all(p.id != t.id for p in state.published)
+    assert _log(state, late).status == "scored"
+    expected = S.failed_prereg_pred_ac + S.retraction_ac_penalty
+    assert state.researcher(second).credit - before[second] == expected
+
+
+def test_scoring_order_choice_follows_counters_moved_earlier_in_the_round():
+    """Scoring predictions: a theory one step from the Nobel Prize only after an earlier prediction
+    this round moved its counter still makes the later group's order a choice."""
+    state = _at_prediction()
+    first, second = state.turn_order()[:2]
+    near = _theory(state, first, {"IP3": "p"}, {"WO1": "up"}, nobel=S.nobel_condition - 2)
+    other = _theory(state, second, {"IP1": "a"}, {"WO1": "up"}, nobel=S.nobel_condition - 1)
+    state, _ = _predict(state, first, near.id, 0, prereg=True)
+    state, a_id = _predict(state, second, near.id, 1, prereg=True)
+    state, b_id = _predict(state, second, other.id, 1, prereg=True)
+    for _ in range(10):
+        if state.phase == Phase.SCORING_ORDER or state.result or state.phase not in STEPS:
+            break
+        state = do(state, a.CommitPhase(seat=state.waiting[0]))
+    assert state.phase == Phase.SCORING_ORDER and state.waiting == [second]
+    state = do(state, a.OrderPredictions(seat=second, order=[a_id, b_id]))
+    state = _finish(state)
+    assert state.result.primary == [first]
 
 
 # Scoring predictions ---------------------------------------------------------------------
@@ -332,7 +415,7 @@ def test_researcher_orders_own_predictions_on_one_probe(winner_first):
     assert state.result.primary == [theories[winner_first].author]
 
 
-# Preregistration pruning: identical theories (specification 5.7) -------------------------
+# Identical theories (Formulating predictions and preregistration; specification 5.7) ------------
 def _identical(n=3):
     state = _at_prediction(n=n, dc=1)
     for r in state.researchers:
@@ -347,7 +430,7 @@ def _cited(state, theory_id):
 
 
 def test_identical_theory_with_someone_elses_fresh_marker_is_not_a_candidate():
-    """Preregistration pruning (specification 5.7): another researcher's Fresh out of print theory is
+    """Identical theories (specification 5.7): another researcher's Fresh out of print theory is
     never cited, even with the lower Nobel counter."""
     state = _identical()
     first = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"}, nobel=3)
@@ -356,7 +439,7 @@ def test_identical_theory_with_someone_elses_fresh_marker_is_not_a_candidate():
 
 
 def test_identical_theories_prefer_the_author_with_lower_credit():
-    """Preregistration pruning: preference 3, the theory of the researcher with the lowest credit."""
+    """Identical theories: preference 3, the theory of the researcher with the lowest credit."""
     state = _identical()
     rich = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"})
     poor = _theory(state, 2, {"IP1": "a"}, {"WO1": "up"})
@@ -365,7 +448,7 @@ def test_identical_theories_prefer_the_author_with_lower_credit():
 
 
 def test_identical_theories_prefer_the_earlier_publication():
-    """Preregistration pruning: preference 4, the earlier published theory."""
+    """Identical theories: preference 4, the earlier published theory."""
     state = _identical()
     later = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"}, round=2)
     earlier = _theory(state, 2, {"IP1": "a"}, {"WO1": "up"}, round=1)
@@ -373,7 +456,7 @@ def test_identical_theories_prefer_the_earlier_publication():
 
 
 def test_identical_theories_same_round_go_to_earlier_author_in_turn_order():
-    """Preregistration pruning (specification 5.7): a remaining tie goes to the author earlier in turn order."""
+    """Identical theories (specification 5.7): a remaining tie goes to the author earlier in turn order."""
     state = _identical()
     by_author = {seat: _theory(state, seat, {"IP1": "a"}, {"WO1": "up"}, round=1) for seat in (1, 2)}
     earlier = next(s for s in state.turn_order() if s in by_author)
@@ -381,19 +464,19 @@ def test_identical_theories_same_round_go_to_earlier_author_in_turn_order():
 
 
 # Crisis -----------------------------------------------------------------------------------
-def test_probe_with_only_pruned_predictions_counts_as_missed():
-    """Crisis (specification 5.7): a Probe whose only predictions were pruned counts as a Probe where
-    no one made a prediction. Three Probes: one kept successful prediction, one pruned, one empty,
-    so two unsuccessful predictions. [crisis_condition] is raised here so the game goes on."""
+def test_probe_without_predictions_counts_as_missed():
+    """Crisis: a Probe where no one made a prediction is an unsuccessful prediction. Three Probes: two
+    successful predictions on the same theory, one empty. [crisis_condition] is raised here so the
+    game goes on."""
     state = _at_prediction(period="crisis", crisis_condition=10)
     first, second = state.turn_order()[:2]
     t = _theory(state, 0, {"IP1": "a"}, {"WO1": "up"})
     state, _ = _predict(state, first, t.id, 0)
-    state, pruned = _predict(state, second, t.id, 1)
+    state, scored = _predict(state, second, t.id, 1)
     state = _finish(state)
-    assert _log(state, pruned).status == "pruned"
+    assert _log(state, scored).status == "scored"
     assert len(state.probes) == 3
-    assert state.unsuccessful_predictions == 2
+    assert state.unsuccessful_predictions == 1
 
 
 @pytest.mark.parametrize("below", [0, 1])
@@ -430,11 +513,15 @@ def test_predictions_are_limited_per_data_collection_staff_member():
 
 def test_the_limit_grows_with_the_staff():
     state = _at_prediction(dc=2)
-    t = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"})
-    for _ in range(S.predictions_per_staff * 2):
-        state, _ = _predict(state, 0, t.id, 0)
+    theories = [_theory(state, 1, {"IP1": "a"}, {"WO1": "up"}), _theory(state, 1, {"IP2": "x"}, {"WO2": "big"}),
+                _theory(state, 1, {"IP3": "p"}, {"WO1": "up"})]
+    pairs = [(t.id, probe.index) for t in theories for probe in state.probes]
+    allowed = S.predictions_per_staff * 2
+    for theory, probe in pairs[:allowed]:
+        state, _ = _predict(state, 0, theory, probe)
+    theory, probe = pairs[allowed]
     with pytest.raises(IllegalAction, match="at most"):
-        apply(state, a.MakePrediction(seat=0, theory=t.id, probe=0))
+        apply(state, a.MakePrediction(seat=0, theory=theory, probe=probe))
 
 
 def test_a_game_saved_before_the_limit_has_none():

@@ -641,27 +641,32 @@ class StrategyBot:
         prereg = [m for m in makes if m.preregister]
         hidden = [m for m in makes if not m.preregister]
         plan: list[BaseModel] = []
-        used: list = []  # theory contents already used: identical published copies count as one theory
+        # (theory content, Probe) pairs already used: one theory, identical copies included, once
+        # per Probe (Formulating predictions and preregistration).
+        used: list = []
 
         def content(m):
             return theory_key(papers[m.theory]["inputs"], papers[m.theory]["outcomes"])
+
+        def slot(m):
+            return (content(m), m.probe)
 
         def take(pool, key, limit):
             for m in sorted(pool, key=key, reverse=True):
                 if len(plan) >= limit:
                     break
-                if content(m) not in used:
+                if slot(m) not in used:
                     plan.append(m)
-                    used.append(content(m))
+                    used.append(slot(m))
 
         if crisis:  # every prediction is preregistered
             if self.motive == "cooperative":
                 mine = [slot for slot, owner in self._field_plan(view) if owner == seat]
                 for probe, key in mine:
                     choice = next((m for m in prereg if m.probe == probe and content(m) == key), None)
-                    if choice is not None and len(plan) < capacity and key not in used:
+                    if choice is not None and len(plan) < capacity and slot(choice) not in used:
                         plan.append(choice)
-                        used.append(key)
+                        used.append(slot(choice))
             else:
                 good = [m for m in prereg if self._expected(papers[m.theory], True, True, papers[m.theory]["author"] == seat) > 0]
                 take(good, lambda m: self._expected(papers[m.theory], True, True, papers[m.theory]["author"] == seat), capacity)
@@ -674,9 +679,9 @@ class StrategyBot:
             pool = [(1, papers[m.theory]["nobel"], 0.0, m) for m in refute]
             pool += [(0, 0, self.tally.rate(papers[m.theory]["inputs"], papers[m.theory]["outcomes"]), m) for m in confirm]
             for *_, m in sorted(pool, key=lambda x: x[:3], reverse=True):
-                if len(plan) < capacity and content(m) not in used:
+                if len(plan) < capacity and slot(m) not in used:
                     plan.append(m)
-                    used.append(content(m))
+                    used.append(slot(m))
             return plan
 
         # Selfish, Calm period: confident preregistrations with its own theories that have no
@@ -691,12 +696,14 @@ class StrategyBot:
         self._cash_in = []
         for m in hidden:
             paper = papers[m.theory]
-            if content(m) in used:  # a preregistered prediction already uses this theory
+            if slot(m) in used:  # a preregistered prediction already uses this theory on this Probe
                 continue
             if paper["author"] == seat or paper["nobel"] >= self.bot.kill_counter:
                 plan.append(m)  # own theories, and rivals' Nobel candidates to kill
+                used.append(slot(m))
             elif self._expected(paper, False, False, False) > 0 and self._expected(paper, False, False, False) >= self.bot.rival_citation_factor * best_own:
                 plan.append(m)
+                used.append(slot(m))
                 if m.theory not in self._cash_in:
                     self._cash_in.append(m.theory)
         return plan
@@ -708,9 +715,8 @@ class StrategyBot:
 
     def _field_plan(self, view) -> list[tuple[tuple[int, Any], int]]:
         """Cooperative, in the Crisis: the plan the cooperative researchers would agree on at the
-        table. Each Probe gets a different theory (a theory can back only one revealed prediction
-        a round), covering as many Probes as possible with the best-supported theories; the
-        predictions are then shared out in turn order by Data collection staff.
+        table. Each Probe gets its best-supported theory (one theory may serve several Probes);
+        the predictions are then shared out in turn order by Data collection staff.
         Returns ((probe, theory content), seat) pairs."""
 
         tally = self._public_tally()
@@ -732,32 +738,12 @@ class StrategyBot:
             )
             for probe in probes
         ]
-        best: tuple[int, float, list] = (-1, -1.0, [])
-
-        def search(i, used, chosen, covered, total):
-            nonlocal best
-            if (covered, total) > best[:2]:
-                best = (covered, total, list(chosen))
-            if i == len(probes):
-                return
-            if covered + (len(probes) - i) < best[0]:
-                return
-            for rate, key in options[i]:
-                if key not in used:
-                    used.append(key)
-                    chosen.append((probes[i]["index"], key))
-                    search(i + 1, used, chosen, covered + 1, total + rate)
-                    chosen.pop()
-                    used.pop()
-            search(i + 1, used, chosen, covered, total)
-
-        search(0, [], [], 0, 0.0)
+        slots = [(probe["index"], choices[0][1]) for probe, choices in zip(probes, options) if choices]
         capacity = {
             r["seat"]: sum(c["postdocs"] + c["students"] for t, c in r["staff"].items() if t == Task.DATA_COLLECTION.value)
             for r in view["researchers"]
         }
         plan, order = [], [x for x in view["turn_order"] if capacity.get(x, 0) > 0]
-        slots = best[2]
         for slot in [x for x in slots if contents[x[1]]["fresh"]]:  # only the author may use a fresh theory
             author = contents[slot[1]]["author"]
             if capacity.get(author, 0) > 0:
@@ -780,7 +766,7 @@ class StrategyBot:
         papers = {p["id"]: p for p in self._theories(view)}
         mine = {p["id"]: p for p in view["predictions"] if p["seat"] == seat}
         listed = [x for x in by_type["reveal_prediction"].actions if x.reveal]
-        prereg = sum(1 for p in mine.values() if p["preregistered"] and p["status"] != "pruned")
+        prereg = sum(1 for p in mine.values() if p["preregistered"])
         room = self._staff(view, Task.DATA_COLLECTION) - prereg
         kills, wins = [], []
         for x in listed:
@@ -792,12 +778,10 @@ class StrategyBot:
                 kills.append((paper["nobel"], x, p["theory"]))
             elif p["success"] and (paper["author"] == seat or p["theory"] in self._cash_in):
                 wins.append((self._success_value(paper, False, False, paper["author"] == seat), x, p["theory"]))
-        plan, used = [], []
+        plan = []
         for _, x, theory in sorted(kills, key=lambda k: k[0], reverse=True) + sorted(wins, key=lambda k: k[0], reverse=True):
-            key = theory_key(papers[theory]["inputs"], papers[theory]["outcomes"])
-            if len(plan) < room and key not in used:
+            if len(plan) < room:
                 plan.append(x)
-                used.append(key)
         return plan
 
     def _order(self, view, by_type) -> list[BaseModel]:

@@ -128,8 +128,6 @@ def render_text(view: dict[str, Any]) -> str:
             flags.append("open access")
         if p["fresh"]:
             flags.append("Fresh out of print")
-        if p["sideways"]:
-            flags.append("cited this round")
         counters = f" | Nobel {p['nobel']}/{view['nobel_condition']} | Retraction {p['retraction']}/{view['retraction_threshold']}" if p["kind"] == "theory" else ""
         patents = f" | patents: {', '.join(name(s) for s in p['patents'])}" if p["patents"] else ""
         out(f"  {letter}{p['id']} {name(p['author'])} tier {p['tier']}: {idea_text(p)}{counters}{patents}{' | ' + ', '.join(flags) if flags else ''}")

@@ -69,7 +69,7 @@ def test_reveal_preview_knows_the_outcome():
     state = _to_reveal(state)
     assert state.phase == Phase.REVEAL
     reveals = task_preview(state, 0)["reveals"]
-    assert reveals[good]["success"] and reveals[good]["patent"] == "new" and not reveals[good]["pruned"]
+    assert reveals[good]["success"] and reveals[good]["patent"] == "new"
     assert not reveals[bad]["success"] and reveals[bad]["patent"] is None
     assert reveals[bad]["credit"] == S.failed_non_prereg_pred_ac
 
@@ -132,17 +132,17 @@ def test_report_of_a_failure():
     assert entry["credit"] == S.failed_prereg_pred_ac
 
 
-def test_report_of_a_pruned_prediction():
+def test_report_of_two_predictions_on_one_theory():
     state = _at_prediction()
     first, second = state.turn_order()[:2]
     t = _theory(state, second, *WRONG)
-    state, kept = _predict(state, first, t.id, 0, prereg=True)
-    state, pruned = _predict(state, second, t.id, 1, prereg=True)
+    state, one = _predict(state, first, t.id, 0, prereg=True)
+    state, two = _predict(state, second, t.id, 1, prereg=True)
     state = _finish(state)
-    assert _entry(state, kept)["outcome"] == "failed"
-    entry = _entry(state, pruned)
-    assert entry["outcome"] == "pruned" and entry["credit"] is None
-    assert (entry["author"], entry["author_credit"]) == (second, S.citation_reward)
+    for pid in (one, two):
+        entry = _entry(state, pid)
+        assert entry["outcome"] == "failed" and entry["credit"] == S.failed_prereg_pred_ac
+        assert entry["author"] == second
 
 
 def test_report_leaves_out_predictions_that_stayed_hidden():

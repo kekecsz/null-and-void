@@ -159,7 +159,7 @@ class Paper(_Model):
     nobel: int = 0
     retraction: int = 0
     fresh: bool = True  # Fresh out of print marker
-    sideways: bool = False  # cited this round
+    sideways: bool = False  # unused: kept so games saved under the earlier citation rule load
     patents: list[int] = []  # one entry per patent: the seat that owns it
 
     @property
@@ -220,12 +220,13 @@ class Prediction(_Model):
     outcomes: dict[str, str]
     preregistered: bool = False
     revealed: bool = False
-    reveal_step: int | None = None  # 1 = Preregistration pruning, 2 = Prediction Reveal
+    reveal_step: int | None = None  # 1 = preregistered (revealed first), 2 = Prediction Reveal
     cited: int | None = None  # the theory cited after the identical-theory preference
+    # "pruned" only in games saved under the earlier Preregistration pruning rule.
     status: Literal["hidden", "revealed", "pruned", "scored", "discarded"] = "hidden"
     success: bool | None = None  # set for every prediction once outcomes are revealed
     readings: dict[str, str | None] = {}  # hidden bookkeeping: the Probe's visible readings (debrief)
-    # What scoring or pruning did, for the prediction report (specification 7.4).
+    # What scoring did, for the prediction report (specification 7.4).
     author: int | None = None  # of the cited theory
     credit_change: int | None = None
     author_credit_change: int | None = None

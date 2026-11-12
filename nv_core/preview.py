@@ -49,7 +49,7 @@ def _theories(ctx: Ctx, seat: int) -> dict[int, dict[str, Any]]:
 
 
 def _reveals(ctx: Ctx, seat: int) -> dict[int, dict[str, Any]]:
-    """For each of the researcher's predictions: what revealing it does, if it is not pruned."""
+    """For each of the researcher's predictions: what revealing it does."""
     state = ctx.state
     crisis = state.period == "crisis"
     result = {}
@@ -66,7 +66,6 @@ def _reveals(ctx: Ctx, seat: int) -> dict[int, dict[str, Any]]:
             "author_credit": author_gained if paper.author == seat else None,
             "patent": patent,
             "patent_holder": patent_holder,
-            "pruned": p.status == "pruned",
         }
     return result
 

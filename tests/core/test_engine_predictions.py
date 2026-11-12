@@ -1,4 +1,4 @@
-"""Rules engine: Observation and prediction phase (predictions, preregistration, pruning,
+"""Rules engine: Observation and prediction phase (predictions, preregistration,
 reveal, scoring), Nobel Prize, Retraction and Crisis.
 
 The tiny world (tests/core/engine_helpers.py) has WO1 = up exactly when IP1 = a. Theories on
@@ -62,13 +62,14 @@ def test_preregistration_limited_by_data_collection_staff():
         apply(state, a.MakePrediction(seat=0, theory=t["V"], probe=1, preregister=True))
 
 
-def test_one_preregistered_prediction_per_theory():
-    """Specification 5.7: no second preregistered prediction on the same theory."""
+def test_one_theory_once_per_probe():
+    """Formulating predictions and preregistration: one theory once by the same researcher on
+    the same Probe; on another Probe it can be preregistered again."""
     state, t = _prediction_phase(T=(1, {"IP3": "p"}, {"WO1": "up"}))
     state = do(state, a.MakePrediction(seat=0, theory=t["T"], probe=0, preregister=True))
-    with pytest.raises(IllegalAction, match="already preregistered"):
-        apply(state, a.MakePrediction(seat=0, theory=t["T"], probe=1, preregister=True))
-    apply(state, a.MakePrediction(seat=0, theory=t["T"], probe=1))  # a hidden one is allowed
+    with pytest.raises(IllegalAction, match="already predict"):
+        apply(state, a.MakePrediction(seat=0, theory=t["T"], probe=0))
+    apply(state, a.MakePrediction(seat=0, theory=t["T"], probe=1, preregister=True))
 
 
 def _finish_predictions(state):
@@ -121,23 +122,20 @@ def test_retraction_returns_the_theory_and_penalises_its_author():
     assert state.researcher(1).credit == max(0, before[1] + S.retraction_ac_penalty)
 
 
-def test_pruning_keeps_earlier_turn_order_and_pays_citation_per_discarded_prediction():
+def test_two_researchers_on_one_theory_are_both_scored():
+    """Outcome and Prediction Reveal: every revealed prediction is scored, also when another
+    researcher used the same theory."""
     state, t = _prediction_phase(n=3, allocations=ONE, T=(2, {"IP3": "p"}, {"WO1": "down"}))
     order = state.turn_order()
     first, second = order[0], order[1]
-    author_before = state.researcher(2).credit
     state = do(
         state,
         a.MakePrediction(seat=first, theory=t["T"], probe=0, preregister=True),
         a.MakePrediction(seat=second, theory=t["T"], probe=1, preregister=True),
     )
-    if 2 in (first, second):
-        pytest.skip("this seed puts the author among the predictors")
     state, events = _finish_predictions(state)
     statuses = {p.seat: p.status for p in state.prediction_log}
-    assert statuses[first] == "scored" and statuses[second] == "pruned"
-    # One discarded prediction -> one citation reward; the kept prediction failed (calm: no reward).
-    assert state.researcher(2).credit - author_before == S.citation_reward
+    assert statuses[first] == "scored" and statuses[second] == "scored"
 
 
 def test_identical_theories_prefer_own():
