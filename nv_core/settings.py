@@ -82,6 +82,14 @@ class Settings(_Strict):
     # Experiments and methods
     experiment_free_input_parameters: StrictInt
     experiment_method_citation_AC_reward: StrictInt
+    # A game saved before these settings existed keeps the rules it was started under (no lab
+    # capacity, no Records capacity, no archiving). The parameter file must still list them: see _validate.
+    starting_lab_capacity_advanced: StrictInt | None = None
+    bonus_lab_capacity_1: StrictInt | None = None
+    bonus_lab_capacity_2: StrictInt | None = None
+    bonus_lab_capacity_3: StrictInt | None = None
+    records_capacity: StrictInt | None = None
+    max_archive_per_staff_member: StrictInt | None = None
     # Predictions
     citation_reward: StrictInt
     failed_non_prereg_pred_ac: StrictInt
@@ -113,6 +121,19 @@ class Settings(_Strict):
     # A game saved before this table existed keeps the rule it was started under, in which the
     # track position itself was both values. The parameter file must still list it: see _validate.
     talent_development_track: list[TalentPosition] | None = None
+
+    def lab_capacity_costs(self) -> list[int]:
+        """Experimentation and equipment phase: the cost of each step of lab capacity above the
+        start, in order (bonus_lab_capacity_1, _2, ...). The last step is the maximum."""
+        costs = []
+        number = 1
+        while f"bonus_lab_capacity_{number}" in type(self).model_fields:
+            cost = getattr(self, f"bonus_lab_capacity_{number}")
+            if cost is None:
+                break
+            costs.append(cost)
+            number += 1
+        return costs
 
     def prediction_limit(self, data_collection_staff: int) -> int | None:
         """Formulating predictions and preregistration: the most predictions a researcher may make

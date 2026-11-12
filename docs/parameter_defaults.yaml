@@ -37,10 +37,16 @@ input_parameter_deck_size: 120             # cards; must divide by every paramet
 probe_true_input_deck_size: 8              # cards
 probe_fake_input_deck_size: 4              # Noise Cards at sensor level 1
 sensor_install_and_upgrade_AC_reward: 1    # academic credit per sensor level reached
+records_capacity: 4
+max_archive_per_staff_member: 2
 
 # Experiments and methods
 experiment_free_input_parameters: 2
 experiment_method_citation_AC_reward: 1    # academic credit
+starting_lab_capacity_advanced: 2
+bonus_lab_capacity_1: 1
+bonus_lab_capacity_2: 2
+bonus_lab_capacity_3: 4
 
 # Predictions (academic credit)
 citation_reward: 1

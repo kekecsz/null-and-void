@@ -54,6 +54,8 @@ Each researcher starts on position \[talent\_development\_track\_starting\_posit
 
 Each researcher starts on position \[grant\_track\_starting\_position\] on the Grant funding track.
 
+Each researcher starts with a lab capacity of \[starting\_lab\_capacity\_advanced\].
+
 By default, the first researcher token goes to one of the players randomly determined. (Alternatively, the players can agree that it goes to the player who has most recently submitted an academic work in real life (hand-in assignment, paper, grant, thesis, etc.)).
 
 Each researcher starts with the funding of their Grant track starting position.
@@ -110,7 +112,7 @@ Each research staff member is allocated to one of the following tasks during the
 
 (Designer’s note: Students can and do develop new theories and methods, and they can train and scout staff. Restricting their allocation to these tasks was strictly a game mechanical choice, to limit too fast engine development.)
 
-The number of staff members that can be allocated to the tasks is unlimited, except for Talent development where only a single staff member can be allocated.
+The number of staff members that can be allocated to the tasks is unlimited, except for Experimentation, where the allocation is capped at the Researcher’s lab capacity, and Talent development where only a single staff member can be allocated.
 
 Hiring and task allocation is resolved parallel across researchers in secret.
 
@@ -139,9 +141,17 @@ For each staff member allocated to Experimentation, the researcher can choose on
 
 Experimentation and equipment phase is completed sequentially. Each researcher, in turn order, resolves their action, decides which published method(s) they want to cite (if any). Researchers can also pass when it is their turn. If they cannot run any more experiments for some reason (e.g. no more staff members), they must pass. A researcher who passed can not specify any more experiments in that round. The turns alternate until all researchers have passed.
 
-Experimentation and equipment development actions often require citation of Methods. Cited Methods are turned sideways, indicating that they can no longer be used this round\!
+Experimentation and equipment development actions often require citation of Methods.
 
-(Developer note: This resembles the expectation of constant innovation in the field.)
+Lab capacity determines how many staff members can be allocated to Experimentation. Although space is limited on the research station, given enough funds and time, it can be expanded. A player who has at least one staff member allocated to experimentation may any time during the Experimentation and equipment phase choose to spend money to increase their Lab capacity by 1 (and only 1 per round), up to a maximum of \[starting\_lab\_capacity\_advanced\]+3. The cost increases with the lab size:
+
+lab capacity \[starting\_lab\_capacity\_advanced\]+1: \[bonus\_lab\_capacity\_1\]
+
+lab capacity \[starting\_lab\_capacity\_advanced\]+2: \[bonus\_lab\_capacity\_2\]
+
+lab capacity \[starting\_lab\_capacity\_advanced\]+3: \[bonus\_lab\_capacity\_3\]
+
+Increasing lab capacity does not use any staff members.   
 
 ## Running experiments
 
@@ -163,7 +173,9 @@ The world outcome is determined and revealed to the researcher immediately after
 
 ## Recording experimental findings
 
-Following the experiments, researchers place the cards from the experiments in the Fresh records area on the player mat. Records can later be used to form experiment record stacks that will support  manuscript submissions. 
+Following the experiments, researchers place the cards from the experiments in the Records area on the player mat. Records can later be used to form experiment record stacks that will support  manuscript submissions. 
+
+New records always enter at the first record position, and push older records one position higher. (Older records in positions beyond the Records capacity of \[records\_capacity\] will be discarded during Clean-up).
 
 ## Sensor installation and upgrade
 
@@ -193,7 +205,7 @@ Those researchers who do not have Probe time yet on any of the Probes place thei
 
 ## Revealing input parameters
 
-Probe stacks are dealt at the start of the Observation and prediction phase (so sensors installed in the Experimentation phase apply in the same round). If the Probe deck is exhausted, re-match discarded probe-stacks from the discard pile, and reshuffle. Cards are tracked by origin. Input Parameter Deck cards go to that deck's discard pile when they are thrown away: unrevealed noise cards at the end of the Observation and prediction phase, Probe readings that nobody records, and records discarded from Stale or after publication. Cards held in records or manuscripts are not reshuffled.
+Probe stacks are dealt at the start of the Observation and prediction phase (so sensors installed in the Experimentation phase apply in the same round). If the Probe deck is exhausted, re-match discarded probe-stacks from the discard pile, and reshuffle. Cards are tracked by origin. Input Parameter Deck cards go to that deck's discard pile when they are thrown away: unrevealed noise cards at the end of the Observation and prediction phase, Probe readings that nobody records, and records discarded from the Records area or after publication. Cards held in records or manuscripts are not reshuffled.
 
 For each round, the true Probe states (both inputs and outputs) are already pre-determined by the scenario that the players are playing (see scenario setup rules). However, during the Calm period, researchers have restricted resources, and the world they study is noisy, so they get restricted information about the world state.
 
@@ -225,9 +237,11 @@ Formulating predictions and preregistration is done in parallel across researche
 
 To formulate a prediction, the researcher must have at least one research staff member assigned to data collection.
 
-Predictions mimic the structure of Probes and Theories. They specify input parameter states and world outcome states. Each prediction must be an exact copy of a published theory, and it needs to be linked to a Probe. There can be no mismatching input parameter states between the prediction and the Probe. (This means that a theory including only one input parameter state can be used for prediction on a Probe that has multiple input parameters revealed. Also, a theory that includes four input parameter states can be used for prediction on a Probe that has only two input parameters revealed). The no mismatching input parameter state between theory and Probe reading is checked against the visible Probe readings (which can differ from the true world state due to sensor noise).
+Predictions mimic the structure of Probes and Theories. They specify input parameter states and world outcome states. Each prediction must be an exact copy of a published theory, and it needs to be linked to a Probe. There can be no mismatching input parameter states between the prediction and the Probe. (This means that a theory including only one input parameter state can be used for prediction on a Probe that has multiple input parameters revealed. Also, a theory that includes four input parameter states can be used for prediction on a Probe that has only two input parameters revealed). The no mismatching input parameter state between theory and Probe reading is checked against the visible Probe readings (which can differ from the true world state due to sensor noise). One theory can only be used once by the same Researcher on the same Probe within the same round. Also, no identical prediction can be made by the same Researcher on the same Probe within the same round though using another identical theory. 
 
-Theories with the Fresh out of print marker can only be used by their authors.
+Theories with the Fresh out of print marker can only be cited by their authors.
+
+When there are multiple identical theories matching the prediction, the cited theory is determined based on this preference order: 1\. the researcher’s own theory, 2\. the theory with the lowest value on its Nobel Prize counter (to prevent another researcher from getting the Nobel Prize), 3\. the theory of the researcher with the lowest academic credit (to reduce the lead of the leading player), 4\. the earlier published theory gets the citation.
 
 The specified Input Parameter states of the predictions are taken from the State Cards directly (not the Input Parameter Deck or the Probes).
 
@@ -239,29 +253,17 @@ During the Calm period, Researchers can choose to make some of their predictions
 
 During the Crisis period all Predictions must be preregistered. Hidden predictions are no longer allowed. So during the Crisis period a researcher can make at most as many predictions as research staff they allocated to data collection.
 
-## Preregistration pruning
-
-Once everyone is finished with Formulating predictions and preregistration assignment, the lab shields are removed to reveal the predictions (Preregistered predictions are shown face up, non-preregistered predictions are hidden face down).
-
-There cannot be two revealed predictions that are based on the same theory (no matter which Probe they are predicting). If two predictions that are Preregistered are based on the same theory, the one belonging to the researcher who is earlier in turn order stays in the game. The other predictions are discarded and \[citation\_reward\] academic credits are awarded for each discarded prediction to the researcher who published the cited theory. If the same player has multiple predictions revealed citing the same theory, they must discard all but one of them.
-
-When there are multiple identical theories matching the prediction, the cited theory is determined based on this preference order: 1\. the researcher’s own theory, 2\. the theory with the lowest value on its Nobel Prize counter (to prevent another researcher from getting the Nobel Prize), 3\. the theory of the researcher with the lowest academic credit (to reduce the lead of the leading player), 4\. the earlier published theory gets the citation.
-
 ## Outcome and Prediction Reveal
 
-Once Preregistration pruning is concluded, world outcomes are revealed.
+Once everyone is finished with Formulating predictions and preregistration assignment, all Researchers reveal their preregistered predictions to the others. 
 
-Next, a Prediction Reveal allocation starts. Researchers can decide to reveal any of their predictions, but only up to the number of research staff they have allocated to data collection, and only predictions that are not based on the same theory as any Preregistered prediction. They choose simultaneously and in secret, by turning predictions they want to reveal face up behind their lab shields. The lab shields are removed once everyone is finished, to show the revealed predictions. (Preregistered predictions stay revealed automatically, whether they were successful or not. This means that if a researcher already has as many Preregistered predictions as the number of research staff they allocated to data collection, they can not reveal any of their secret predictions.) 
+After this, the world outcomes are revealed.
 
-As stated above, there cannot be two revealed predictions that are based on the same theory (no matter which Probe they are predicting). If two predictions are revealed that are based on the same theory, the one belonging to the researcher who is earlier in turn order stays in the game. The other prediction is discarded and \[citation\_reward\] academic credits are awarded for each discarded prediction to the researcher who published the cited theory. If the same player has multiple predictions revealed citing the same theory, they must discard all but one of them.
+Next, a Prediction Reveal allocation starts. Researchers can decide to reveal any of their predictions, but only up to the number of research staff they have allocated to data collection. They choose simultaneously and in secret, by turning predictions they want to reveal face up behind their lab shields. The lab shields are removed once everyone is finished, to show the revealed predictions. (Preregistered predictions stay revealed automatically, whether they were successful or not. This means that if a researcher already has as many Preregistered predictions as the number of research staff they allocated to data collection, they can not reveal any of their secret predictions.) 
 
-(Designer’s note: Mind-games can occur during prediction selection, preregistration allocation, and prediction reveal allocation, to avoid duplicating predictions.)
+Once every researcher revealed all of the predictions they wanted, Scoring happens.
 
-Theories can be turned sideways to help to keep track of which theories are cited already this round.
-
-Once every researcher revealed all of the predictions they wanted, and prediction pruning is finished, Scoring happens.
-
-As many staff members are used during the Observation and prediction phase as many Predictions the researcher revealed (even if it was pruned), including Preregistered predictions.
+As many staff members are used during the Observation and prediction phase as many Predictions the researcher revealed, including Preregistered predictions.
 
 ## Scoring predictions
 
@@ -269,7 +271,7 @@ Only revealed predictions count for scoring purposes.
 
 A prediction is considered successful when all world outcomes shown on the theory used for the prediction matches the world outcome revealed for the Probe for which that prediction was made. If a theory shows only one world outcome, it only needs to match that world outcome on the Probe, the other world outcome is disregarded. A prediction is considered failed in every other case.
 
-Predictions are scored in the order they were revealed, so Preregistered predictions are scored first. Furthermore, predictions are scored in turn order, then in Probe order. If there are multiple predictions revealed for the same Probe by the same player, the player can decide the order in which these predictions are scored. (Precise Probe scoring order only matters for determining which theory wins the Nobel prize, so this can be ignored for most rounds). 
+Predictions are scored in the order they were revealed, so Preregistered predictions are scored first. Furthermore, predictions are scored in turn order, then in Probe order. If there are multiple predictions revealed for the same Probe by the same player, the player can decide the order in which these predictions are scored. (Precise Probe scoring order matters for determining who gets the patent for the successful prediction, and which theory wins the Nobel prize, in cases when there is no competition for these, probe scoring order can be ignored). 
 
 ## Failed predictions: 
 
@@ -287,7 +289,7 @@ Patent
 Counters
 
 - Sets the Nobel Prize counter of the cited theory to 0;   
-- Increases the retraction counter of the cited theory by 1\.
+- Increases the retraction counter of the cited theory by 1\. The retraction counter is only adjusted once for each theory per probe per round, so if the same theory was used for prediction in the same round on the same Probe by multiple researchers, the retraction counter is only increased once.
 
 *Successful predictions:* 
 
@@ -302,11 +304,11 @@ Academic credits
 
 Patent
 
-- A patent linked to the cited theory is created if that theory did not already have a linked patent, and is allocated to the researcher making the prediction (not the author of the cited theory).
+- A patent linked to the cited theory is created if that theory did not already have a linked patent, and is allocated to the researcher who made the prediction (not the author of the cited theory).
 
 Counters
 
-- Increases the Nobel Prize counter of the cited theory by 1;   
+- Increases the Nobel Prize counter of the cited theory by 1\. The Nobel Prize counter is only adjusted once for each theory per probe per round, so if the same theory was used for prediction in the same round on the same Probe by multiple researchers, the Nobel Prize counter is only increased once.    
 - Set the retraction counter of the cited theory to 0\.
 
 Self-citation is possible, and it yields the same reward (or penalty) as being cited by another researcher.
@@ -315,14 +317,15 @@ Self-citation is possible, and it yields the same reward (or penalty) as being c
 
 At the end of the Observation and prediction phase, the researcher who has Probe time for a given Probe takes all cards from the Probe, resembling that they record the observations. This observational record can be used to support a theory when it is submitted to a journal (see journal tiers). Since Probe readings are taken directly as observations, and Probe readings can be inaccurate, the observations carry these inaccuracies with them.
 
-Records are put in the Fresh records area on the player mat.
+Records are put in the Records area on the player mat.
 
 # Development phase
 
 For each staff member allocated to Development, the researcher can choose one of the following actions:
 
 - Formulate a theory  
-- Develop a method
+- Develop a method  
+- Archive a record
 
 Development actions are taken in parallel by the researchers.
 
@@ -360,6 +363,12 @@ When developing a method, researchers build a stack of cards including one card 
 
 (Methods need to be published before anyone can use them for experiments or sensor installation.)
 
+## Archiving records
+
+Researchers can archive their records, preserving them for the long term. At most \[max\_archive\_per\_staff\_member\] records can be archived for each staff member used for this action.
+
+Archived records no longer have a record position, thus, they are not discarded at Clean-up, nor do they count toward Records capacity. Nevertheless, archived records count as being in the Records area for all other purposes, so they can be used for theory formation, or as supporting records during submission.
+
 # Publication
 
 ## Submission
@@ -381,11 +390,11 @@ Theories and Methods need to be submitted to one of the journal tiers, and once 
 
 ## Supporting observational and experimental records
 
-If the journal tier requires observational or experimental support for the theory, recorded observations or experimental findings need to be included in the submission as well. The supporting records can be taken from the Fresh records or the Stale records areas. Each supporting record takes one card per slot from the player's pool (each card can be used only once). The supporting records must not have any mismatching elements (input parameters or world outcomes) with the theory they support. (A blank card never mismatches.) 
+If the journal tier requires observational or experimental support for the theory, recorded observations or experimental findings need to be included in the submission as well. The supporting records must be taken from the Records area. Each supporting record takes one card per slot from the player's pool (each card can be used only once). The supporting records must not have any mismatching elements (input parameters or world outcomes) with the theory they support. (A blank card never mismatches.) 
 
 Submissions can include supporting records that are not necessary for the journal tier (this may be useful to make a submission stack look like it is going for a high tier journal). Note that method submissions can have any supporting record attached. These records are submitted as part of the manuscript submission, and they travel as part of the card stack of the manuscript during the peer review and article processing. Once the theory or method is published, the supporting records are discarded. Submissions to a journal without peer review cannot include supporting records.
 
-Note, that at no time do other researchers see the cards involved in experiments of the researcher, this means that the experiment records supporting the manuscript can be mixed across cards involved in several experiments. (Although researchers must put together valid experiments, and only those cards can be used to support a publication which were part of experiments at one point.) All cards in the same supporting record stack must come from the same record area (either Fresh or Stale records), but if multiple supporting records are allowed, these multiple records can come from multiple record areas.
+Note, that at no time do other researchers see the cards involved in experiments of the researcher, this means that the experiment records supporting the manuscript can be mixed across cards involved in several experiments. (Although researchers must put together valid experiments, and only those cards can be used to support a publication which were part of experiments at one point.)
 
 (Designer’s note: the experimentation and data collection process is almost always hidden, allowing for questionable research practices, data falsification, and fabrication. The game is supposed to show that pressures on the field may drive an otherwise honest researcher to utilize questionable means to achieve goals. The game is also supposed to demonstrate that even if the individual researchers might get short term gains from these practices, the field, and society as a whole loses.)
 
@@ -443,7 +452,7 @@ The researcher who published the paper scores academic credit equal to the journ
 
 # Funding
 
-Funding is used to pay research staff and to pay article processing charges.
+Funding is used to pay research staff and article processing charges, and to build up lab capacity.
 
 There are two main funding sources: research grants and patents.
 
@@ -517,8 +526,6 @@ The values for each position are in parameter\_defaults.yaml in the \[talent\_de
 
 Each researcher pays \[cost\_of\_postdoc\] after each of their postdocs to the bank.
 
-Methods and Theories that have been turned sideways are returned to the upright position.
-
 Advance the Hot topic marker one space to the right. (When it is at the rightmost Probe at the beginning of the Clean-up phase, advance it to the leftmost Probe.) 
 
 Return the Researcher's markers from the Probe time slots.
@@ -547,9 +554,7 @@ Each researcher gets \[patent\_funding\] for each patent they own.
 
 During the Crisis period, advance the rounds in crisis track by one. When the crisis track cannot be advanced any further, the game ends.
 
-Records in the Stale records area are discarded.
-
-Records in the Fresh records area are advanced to the Stale records area.
+Records in the Records area that are in positions beyond their \[records\_capacity\] are discarded.
 
 The First researcher token moves to the next player counterclockwise. 
 

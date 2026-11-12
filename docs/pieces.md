@@ -48,9 +48,10 @@ The game uses the pieces below. The computer version uses the same pieces in vir
 - Lab shield.  
 - Player mat with:  
   - the staff allocation mat, with one area for each task (Development, Data collection, Experimentation, Write-up, Peer-review, Talent development with room for one staff member, and Grants) and a Fired postdocs area;  
-  - the Fresh records and Stale records areas;  
+  - Records area with numbered positions, and Archive area  
   - the Grant funding track (positions 1–6, with the Grant position table printed beside it);  
   - the Talent development track (positions 0–\[talent\_track\_max\]).  
+  - Lab capacity track and marker  
 - Research staff: 10 postdoc figures and 7 student figures.  
 - Markers: an academic credit marker and a \+100 marker (for going over 100 academic credit), a Grant funding marker, a Talent development marker, and 6 Probe time markers (one per Probe column, since a researcher can hold Probe time on several Probes).  
 - Author indicator cards: 20\.  
