@@ -134,6 +134,11 @@ class Researcher(_Model):
     leaving_students: int = 0  # Student task check: how many must leave
     unpaid: int = 0
     publications_this_round: int = 0
+    # Experimentation and equipment phase: how many staff members may be allocated to
+    # Experimentation (None: a game saved before lab capacity existed), and whether it was
+    # increased this round.
+    lab_capacity: int | None = None
+    lab_expanded: bool = False
     ideas: list[Idea] = []
     fresh: RecordArea = Field(default_factory=RecordArea)
     stale: RecordArea = Field(default_factory=RecordArea)

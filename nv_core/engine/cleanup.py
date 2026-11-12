@@ -106,6 +106,7 @@ def cleanup(ctx: Ctx) -> None:
                 ctx.log("talent", f"{ctx.name(seat)} moves back to {r.talent_position} on the Talent development track")
             r.unpaid = 0
         r.students = 0
+        r.lab_expanded = False
         r.money = 0  # unspent money returned to the bank
         r.staff = {}
         r.used = {}

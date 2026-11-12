@@ -227,3 +227,36 @@ def test_the_parameter_file_must_list_the_table(tmp_path):
     path.write_text(yaml.safe_dump(data), encoding="utf-8")
     with pytest.raises(SettingsError, match="talent_development_track: missing"):
         load_settings(path=path)
+
+
+# Lab capacity caps Experimentation ----------------------------------------------------------------
+def test_researchers_start_with_the_starting_lab_capacity():
+    """Game setup: each researcher starts with a lab capacity of [starting_lab_capacity_advanced]."""
+    assert all(r.lab_capacity == S.starting_lab_capacity_advanced for r in game(3).researchers)
+
+
+@pytest.mark.parametrize("students", [0, 1])
+def test_experimentation_staff_are_capped_at_the_lab_capacity(students):
+    """Hiring and task allocation phase: the Experimentation allocation (postdocs and students
+    together) is capped at the researcher's lab capacity."""
+    state = game()
+    cap = state.researcher(0).lab_capacity
+    state.researcher(0).money = 10 * S.cost_of_postdoc
+    at_cap = a.AllocateStaff(seat=0, hire_postdocs=cap - students, hire_students=students,
+                             allocation={Task.EXPERIMENTATION: StaffCount(postdocs=cap - students, students=students)})
+    assert validate(state, at_cap) is None
+    over = a.AllocateStaff(seat=0, hire_postdocs=cap + 1 - students, hire_students=students,
+                           allocation={Task.EXPERIMENTATION: StaffCount(postdocs=cap + 1 - students, students=students)})
+    assert "lab capacity" in validate(state, over)
+    template = next(o for o in legal_actions(state, 0) if o.type == "allocate_staff").template
+    assert template["task_caps"][Task.EXPERIMENTATION.value] == cap
+
+
+def test_a_game_saved_before_lab_capacity_has_no_cap():
+    state = game()
+    state.researcher(0).lab_capacity = None
+    n = S.starting_lab_capacity_advanced + 2
+    state.researcher(0).money = n * S.cost_of_postdoc
+    action = a.AllocateStaff(seat=0, hire_postdocs=n, allocation={Task.EXPERIMENTATION: StaffCount(postdocs=n)})
+    assert validate(state, action) is None
+

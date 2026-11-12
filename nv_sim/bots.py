@@ -27,6 +27,7 @@ class RandomWeights:
 
     pass_turn: float = 0.15  # pass in the Experimentation phase instead of acting
     sensor: float = 0.3  # install a sensor rather than run an experiment, when possible
+    expand_lab: float = 0.2  # increase the lab capacity, when possible (once a round)
     another_prediction: float = 0.6  # make one more prediction before committing
     preregister: float = 0.5
     reveal: float = 0.6  # reveal a hidden prediction
@@ -101,6 +102,8 @@ class RandomBot:
         if "claim_probe_time" in by_type:
             return rng.choice(by_type["claim_probe_time"].actions)
         if "run_experiment" in by_type:
+            if "expand_lab" in by_type and rng.random() < w.expand_lab:
+                return by_type["expand_lab"].actions[0]
             if "pass" in by_type and rng.random() < w.pass_turn:
                 return by_type["pass"].actions[0]
             if "install_sensor" in by_type and rng.random() < w.sensor:
@@ -168,13 +171,22 @@ class RandomBot:
         tasks = [Task(x) for x in t["tasks"]]
         student_tasks = [x for x in tasks if x.value not in t["postdoc_only"]]
         allocation: dict[Task, StaffCount] = {}
+        caps = t.get("task_caps", {})
+
+        def full(task: Task) -> bool:
+            return task.value in caps and task in allocation and allocation[task].total >= caps[task.value]
+
         for _ in range(postdocs):
             task = rng.choice(tasks)
-            if task.value in t["at_most_one"] and task in allocation:
-                task = Task.DEVELOPMENT
+            if full(task):
+                task = Task.DEVELOPMENT  # a postdoc-only task without a cap
             allocation.setdefault(task, StaffCount()).postdocs += 1
         for _ in range(students):
-            allocation.setdefault(rng.choice(student_tasks), StaffCount()).students += 1
+            open_tasks = [x for x in student_tasks if not full(x)]
+            if not open_tasks:
+                break
+            allocation.setdefault(rng.choice(open_tasks), StaffCount()).students += 1
+        students = sum(c.students for c in allocation.values())
         now = t["postdocs_now"]
         return a.AllocateStaff(
             seat=seat,

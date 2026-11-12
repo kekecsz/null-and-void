@@ -155,7 +155,7 @@ def test_student_task_check_threshold(monkeypatch):
 
 # Running experiments ---------------------------------------------------------------------
 def _experiment_state():
-    state = game()
+    state = game(starting_lab_capacity_advanced=3)
     return to_phase(state, Phase.EXPERIMENTATION, {0: {"experimentation": 3}, 1: {"experimentation": 3}})
 
 

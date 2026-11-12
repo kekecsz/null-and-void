@@ -188,6 +188,7 @@ input.plain::-webkit-inner-spin-button, input.plain::-webkit-outer-spin-button {
 .hire-row .stepper button { margin: 0; }
 .alloc.postdocs-short tr > :nth-child(3), .alloc.students-short tr > :nth-child(4) { background: #e4e4de; }
 .alloc.postdocs-over tr > :nth-child(3), .alloc.students-over tr > :nth-child(4) { background: #f6c9c5; }
+.alloc input.over { outline: 2px solid var(--bad); }
 
 .payoff { font-size: 11.5px; padding: 0 4px 3px calc(var(--head) + 3px); }
 .processing { flex-basis: 100%; }

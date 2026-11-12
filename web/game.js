@@ -302,7 +302,8 @@ function renderLab() {
 }
 
 function labInto(box, v, me, lab) {
-  box.append(h("p", {}, `Credit ${me.credit} \u00b7 money ${me.money} \u00b7 Grant ${me.grant_position} \u00b7 Talent ${me.talent_position}`,
+  const capacity = me.lab_capacity === null ? "" : ` \u00b7 Lab capacity ${me.lab_capacity}`;
+  box.append(h("p", {}, `Credit ${me.credit} \u00b7 money ${me.money} \u00b7 Grant ${me.grant_position} \u00b7 Talent ${me.talent_position}${capacity}`,
     h("br"), `${me.postdocs} postdoc(s), ${me.students} student(s) \u00b7 ${me.patents} patent(s)`));
   const staff = Object.entries(me.staff).filter(([, c]) => c.postdocs + c.students)
     .sort(([a], [b]) => taskOrder(a) - taskOrder(b));
@@ -334,9 +335,9 @@ function renderTracks() {
   const v = view();
   const rows = v.researchers.map((r) => [
     h("span", {}, chip(r.seat), r.committed ? h("span", { class: "muted" }, " ready") : null),
-    r.credit, r.money, r.grant_position, r.talent_position, `${r.postdocs}p ${r.students}s`, r.patents,
+    r.credit, r.money, r.grant_position, r.talent_position, r.lab_capacity ?? "\u2013", `${r.postdocs}p ${r.students}s`, r.patents,
   ]);
-  fill($("tracks"), table(["", "Credit", "Money", "Grant", "Talent", "Staff", "Pat."], rows));
+  fill($("tracks"), table(["", "Credit", "Money", "Grant", "Talent", "Lab", "Staff", "Pat."], rows));
 }
 
 function renderAlliances() {

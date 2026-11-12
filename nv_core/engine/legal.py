@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict
 
 from nv_core import actions as a
 from nv_core.engine.context import Ctx, IllegalAction
-from nv_core.engine.experimentation import MAX_SENSOR_LEVEL
+from nv_core.engine.experimentation import MAX_SENSOR_LEVEL, check_expand_lab
 from nv_core.engine.hiring import POSTDOC_ONLY
 from nv_core.engine.observation import _capacity, _revealable, _success, mismatch, same_theory_on_probe
 from nv_core.engine.publication import possible_submissions
@@ -69,6 +69,11 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
                     "tasks": [t.value for t in Task],
                     "postdoc_only": [t.value for t in POSTDOC_ONLY],
                     "at_most_one": [Task.TALENT_DEVELOPMENT.value],
+                    # the most staff members (postdocs and students together) a task can take
+                    "task_caps": {
+                        Task.TALENT_DEVELOPMENT.value: 1,
+                        **({Task.EXPERIMENTATION.value: r.lab_capacity} if r.lab_capacity is not None else {}),
+                    },
                     "every_staff_member_needs_a_task": True,
                 },
             )
@@ -243,6 +248,10 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
         ]
         if votes:
             options.append(Option(type="review_vote", actions=votes))
+
+    if phase == Phase.EXPERIMENTATION and _commit_ok(ctx, seat, check_expand_lab):
+        # any time during the phase, also when it is not the researcher's turn
+        options.append(Option(type="expand_lab", actions=[a.ExpandLab(seat=seat)]))
 
     if phase in SIMULTANEOUS and waiting and _commit_ok(ctx, seat, STEPS[phase].commit_check):
         options.append(Option(type="commit", actions=[a.CommitPhase(seat=seat)]))

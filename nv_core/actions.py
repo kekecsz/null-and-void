@@ -52,6 +52,12 @@ class Pass(_Action):
     type: Literal["pass"] = "pass"
 
 
+class ExpandLab(_Action):
+    """Increase the lab capacity by 1, any time during the phase (not only on the researcher's turn)."""
+
+    type: Literal["expand_lab"] = "expand_lab"
+
+
 # Probe time
 class ClaimProbeTime(_Action):
     type: Literal["claim_probe_time"] = "claim_probe_time"
@@ -186,6 +192,7 @@ Action = Annotated[
         RunExperiment,
         InstallSensor,
         Pass,
+        ExpandLab,
         ClaimProbeTime,
         MakePrediction,
         CancelPrediction,

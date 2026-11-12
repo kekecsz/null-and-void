@@ -53,6 +53,7 @@ def create_game(world: WorldData, settings: Settings, seed: int, players: list[s
             money=settings.grant_track[start - 1].funding,
             grant_position=start,
             talent_position=settings.talent_development_track_starting_position,
+            lab_capacity=settings.starting_lab_capacity_advanced,
         )
         for seat, name in enumerate(players)
     ]

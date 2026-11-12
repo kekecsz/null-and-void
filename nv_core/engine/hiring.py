@@ -51,6 +51,8 @@ def check_allocation(ctx: Ctx, r: Researcher, a: AllocateStaff) -> None:
             raise IllegalAction(f"{task.value} is a postdoc-only task")
     if a.allocation.get(Task.TALENT_DEVELOPMENT, StaffCount()).total > 1:
         raise IllegalAction("only one staff member can be allocated to talent development")
+    if r.lab_capacity is not None and a.allocation.get(Task.EXPERIMENTATION, StaffCount()).total > r.lab_capacity:
+        raise IllegalAction(f"your lab capacity allows at most {r.lab_capacity} staff member(s) on experimentation")
 
 
 def allocate(ctx: Ctx, action: AllocateStaff) -> None:

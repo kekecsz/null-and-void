@@ -478,12 +478,17 @@ function allocateForm(t) {
   const postdocs = numberInput(pending ? now + pending.hire_postdocs - pending.fire_postdocs : now, low, high);
   const students = numberInput(pending ? pending.hire_students : 0, 0, t.max_students);
   const inputs = {};
+  const caps = t.task_caps || {};  // the most staff a task takes: Talent development, and Experimentation (lab capacity)
+  const cap = (task) => (task in caps ? caps[task] : t.at_most_one.includes(task) ? 1 : null);
+  const rowsByTask = {};
   const rows = [...t.tasks].sort((a, b) => taskOrder(a) - taskOrder(b)).map((task) => {
     const current = pending && pending.allocation[task] ? pending.allocation[task] : { postdocs: 0, students: 0 };
-    const p = numberInput(current.postdocs, 0, t.at_most_one.includes(task) ? 1 : null);
-    const s = numberInput(current.students, 0, null, t.postdoc_only.includes(task));
+    const p = numberInput(current.postdocs, 0, cap(task));
+    const s = numberInput(current.students, 0, cap(task), t.postdoc_only.includes(task));
     inputs[task] = [p, s];
-    return [taskLabel(task), TASK_WHEN[task] || "", p.box, s.box];
+    rowsByTask[task] = [p, s];
+    const limit = task in caps && !t.at_most_one.includes(task) ? h("div", { class: "muted" }, `at most ${caps[task]} (lab capacity)`) : null;
+    return [h("span", {}, taskLabel(task), limit), TASK_WHEN[task] || "", p.box, s.box];
   });
   const totals = { postdocs: h("b", {}), students: h("b", {}) };
   const allocationTable = table(["Task", "When", "Postdocs", "Students"], [...rows, [h("b", {}, "Allocated"), "", totals.postdocs, totals.students]]);
@@ -508,7 +513,14 @@ function allocateForm(t) {
       allocationTable.classList.toggle(`${kind}-short`, given[kind] < wanted[kind]);
       totals[kind].textContent = `${given[kind]} of ${wanted[kind]}`;
     }
-    button.disabled = given.postdocs !== wanted.postdocs || given.students !== wanted.students;
+    let overCap = false;
+    for (const [task, [p, s]] of Object.entries(rowsByTask)) {
+      const over = cap(task) !== null && (Number(p.value) || 0) + (Number(s.value) || 0) > cap(task);
+      p.classList.toggle("over", over);
+      s.classList.toggle("over", over);
+      overCap = overCap || over;
+    }
+    button.disabled = given.postdocs !== wanted.postdocs || given.students !== wanted.students || overCap;
   };
   for (const input of [postdocs, students, ...Object.values(inputs).flat()]) input.oninput = update;
   const maxButton = (input, limit) => (limit === null ? null : h("button", { type: "button", title: "As many as you can", onclick: () => { input.value = limit; update(); } }, "max"));
@@ -527,7 +539,8 @@ function allocateForm(t) {
       ` (${low} to ${high === null ? "any" : high}) \u00b7 students to hire: `, students.box, maxButton(students, t.max_students), ` (at most ${t.max_students}) `,
       h("button", { type: "button", disabled: previous ? null : true, title: "Fill in the task allocation of your last round", onclick: repeat }, "Repeat")),
     allocationTable,
-    h("div", { class: "small muted" }, "Every staff member needs a task; Development and Talent development take postdocs only; at most one on Talent development."),
+    h("div", { class: "small muted" }, "Every staff member needs a task; Development and Talent development take postdocs only; at most one on Talent development"
+      + (caps.experimentation !== undefined ? `; at most ${caps.experimentation} on Experimentation (your lab capacity).` : ".")),
     button,
   ];
 }
@@ -579,8 +592,9 @@ const TASK_NAMES = {
   submit: ["submit manuscripts", 'the outlined box receives what you "use"'],
   review_vote: ["peer review", "open a box to see the manuscript's supporting records"],
 };
-const IN_THE_TITLE = { commit: "Commit", pass: "Pass" };
-const COMMIT_HELP = { commit: "My choices for this step are final", pass: "Stop experimenting this round" };
+const IN_THE_TITLE = { commit: "Commit", pass: "Pass", expand_lab: "Lab capacity +1" };
+const COMMIT_HELP = { commit: "My choices for this step are final", pass: "Stop experimenting this round",
+  expand_lab: "Pay to increase your lab capacity by 1 (once a round). It uses no staff member and does not end your turn; the new capacity counts from the next Hiring." };
 
 // The server sends a new state after every player's action, also another player's. Rebuilding the
 // forms then would throw away what this player has typed but not sent yet, so they are rebuilt
@@ -614,7 +628,7 @@ function titleButton(option) {
       if (warning && !window.confirm(`${warning}\n\nCommit anyway?`)) return;
       send(option.actions[0]);
     },
-  }, IN_THE_TITLE[option.type]);
+  }, option.type === "expand_lab" ? `${IN_THE_TITLE.expand_lab} (costs ${view().researchers[msg.you].lab_capacity_cost})` : IN_THE_TITLE[option.type]);
 }
 
 function setTaskHeading(name, note, buttons) {
@@ -686,7 +700,8 @@ function renderActions() {
   setTaskHeading();
   if (report) { showReport(box, report); refreshHighlights(); return; }
   if (v.result || msg.status !== "running") { box.append(h("p", { class: "muted" }, "Nothing to do.")); return; }
-  if (msg.options.every((o) => o.type === "alliance")) {  // alliances have their own panel
+  if (msg.options.every((o) => o.type === "alliance" || o.type === "expand_lab")) {  // alliances have their own panel
+    setTaskHeading(null, null, msg.options.filter((o) => o.type === "expand_lab").map(titleButton));
     box.append(h("p", { class: "muted" }, msg.seats[msg.you] && msg.seats[msg.you].kind !== "human"
       ? `Your seat is played by an automated player (${msg.seats[msg.you].kind}) for now.` : "Nothing to do right now; others are deciding."));
     const preregistered = preregisteredRows();

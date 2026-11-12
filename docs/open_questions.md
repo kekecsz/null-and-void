@@ -10,11 +10,6 @@ Each entry gives the document and section, the exact text, the possible readings
 
 ## Rule changes of 2026-11-12: open points (review before implementing)
 
-### R3. Buying lab capacity
-- **Where:** Experimentation and equipment phase: "Each round during the Experimentation and equipment phase the researcher may choose to spend money to increase their Lab capacity by 1 (and only 1 per round)".
-- **Questions:** (a) Is buying a turn of its own in the sequential phase, or done alongside an action? (b) Does it need, or use up, an Experimentation staff member? Can a researcher with no Experimentation staff (who must pass) still buy? (c) The new capacity can only matter from the next Hiring phase on, since staff were allocated before; is that intended?
-- **Also:** "up to a maximum of [starting_lab_capacity_advanced]+3" and the "+1", "+2", "+3" lines write numbers into the rulebook. The maximum follows from the three costs, so the text could say "up to the last capacity in the cost list", or the costs could become a table like `[talent_development_track]`.
-
 ### R4. What is one record, for the Records capacity?
 - **Where:** Recording experimental findings; Recording observations; Supporting observational and experimental records; Clean-up phase.
 - **Text:** "New records always enter at the first record position, and push older records one position higher." and "each card can be used only once"; experiment records "can be mixed across cards involved in several experiments".

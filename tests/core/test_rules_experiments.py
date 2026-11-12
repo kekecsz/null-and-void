@@ -1,5 +1,5 @@
 """Rulebook "Experimentation and equipment phase": "Running experiments", "Recording experimental
-findings", "Sensor installation and upgrade"; "Academic credit rules" (at 0 credit, specification 5.7).
+findings", "Sensor installation and upgrade", lab capacity; "Academic credit rules" (at 0 credit, specification 5.7).
 
 The tiny world (tests/core/engine_helpers.py) has inputs IP1, IP2, IP3. Probe 1 (index 0) has
 Specialty IP1 and IP2, so IP3 can take a sensor there.
@@ -8,7 +8,7 @@ Specialty IP1 and IP2, so IP3 can take a sensor there.
 import pytest
 
 from nv_core import actions as a
-from nv_core.engine import IllegalAction, apply, validate
+from nv_core.engine import IllegalAction, apply, legal_actions, validate
 from nv_core.state import Phase, Task
 from tests.core.engine_helpers import do, game, publish, settings, to_phase
 
@@ -200,3 +200,104 @@ def test_experiment_uses_an_experimentation_staff_member():
     seat = state.current
     state = do(state, a.RunExperiment(seat=seat))
     assert state.researcher(seat).used.get(Task.EXPERIMENTATION, 0) == 1
+
+
+# Lab capacity ---------------------------------------------------------------------------------------
+COSTS = S.lab_capacity_costs()
+
+
+def _expand_options(state, seat):
+    return [o for o in legal_actions(state, seat) if o.type == "expand_lab"]
+
+
+def test_lab_capacity_costs_come_from_the_parameter_file():
+    assert COSTS == [S.bonus_lab_capacity_1, S.bonus_lab_capacity_2, S.bonus_lab_capacity_3]
+
+
+def test_increasing_lab_capacity_costs_money_but_no_staff_and_not_the_turn():
+    """Experimentation and equipment phase (Lab capacity): pay [bonus_lab_capacity_1] for the first
+    step; no staff member is used and it is still the researcher's turn."""
+    state = _experimentation(k=1)
+    seat = state.current
+    before = state.researcher(seat).model_copy(deep=True)
+    state = do(state, a.ExpandLab(seat=seat))
+    r = state.researcher(seat)
+    assert r.lab_capacity == before.lab_capacity + 1
+    assert r.money == before.money - COSTS[0]
+    assert r.remaining(Task.EXPERIMENTATION) == before.remaining(Task.EXPERIMENTATION)
+    assert state.current == seat
+
+
+def test_lab_capacity_can_be_increased_when_it_is_not_your_turn():
+    """Lab capacity: any time during the Experimentation and equipment phase."""
+    state = _experimentation(k=1)
+    other = 1 - state.current
+    assert _expand_options(state, other)
+    state = do(state, a.ExpandLab(seat=other))
+    assert state.researcher(other).lab_capacity == S.starting_lab_capacity_advanced + 1
+
+
+def test_only_once_per_round():
+    """Lab capacity: by 1, and only 1 per round; the next round it can be increased again."""
+    state = _experimentation(k=1)
+    seat = state.current
+    state = do(state, a.ExpandLab(seat=seat))
+    with pytest.raises(IllegalAction, match="only 1 per round"):
+        apply(state, a.ExpandLab(seat=seat))
+    assert not _expand_options(state, seat)
+    state.researcher(seat).lab_expanded = True
+    state = to_phase(state, Phase.HIRING)
+    assert not state.researcher(seat).lab_expanded
+
+
+def test_needs_a_staff_member_on_experimentation():
+    """Lab capacity: only a player who has at least one staff member allocated to experimentation."""
+    state = _experimentation(k=1, n=2)
+    seat = state.current
+    state.researcher(seat).staff = {}
+    with pytest.raises(IllegalAction, match="staff on experimentation"):
+        apply(state, a.ExpandLab(seat=seat))
+    assert not _expand_options(state, seat)
+
+
+def test_not_outside_the_experimentation_phase():
+    state = game()
+    with pytest.raises(IllegalAction):
+        apply(state, a.ExpandLab(seat=0))
+
+
+def test_each_step_costs_more_up_to_the_maximum():
+    """Lab capacity: the cost increases with the lab size, up to [starting_lab_capacity_advanced]
+    plus the number of steps in the cost list."""
+    state = _experimentation(k=1)
+    seat = state.current
+    r = state.researcher(seat)
+    for step, cost in enumerate(COSTS):
+        state = state.clone()
+        state.researcher(seat).lab_expanded = False
+        state.researcher(seat).money = 100
+        state = do(state, a.ExpandLab(seat=seat))
+        assert state.researcher(seat).money == 100 - cost
+        assert state.researcher(seat).lab_capacity == r.lab_capacity + step + 1
+    state = state.clone()
+    state.researcher(seat).lab_expanded = False
+    with pytest.raises(IllegalAction, match="maximum"):
+        apply(state, a.ExpandLab(seat=seat))
+
+
+def test_cannot_pay_more_than_the_money():
+    state = _experimentation(k=1)
+    seat = state.current
+    state.researcher(seat).money = COSTS[0] - 1
+    with pytest.raises(IllegalAction, match="costs"):
+        apply(state, a.ExpandLab(seat=seat))
+
+
+def test_a_game_saved_before_lab_capacity_cannot_increase_it():
+    state = _experimentation(k=1)
+    seat = state.current
+    state.researcher(seat).lab_capacity = None
+    assert not _expand_options(state, seat)
+    with pytest.raises(IllegalAction, match="before lab capacity"):
+        apply(state, a.ExpandLab(seat=seat))
+

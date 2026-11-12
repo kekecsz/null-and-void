@@ -8,7 +8,7 @@ from typing import Any
 
 from nv_core.engine import SIMULTANEOUS
 from nv_core.engine.context import Event
-from nv_core.state import Card, GameState, Idea, Manuscript, Paper, Phase, Prediction, RecordArea
+from nv_core.state import Card, GameState, Idea, Manuscript, Paper, Phase, Prediction, RecordArea, Researcher
 
 # Probes are dealt at the start of the Observation and prediction phase.
 _DEALT = {Phase.PREDICTION, Phase.REVEAL, Phase.SCORING_ORDER, Phase.DEVELOPMENT, Phase.SUBMISSION, Phase.PEER_REVIEW}
@@ -47,6 +47,16 @@ def _paper(state: GameState, paper: Paper) -> dict[str, Any]:
         "fresh": paper.fresh,
         "patents": list(paper.patents),
     }
+
+
+def _lab_capacity_cost(state: GameState, r: Researcher) -> int | None:
+    """The cost of the next step of lab capacity, None at the maximum (Experimentation and equipment phase)."""
+    s = state.settings
+    if r.lab_capacity is None or s.starting_lab_capacity_advanced is None:
+        return None
+    costs = s.lab_capacity_costs()
+    step = r.lab_capacity - s.starting_lab_capacity_advanced
+    return costs[step] if 0 <= step < len(costs) else None
 
 
 def _manuscript(m: Manuscript, show_content: bool, show_records: bool, spectator: bool) -> dict[str, Any]:
@@ -129,6 +139,8 @@ def _view(state: GameState, seat: int | None) -> dict[str, Any]:
                 "money": r.money,
                 "grant_position": r.grant_position,
                 "talent_position": r.talent_position,
+                "lab_capacity": r.lab_capacity,
+                "lab_capacity_cost": _lab_capacity_cost(state, r),
                 "postdocs": r.postdocs,
                 "students": r.students,
                 "staff": {

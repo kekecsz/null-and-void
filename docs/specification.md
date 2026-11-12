@@ -105,7 +105,7 @@ The `GameState` (Pydantic, serialisable to JSON) contains:
 - **Setup:** scenario id, world id, settings, seed, player seats and turn order, alliance list.
 - **Clock:** round number, period (Calm or Crisis), current phase and step, Game Period Deck, crisis tracker (rounds in crisis, unsuccessful predictions).
 - **World Grid:** per Probe column — specialty parameters, sensor level per non-specialty parameter, the current Probe stack (true inputs and outcomes), the readings shown, Probe time owner, Hot topic marker.
-- **Per researcher:** academic credit, money, Grant funding and Talent development track positions, staff (postdocs and students, each with a task), unpublished theories and methods, experiment card pool, records (Fresh and Stale), predictions, patents owned.
+- **Per researcher:** academic credit, money, Grant funding and Talent development track positions, lab capacity, staff (postdocs and students, each with a task), unpublished theories and methods, experiment card pool, records (Fresh and Stale), predictions, patents owned.
 - **Submission Portal:** awaiting-review positions, Revise area, Accept area with rounds-in-processing tokens.
 - **Published papers:** each theory or method with its author, journal tier, open-access flag, Nobel Prize and Retraction counters, Fresh-out-of-print marker and attached patents.
 - **Hidden bookkeeping for the debrief:** every prediction of the game with the visible readings of its Probe (so the debrief can tell which predictions were made against the predictor's own experiment knowledge); every published paper, kept after its supporting records are discarded and after a retraction, with how many of its records were fabricated; every peer review decision; the academic credit and Nobel Prize counters at the end of each round. Never shown in player views.
@@ -118,7 +118,7 @@ The engine runs the phases in the order, and with the steps, that the rulebook g
 | --- | --- |
 | Hiring and task allocation phase | simultaneous secret |
 | Student task check phase | automatic dice, then simultaneous choice of which students leave |
-| Experimentation and equipment phase | sequential |
+| Experimentation and equipment phase | sequential; increasing the lab capacity is open (any time during the phase, also out of turn, and it does not end a turn) |
 | Probe time | sequential, in the order the rulebook sets |
 | Observation and prediction phase: revealing input parameters, revealing preregistered predictions, outcome reveal, scoring, recording observations | automatic |
 | Observation and prediction phase: formulating predictions and preregistration; prediction reveal | simultaneous secret |
@@ -135,7 +135,7 @@ Win and loss checks (Nobel Prize, Crisis Crash, end of the Crisis period) run af
 
 ### 5.3 Actions
 
-Every action is a typed Pydantic model in one discriminated union, so the server, the AI player and the simulator all validate the same way. Illustrative examples (the action union in the code is authoritative): `AllocateStaff`, `HirePostdocs`, `FirePostdoc`, `HireStudents`, `ChooseLeavingStudents`, `RunExperiment(specified_states, cited_methods)`, `InstallSensor(probe, parameter, cited_methods)`, `Pass`, `ClaimProbeTime(probe)`, `BuildRecord(cards)`, `MakePrediction(theory, probe)`, `Preregister(predictions)`, `RevealPredictions(predictions)`, `FormulateTheory(inputs, outcomes)`, `DevelopMethod(parameter)`, `Submit(manuscript, tier, records, pay_apc)`, `Revise(manuscript)`, `WithdrawSubmission(manuscript)`, `ReviewVote(position, vote)`, `ProposeAlliance`, `AcceptAlliance`, `LeaveAlliance`, `CommitPhase`.
+Every action is a typed Pydantic model in one discriminated union, so the server, the AI player and the simulator all validate the same way. Illustrative examples (the action union in the code is authoritative): `AllocateStaff`, `HirePostdocs`, `FirePostdoc`, `HireStudents`, `ChooseLeavingStudents`, `RunExperiment(specified_states, cited_methods)`, `InstallSensor(probe, parameter, cited_methods)`, `Pass`, `ExpandLab`, `ClaimProbeTime(probe)`, `BuildRecord(cards)`, `MakePrediction(theory, probe)`, `Preregister(predictions)`, `RevealPredictions(predictions)`, `FormulateTheory(inputs, outcomes)`, `DevelopMethod(parameter)`, `Submit(manuscript, tier, records, pay_apc)`, `Revise(manuscript)`, `WithdrawSubmission(manuscript)`, `ReviewVote(position, vote)`, `ProposeAlliance`, `AcceptAlliance`, `LeaveAlliance`, `CommitPhase`.
 
 - `legal_actions(state, player)` returns what the player may do now. Where the option space is large (theories, records, predictions), it returns templates with their constraints, and `validate(state, action)` gives a clear reason when an action is refused.
 - In simultaneous phases, a player's choices stay editable until they send `CommitPhase`; other players only see "committed" or "still deciding".
@@ -234,7 +234,7 @@ Plain and functional, desktop-first, English only. Section 7.4 replaces how the 
 | Lab (behind the shield) | staff and tasks, money, hand of theories and methods, experiment pool, records, predictions | allocate staff, run experiments, build records, formulate, predict, preregister |
 | Literature | published theories and methods with counters, authors, tiers, patents | cite, inspect |
 | Submission Portal | manuscripts by position, tier and author; Revise and Accept areas | submit, revise, vote in peer review |
-| Tracks | academic credit, Grant funding, Talent development, Game Period Deck count, crisis tracker | — |
+| Tracks | academic credit, Grant funding, Talent development, lab capacity, Game Period Deck count, crisis tracker | increase the lab capacity (Experimentation phase) |
 | Status bar | round, phase, who is still deciding, AI cost so far | commit the phase |
 | Event log | public events in order, filterable | — |
 

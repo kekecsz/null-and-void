@@ -178,6 +178,8 @@ class StrategyBot:
         if "claim_probe_time" in by_type:
             return self._probe_time(view, by_type["claim_probe_time"].actions)
         if "run_experiment" in by_type:
+            if "expand_lab" in by_type and self._expand_lab(view):
+                return by_type["expand_lab"].actions[0]
             return self._experiment(view, by_type)
         if "commit" in by_type:
             return by_type["commit"].actions[0]
@@ -187,6 +189,18 @@ class StrategyBot:
             if option.actions and option.type not in UNDO_TYPES:
                 return option.actions[0]
         raise ValueError("no complete action among the options")
+
+    def _expand_lab(self, view) -> bool:
+        """Experimentation and equipment phase: buy lab capacity when the lab is full this round and
+        the money left still pays the postdocs."""
+        me = self._me(view)
+        staff = me["staff"].get(Task.EXPERIMENTATION.value)
+        cost = me["lab_capacity_cost"]
+        if cost is None or me["lab_capacity"] is None or not staff:
+            return False
+        full = staff["postdocs"] + staff["students"] >= me["lab_capacity"]
+        payroll = me["postdocs"] * self.settings.cost_of_postdoc
+        return full and me["money"] - cost >= payroll
 
     def _wakes(self, view) -> bool:
         """Patient modifier: confident in some theory, or the Warning shot is revealed; at the
@@ -490,18 +504,25 @@ class StrategyBot:
                 put(task, True)
                 left[task] -= 1
                 spare -= 1
-        for _ in range(spare):
-            put(Task.EXPERIMENTATION, True)
+        cap = t.get("task_caps", {}).get(Task.EXPERIMENTATION.value)
+
+        def room_on(task: Task) -> bool:  # lab capacity (Hiring and task allocation phase)
+            return task != Task.EXPERIMENTATION or cap is None or allocation.get(task, StaffCount()).total < cap
+
+        for _ in range(spare):  # spare postdocs experiment, or develop a method when the lab is full
+            put(Task.EXPERIMENTATION if room_on(Task.EXPERIMENTATION) else Task.DEVELOPMENT, True)
         students_needed = sum(left.values())
         chance = self._leave_chance(view)
         buffer = round(students_needed * chance / (1 - chance)) if chance < 1 else 0
         room = t["max_students"]
         for task in order:
-            while left[task] and room:
+            while left[task] and room and room_on(task):
                 put(task, False)
                 left[task] -= 1
                 room -= 1
         for _ in range(min(buffer, room)):  # extra students leave first (from Experimentation)
+            if not room_on(Task.EXPERIMENTATION):
+                break
             put(Task.EXPERIMENTATION, False)
         students = sum(c.students for c in allocation.values())
         return [

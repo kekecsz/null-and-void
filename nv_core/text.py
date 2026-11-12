@@ -91,7 +91,7 @@ def render_text(view: dict[str, Any]) -> str:
     # Researchers ---------------------------------------------------------------------------
     out("")
     out("RESEARCHERS")
-    rows = [["", "credit", "money", "grant", "talent", "postdocs", "students", "stacks", "fresh", "stale", "patents"]]
+    rows = [["", "credit", "money", "grant", "talent", "lab", "postdocs", "students", "stacks", "fresh", "stale", "patents"]]
     for r in view["researchers"]:
         mark = " (first)" if r["seat"] == view["first_player"] else ""
         done = " (ready)" if r["committed"] else ""
@@ -102,6 +102,7 @@ def render_text(view: dict[str, Any]) -> str:
                 str(r["money"]),
                 str(r["grant_position"]),
                 str(r["talent_position"]),
+                "-" if r.get("lab_capacity") is None else str(r["lab_capacity"]),
                 str(r["postdocs"]),
                 str(r["students"]),
                 str(r["ideas"]),

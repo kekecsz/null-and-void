@@ -32,6 +32,8 @@ DESCRIPTIONS: dict[str, str] = {
     "install_sensor": "Sensor installation and upgrade: install a level 1 sensor or upgrade one by one level, "
     "citing as many methods for that parameter as the level reached.",
     "pass": "Experimentation and equipment phase: stop using experimentation staff this round.",
+    "expand_lab": "Experimentation and equipment phase: pay to increase your lab capacity by 1 (once a round; "
+    "does not use a staff member or end your turn).",
     "claim_probe_time": "Probe time: place your marker on a free Probe (0-based index: P1 is 0).",
     "make_prediction": "Formulating predictions and preregistration: copy a published theory onto a Probe "
     "(0-based index), optionally preregistered.",
