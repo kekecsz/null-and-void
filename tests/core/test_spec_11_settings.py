@@ -289,3 +289,14 @@ def test_overrides_do_not_change_the_defaults():
 def test_override_with_a_whole_number_float_is_the_wrong_type():
     """11. Configuration: whole-number settings must be written as integers, also in overrides."""
     _raises_naming(SOME_SETTING, lambda: load_settings({SOME_SETTING: float(DEFAULTS[SOME_SETTING])}))
+
+
+def test_journal_tier_without_ac_reward_is_named(tmp_path):
+    """Publication scoring: every journal tier gives its AC reward in the parameter file (it may be
+    left out only by a game saved before the column existed)."""
+    data = copy.deepcopy(DEFAULTS)
+    del data["journal_tiers"][3]["ac_reward"]
+    path = _write(tmp_path, data)
+    with pytest.raises(SettingsError, match=r"journal_tiers\[3\]\.ac_reward: missing"):
+        load_settings(path=path)
+

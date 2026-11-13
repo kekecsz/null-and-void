@@ -7,7 +7,7 @@ import json
 import pytest
 
 from nv_core import actions as a
-from nv_core.engine import IllegalAction, apply
+from nv_core.engine import IllegalAction, apply, legal_actions
 from nv_core.engine.cleanup import cleanup
 from nv_core.engine.context import Ctx
 from nv_core.engine.ending import credit_victory, end_game
@@ -176,7 +176,7 @@ def test_cleanup_publishes_scores_and_moves_the_grant_marker():
     cleanup(Ctx(state))
     paper = next(p for p in state.published if p.idea.id == 950)
     assert paper.fresh and not state.paper(old.id).fresh
-    assert r.credit == credit + 2 + S.OA_publication_AC_reward
+    assert r.credit == credit + S.journal_tiers[2].ac_reward + S.OA_publication_AC_reward
     if position.expected_to_increase is not None and 1 >= position.expected_to_increase:
         assert r.grant_position == S.grant_track_starting_position + 1
     assert r.money == S.grant_track[r.grant_position - 1].funding
@@ -344,3 +344,41 @@ def test_replaying_the_action_log_reproduces_the_state(tmp_path):
     again = GameRecord.load(path).replay()
     assert again.model_dump() == state.model_dump()
     assert state.round == 4
+
+
+# Publication scoring: the AC reward of the journal tier --------------------------------------------
+@pytest.mark.parametrize("tier", range(len(S.journal_tiers)))
+@pytest.mark.parametrize("open_access", [False, True])
+def test_publication_scores_the_tier_ac_reward(tier, open_access):
+    """Publication scoring: the academic credit given in the journal tier table, plus
+    [OA_publication_AC_reward] for open access."""
+    state = game()
+    r = state.researcher(0)
+    m = _manuscript(state, tier, open_access=open_access)
+    m.tokens = 0
+    state.manuscripts.append(m)
+    r.staff = {Task.GRANTS: StaffCount(postdocs=S.grant_track[r.grant_position - 1].admin)}
+    credit = r.credit
+    cleanup(Ctx(state))
+    expected = S.journal_tiers[tier].ac_reward + (S.OA_publication_AC_reward if open_access else 0)
+    assert r.credit == credit + expected
+    assert S.publication_reward(tier, open_access) == expected
+
+
+def test_a_game_saved_before_the_ac_reward_scores_the_tier_number():
+    from nv_core.settings import Settings
+
+    saved = S.model_dump(mode="json")
+    for tier in saved["journal_tiers"]:
+        del tier["ac_reward"]
+    old = Settings.model_validate(saved)
+    assert [old.publication_reward(i, False) for i in range(len(old.journal_tiers))] == list(range(len(old.journal_tiers)))
+
+
+def test_submission_options_give_the_reward_of_each_tier():
+    state = _submission_state()
+    option = next(o for o in legal_actions(state, 0) if o.type == "submit")
+    rewards = option.template["ac_reward"]
+    for i in range(len(S.journal_tiers)):
+        assert rewards[str(i)] == [S.publication_reward(i, False), S.publication_reward(i, True)]
+

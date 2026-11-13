@@ -22,7 +22,7 @@ S = settings()
 # Hand-made tiers. Tier 0: no review, fee 1. Tier 1: 1 record, 3 elements, 2 rounds, APC 1.
 # Tier 2: 2 records incl. at least 1 observation and 1 experiment, no methods, 3 rounds.
 _TIER = dict(min_records=0, min_observations=0, min_experiments=0, min_elements=2, rounds_in_processing=0,
-             peer_review=False, methods_accepted=True, submission_fee=1, apc=0)
+             peer_review=False, methods_accepted=True, submission_fee=1, apc=0, ac_reward=0)
 TIERS = [
     _TIER,
     _TIER | dict(min_records=1, min_elements=3, rounds_in_processing=2, peer_review=True, submission_fee=0, apc=1),

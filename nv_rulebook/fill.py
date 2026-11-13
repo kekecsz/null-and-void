@@ -29,7 +29,7 @@ _REFERENCE = re.compile(r"\[(\w+)\](?!\()")
 
 _TIER_FIRST_NUMBER = {"journal_tiers": 0, "grant_track": 1, "talent_development_track": 0}  # see the comments in the parameter file
 _FIRST_COLUMN = {"journal_tiers": "Tier", "grant_track": "Position", "talent_development_track": "Position"}
-_COLUMN_LABELS = {"apc": "APC"}
+_COLUMN_LABELS = {"apc": "APC", "ac_reward": "AC reward"}
 
 
 class FillError(ValueError):

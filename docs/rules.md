@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.09. 23:09
+Last updated: 2026.11.13. 22:47
 
 # Summary
 
@@ -448,7 +448,7 @@ Manuscripts get published during the Clean-up phase (see Clean-up phase rules).
 
 ## Publication scoring
 
-The researcher who published the paper scores academic credit equal to the journal tier. Open Access publications score an additional \[OA\_publication\_AC\_reward\] academic credits.
+The researcher who published the paper scores academic credit indicated in the journal tier table. Open Access publications score an additional \[OA\_publication\_AC\_reward\] academic credits.
 
 # Funding
 

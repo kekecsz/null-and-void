@@ -38,6 +38,9 @@ class JournalTier(_Strict):
     methods_accepted: StrictBool
     submission_fee: StrictInt
     apc: StrictInt
+    # Publication scoring. None only in a game saved before the column existed, which keeps the rule
+    # it was started under (the tier number). The parameter file must list it: see _validate.
+    ac_reward: StrictInt | None = None
 
 
 class TalentPosition(BaseModel):
@@ -122,6 +125,11 @@ class Settings(_Strict):
     # track position itself was both values. The parameter file must still list it: see _validate.
     talent_development_track: list[TalentPosition] | None = None
 
+    def publication_reward(self, tier: int, open_access: bool) -> int:
+        """Publication scoring: the academic credit for a paper published in this tier."""
+        reward = self.journal_tiers[tier].ac_reward
+        return (tier if reward is None else reward) + (self.OA_publication_AC_reward if open_access else 0)
+
     def lab_capacity_costs(self) -> list[int]:
         """Experimentation and equipment phase: the cost of each step of lab capacity above the
         start, in order (bonus_lab_capacity_1, _2, ...). The last step is the maximum."""
@@ -191,6 +199,13 @@ def _validate(data: dict[str, Any], path: Path, overridden: set[str]) -> Setting
     absent = [name for name, field in Settings.model_fields.items() if not field.is_required() and name not in data]
     if absent:
         raise SettingsError("; ".join(f"{path}: {name}: missing" for name in absent))
+    tiers = data.get("journal_tiers")
+    if isinstance(tiers, list):
+        source = "parameter_overrides" if "journal_tiers" in overridden else str(path)
+        missing = [f"{source}: journal_tiers[{i}].ac_reward: missing" for i, tier in enumerate(tiers)
+                   if isinstance(tier, dict) and "ac_reward" not in tier]
+        if missing:
+            raise SettingsError("; ".join(missing))
     try:
         return Settings.model_validate(data)
     except ValidationError as exc:

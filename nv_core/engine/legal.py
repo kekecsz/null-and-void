@@ -252,6 +252,9 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
                         },
                         "apc": {str(i): t.apc for i, t in enumerate(tiers)},
                         "submission_fee": {str(i): t.submission_fee for i, t in enumerate(tiers)},
+                        # Publication scoring: credit once published, without and with open access
+                        "ac_reward": {str(i): [ctx.settings.publication_reward(i, False), ctx.settings.publication_reward(i, True)]
+                                      for i in range(len(tiers))},
                         "spendable": ctx.spendable(r),
                         "rule": "extra records and pay_apc may be added to a listed submission",
                     },

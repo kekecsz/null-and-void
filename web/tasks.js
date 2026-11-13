@@ -356,7 +356,9 @@ function recordRow(spec) {  // a record as an action names it
 function chargeControl(box, t) {  // offered only when the fee and the charge together fit the money that may be spent
   const fee = t.submission_fee[String(box.tier)];
   const charge = t.apc[String(box.tier)];
-  const text = h("span", {}, `fee ${fee}; you can spend ${t.spendable}`);
+  const reward = t.ac_reward ? t.ac_reward[String(box.tier)] : null;  // Publication scoring
+  const worth = reward ? h("b", {}, `published: +${reward[0]} AC${charge && reward[1] !== reward[0] ? ` (+${reward[1]} with open access)` : ""}; `) : null;
+  const text = h("span", {}, worth, `fee ${fee}; you can spend ${t.spendable}`);
   if (!charge) return text;
   if (fee + charge > t.spendable) return [text, h("span", { class: "muted" }, ` (article processing charge ${charge}: not enough money)`)];
   return [text, h("label", {}, h("input", { type: "checkbox", checked: box.payApc ? true : null, onchange: (e) => { box.payApc = e.target.checked; redraw(); } }), ` pay the article processing charge (${charge})`)];

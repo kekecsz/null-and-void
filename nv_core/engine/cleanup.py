@@ -72,7 +72,7 @@ def cleanup(ctx: Ctx) -> None:
             paper=paper.id,
         )
         state.researcher(paper.author).publications_this_round += 1
-        reward = paper.tier + (s.OA_publication_AC_reward if paper.open_access else 0)
+        reward = s.publication_reward(paper.tier, paper.open_access)
         ctx.credit(paper.author, reward, f"{letter}{paper.id} published")
     for manuscript in state.manuscripts:
         if manuscript.area == "accept" and manuscript.tokens:
