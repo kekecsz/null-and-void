@@ -131,6 +131,12 @@ class RandomBot:
                         choice = preregistered[0]
                 return choice
             self._done.add("predictions")
+        if "reveal_prediction" in by_type and commit_action is None:
+            # Committing is refused only at 0 academic credit while a successful prediction can still
+            # be revealed: every staff member that can be used must be.
+            more = [x for x in by_type["reveal_prediction"].actions if x.reveal]
+            if more:
+                return more[0]
         if "reveal_prediction" in by_type and "reveals" not in self._done:
             reveals = [x for x in by_type["reveal_prediction"].actions if x.reveal]
             self._done.add("reveals")
@@ -166,7 +172,9 @@ class RandomBot:
     def _any_action(options: list[Option]) -> BaseModel:
         for option in options:  # never an undo (withdraw, cancel): it can loop with the choice it undoes
             if option.actions and not option.type.startswith(("withdraw_", "cancel_")):
-                return option.actions[0]
+                done = [x for x in option.actions if getattr(x, "reveal", True)]  # nor taking back a reveal
+                if done:
+                    return done[0]
         raise ValueError("no complete action among the options")
 
     def _allocate(self, seat: int, t: dict[str, Any]) -> a.AllocateStaff:
