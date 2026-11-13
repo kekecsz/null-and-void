@@ -62,6 +62,13 @@ function send(action) {
   showError("");
   if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "action", action }));
 }
+// Send a choice and commit it in one click. The commit goes only once the server has accepted the
+// choice (it answers each action in order), so a refused choice never commits an earlier one.
+let commitAfter = false;
+function sendAndCommit(action) {
+  commitAfter = true;
+  send(action);
+}
 function mustAct() {
   const v = view();
   return v && msg.status === "running" && msg.you !== null && (v.current === msg.you || v.waiting.includes(msg.you));
@@ -129,11 +136,16 @@ function connect() {
     const data = JSON.parse(event.data);
     if (data.type === "error") {
       showError(data.message);
+      commitAfter = false;
       task.afterSend = null;  // refused: the draft stays
       if (!msg) refused = true;  // no seat and not the host: show the join form instead of reconnecting
       return;
     }
-    if (data.type === "accepted") { showError(""); return; }
+    if (data.type === "accepted") {
+      showError("");
+      if (commitAfter) { commitAfter = false; send({ type: "commit" }); }
+      return;
+    }
     if (data.type === "state" && (!live || data.seq >= live.seq || data.status !== live.status || data.you !== live.you)) {
       live = data;
       if (!live.spectator) replay = null;

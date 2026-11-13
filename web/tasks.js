@@ -517,16 +517,16 @@ function allocateForm(t) {
   const totals = { postdocs: h("b", {}), students: h("b", {}) };
   const allocationTable = table(["Task", "When", "Postdocs", "Students"], [...rows, [h("b", {}, "Allocated"), "", totals.postdocs, totals.students]]);
   allocationTable.classList.add("alloc");
-  const button = h("button", { onclick: () => {
+  const button = h("button", { class: "primary", title: "Hire, fire and allocate as shown, and commit: final for this round", onclick: () => {
     const after = Number(postdocs.value);
     const allocation = {};
     for (const [task, [p, s]] of Object.entries(inputs)) {
       const count = { postdocs: Number(p.value) || 0, students: Number(s.value) || 0 };
       if (count.postdocs || count.students) allocation[task] = count;
     }
-    send({ type: "allocate_staff", hire_postdocs: Math.max(0, after - now), fire_postdocs: Math.max(0, now - after),
+    sendAndCommit({ type: "allocate_staff", hire_postdocs: Math.max(0, after - now), fire_postdocs: Math.max(0, now - after),
       hire_students: Number(students.value) || 0, allocation });
-  } }, "Set staff allocation");
+  } }, "Commit");
   // Each staff column: grey until every hired staff member of that type has a task, red if too many do.
   const update = () => {
     const wanted = { postdocs: Number(postdocs.value) || 0, students: Number(students.value) || 0 };
@@ -575,11 +575,11 @@ function leavingForm(t) {
   return [
     h("p", {}, `${t.count} student(s) must leave. Choose from which tasks:`),
     table(["Task", "When", "Students there", "Leaving"], inputs.map(([task, input, n]) => [taskLabel(task), TASK_WHEN[task] || "", n, input.box])),
-    h("button", { onclick: () => {
+    h("button", { class: "primary", title: "These students leave; final for this round", onclick: () => {
       const by_task = {};
       for (const [task, input] of inputs) if (Number(input.value)) by_task[task] = Number(input.value);
-      send({ type: "choose_leaving_students", by_task });
-    } }, "Choose"),
+      sendAndCommit({ type: "choose_leaving_students", by_task });
+    } }, "Commit"),
   ];
 }
 
@@ -736,7 +736,9 @@ function renderActions() {
   let [name, note] = named ? TASK_NAMES[named.type] : [null, null];
   const limit = preview().prediction_limit;  // Formulating predictions and preregistration
   if (limit) note = `${limit.made} of ${limit.allowed} predictions made${limit.made >= limit.allowed ? " (no room for more)" : ""}. ${note || ""}`;
-  setTaskHeading(name, note, msg.options.filter((o) => IN_THE_TITLE[o.type]).map(titleButton));
+  // Hiring and the Student task check commit from their own form, so the choice and the commit are one click.
+  const formCommits = optionOf("allocate_staff") || optionOf("choose_leaving_students");
+  setTaskHeading(name, note, msg.options.filter((o) => IN_THE_TITLE[o.type] && !(formCommits && o.type === "commit")).map(titleButton));
   // The sensor choices are drawn with the experiment; withdrawing is done on the prediction strips.
   const listed = msg.options.filter((o) => !IN_THE_TITLE[o.type] && !["install_sensor", "cancel_prediction", "alliance"].includes(o.type));
   if (optionOf("cancel_prediction") && !optionOf("make_prediction")) box.append(h("div", { class: "rows" }, predictionRows(null)));
