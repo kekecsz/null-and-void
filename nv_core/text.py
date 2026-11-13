@@ -91,7 +91,7 @@ def render_text(view: dict[str, Any]) -> str:
     # Researchers ---------------------------------------------------------------------------
     out("")
     out("RESEARCHERS")
-    rows = [["", "credit", "money", "grant", "talent", "lab", "postdocs", "students", "stacks", "fresh", "stale", "patents"]]
+    rows = [["", "credit", "money", "grant", "talent", "lab", "postdocs", "students", "stacks", "records", "patents"]]
     for r in view["researchers"]:
         mark = " (first)" if r["seat"] == view["first_player"] else ""
         done = " (ready)" if r["committed"] else ""
@@ -106,8 +106,7 @@ def render_text(view: dict[str, Any]) -> str:
                 str(r["postdocs"]),
                 str(r["students"]),
                 str(r["ideas"]),
-                f"{r['fresh']['observations']}o+{r['fresh']['cards']}c",
-                f"{r['stale']['observations']}o+{r['stale']['cards']}c",
+                f"{r['records']}" + (f" (+{r['archived']} archived)" if r["archived"] else ""),
                 str(r["patents"]),
             ]
         )
@@ -177,15 +176,22 @@ def _lab_lines(lab: dict[str, Any], name) -> list[str]:
     lines = ["", f"LAB OF {name(lab['seat']).upper()} (hidden from others)"]
     if lab["ideas"]:
         lines.append("  Development stacks: " + "; ".join(f"D{i['id']} {idea_text(i)}" for i in lab["ideas"]))
-    for area_name in ("fresh", "stale"):
-        area = lab[area_name]
-        for o in area["observations"]:
-            lines.append(f"  {area_name.title()} O{o['id']} (P{o['probe'] + 1}, round {o['round']}): {_values(o['cards'])}")
-        for e in area["experiments"]:
-            lines.append(f"  {area_name.title()} E{e['id']}: {_values(e['cards'])}")
+    records = lab["records"]
+    slips = [("O", o, f" (P{o['probe'] + 1}, round {o['round']})") for o in records["observations"]]
+    slips += [("E", e, "") for e in records["experiments"]]
+    capacity = records["capacity"]
+    for letter, slip, where in sorted(slips, key=lambda x: (x[1]["position"] is None, x[1]["position"] or 0, -x[1]["id"])):
+        if slip["position"] is None:
+            place = "Archived"
+        else:
+            beyond = capacity is not None and slip["position"] > capacity
+            place = f"Record {slip['position']}{' (beyond the capacity)' if beyond else ''}"
+        lines.append(f"  {place} {letter}{slip['id']}{where}: {_values(slip['cards'])}")
     pending = lab["pending"]
     if pending["development"]:
         lines.append("  Chosen this phase: " + "; ".join(f"{n + 1}. {idea_text(i)}" for n, i in enumerate(pending["development"])))
+    if pending.get("archive"):
+        lines.append("  To archive this phase: " + ", ".join(str(x) for x in pending["archive"]))
     if pending["allocation"]:
         a = pending["allocation"]
         staff = ", ".join(f"{t} {c['postdocs']}p+{c['students']}s" for t, c in a["allocation"].items()) or "none"

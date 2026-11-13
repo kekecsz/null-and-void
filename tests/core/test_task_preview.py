@@ -234,7 +234,7 @@ def test_processing_preview_is_what_acceptance_then_gives():
     processing = task_preview(state, 0)["processing"]
     assert processing
     ctx = Ctx(state)
-    record = SupportRecord(kind="observation", area="fresh", cards=[])
+    record = SupportRecord(kind="observation", cards=[])
     for key, p in processing.items():
         tier = int(key.split("/")[1])
         manuscript = Manuscript(idea=idea, author=0, tier=tier, open_access=False, records=[record] * p["first_records"],

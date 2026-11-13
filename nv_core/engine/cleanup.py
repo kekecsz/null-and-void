@@ -4,6 +4,7 @@ Research grants and Patents, which happen during Clean-up)."""
 from nv_core.engine.context import Ctx
 from nv_core.engine.ending import credit_victory, end_game
 from nv_core.engine.publication import describe
+from nv_core.engine.records import clean_up as clean_up_records
 from nv_core.state import Paper, PaperLog, RoundLog, Task
 
 
@@ -128,7 +129,6 @@ def cleanup(ctx: Ctx) -> None:
             return
         state.rounds_in_crisis += 1
 
-    for r in state.researchers:
-        ctx.discard_area(r.stale)
-        r.stale, r.fresh = r.fresh, r.stale  # the emptied stale area becomes the new fresh area
+    for seat in order:
+        clean_up_records(ctx, state.researcher(seat))
     state.first_player = (state.first_player + 1) % state.n_players

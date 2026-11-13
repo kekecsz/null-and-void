@@ -28,6 +28,7 @@ class RandomWeights:
     pass_turn: float = 0.15  # pass in the Experimentation phase instead of acting
     sensor: float = 0.3  # install a sensor rather than run an experiment, when possible
     expand_lab: float = 0.2  # increase the lab capacity, when possible (once a round)
+    archive: float = 0.2  # archive some records in the Development phase, when possible
     another_prediction: float = 0.6  # make one more prediction before committing
     preregister: float = 0.5
     reveal: float = 0.6  # reveal a hidden prediction
@@ -136,6 +137,12 @@ class RandomBot:
             self._queue = [x for x in reveals if rng.random() < w.reveal]
             if self._queue:
                 return self._queue.pop(0)
+        if "archive_records" in by_type and "archive" not in self._done:
+            self._done.add("archive")
+            t = by_type["archive_records"].template
+            room = t["per_staff_member"] * t["staff_free"]
+            if t["records"] and room > 0 and rng.random() < w.archive:
+                return a.ArchiveRecords(seat=seat, records=rng.sample(t["records"], rng.randint(1, min(room, len(t["records"])))))
         if "formulate_theory" in by_type or "develop_method" in by_type:
             if "formulate_theory" in by_type and rng.random() < w.theory:
                 theory = self._theory(seat, by_type["formulate_theory"].template)

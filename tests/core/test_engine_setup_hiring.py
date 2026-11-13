@@ -168,7 +168,7 @@ def test_experiment_specifies_free_parameters_and_reads_the_world_table():
     experiment = state.researcher(seat).experiments[-1]
     assert {k: experiment.inputs[k] for k in free} == free
     assert experiment.outcomes == {"WO1": "up" if experiment.inputs["IP1"] == "a" else "down"}
-    cards = state.researcher(seat).fresh.cards
+    cards = state.researcher(seat).records.cards
     assert len(cards) == 4 and {c.experiment for c in cards} == {experiment.id}
 
 

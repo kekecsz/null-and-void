@@ -8,7 +8,7 @@ import copy
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from nv_core.settings import Settings
 from nv_core.world_data import WorldData
@@ -94,7 +94,7 @@ class Observation(_Model):
 
 
 class ExperimentCard(_Model):
-    """One card of an experiment in a record area; ``experiment`` is the experiment's id."""
+    """One card of an experiment in the Records area; ``experiment`` is the experiment's id."""
 
     experiment: int
     card: Card
@@ -103,6 +103,17 @@ class ExperimentCard(_Model):
 class RecordArea(_Model):
     observations: list[Observation] = []
     cards: list[ExperimentCard] = []
+
+
+def _merged_areas(*areas: Any) -> dict[str, list]:
+    """Old Fresh and Stale record areas (games saved before the Records area) as one area."""
+    merged: dict[str, list] = {"observations": [], "cards": []}
+    for area in areas:
+        if area is None:
+            continue
+        for key in merged:
+            merged[key] += list(area.get(key, []) if isinstance(area, dict) else getattr(area, key))
+    return merged
 
 
 class Experiment(_Model):
@@ -140,9 +151,17 @@ class Researcher(_Model):
     lab_capacity: int | None = None
     lab_expanded: bool = False
     ideas: list[Idea] = []
-    fresh: RecordArea = Field(default_factory=RecordArea)
-    stale: RecordArea = Field(default_factory=RecordArea)
+    records: RecordArea = Field(default_factory=RecordArea)  # the Records area, archived records included
+    archived: list[int] = []  # the archived record slips (experiment or observation ids)
     experiments: list[Experiment] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def _one_records_area(cls, data: Any) -> Any:
+        if isinstance(data, dict) and ("fresh" in data or "stale" in data):
+            data = dict(data)
+            data["records"] = _merged_areas(data.pop("stale", None), data.pop("fresh", None))
+        return data
 
     def allocated(self, task: Task) -> int:
         count = self.staff.get(task)
@@ -176,7 +195,7 @@ class SupportRecord(_Model):
     """A supporting record stack in a manuscript (Supporting observational and experimental records)."""
 
     kind: Literal["observation", "experiment"]
-    area: Literal["fresh", "stale"]
+    area: Literal["fresh", "stale", "records"] = "records"  # "fresh", "stale": games saved before the Records area
     cards: list[Card]
     observation: int | None = None
     experiments: list[int] = []  # the experiments the cards came from
@@ -254,8 +273,16 @@ class SubmissionUndo(_Model):
     manuscript: int
     cost: int = 0  # submission fee and APC paid
     index: int = 0  # where the development stack was among the researcher's ideas
-    taken: dict[Literal["fresh", "stale"], RecordArea] = {}  # the supporting records, from their areas
+    taken: RecordArea = Field(default_factory=RecordArea)  # the supporting records, from the Records area
     before: Manuscript | None = None  # revisions: the manuscript as it was in the Revise area
+
+    @model_validator(mode="before")
+    @classmethod
+    def _one_records_area(cls, data: Any) -> Any:
+        taken = data.get("taken") if isinstance(data, dict) else None
+        if isinstance(taken, dict) and ("fresh" in taken or "stale" in taken):
+            data = {**data, "taken": _merged_areas(taken.get("stale"), taken.get("fresh"))}
+        return data
 
 
 class PaperLog(_Model):
@@ -303,6 +330,7 @@ class Pending(_Model):
     leaving_students: dict[Task, int] | None = None
     leave_alliances: list[int] = []
     development: list[Idea] = []
+    archive: list[int] = []  # Development phase: the record slips chosen to archive
     votes: dict[int, Literal["accept", "revise"]] = {}
     scoring_order: list[int] | None = None
     submissions: list[SubmissionUndo] = []  # Publication: submission and revisions

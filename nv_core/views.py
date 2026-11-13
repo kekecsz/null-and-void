@@ -8,6 +8,7 @@ from typing import Any
 
 from nv_core.engine import SIMULTANEOUS
 from nv_core.engine.context import Event
+from nv_core.engine.records import positions, slips
 from nv_core.state import Card, GameState, Idea, Manuscript, Paper, Phase, Prediction, RecordArea, Researcher
 
 # Probes are dealt at the start of the Observation and prediction phase.
@@ -32,6 +33,17 @@ def _area(area: RecordArea) -> dict[str, Any]:
         ],
         "experiments": [{"id": e, "cards": cards} for e, cards in sorted(experiments.items())],
     }
+
+
+def _records(state: GameState, r: Researcher) -> dict[str, Any]:
+    """The Records area: each slip with its record position (None when archived)."""
+    area = _area(r.records)
+    position = {slip: n for n, slip in enumerate(positions(r), start=1)}
+    for entry in area["observations"] + area["experiments"]:
+        entry["position"] = position.get(entry["id"])
+        entry["archived"] = entry["id"] in r.archived
+    area["capacity"] = state.settings.records_capacity
+    return area
 
 
 def _paper(state: GameState, paper: Paper) -> dict[str, Any]:
@@ -102,7 +114,7 @@ def _prediction(p: Prediction, full: bool) -> dict[str, Any]:
 
 def _public_prediction(state: GameState, p: Prediction) -> bool:
     """Preregistered predictions are shown once the lab shields are removed; others once revealed."""
-    if p.status in ("revealed", "pruned", "scored"):
+    if p.status in ("revealed", "pruned", "scored"):  # "pruned": games saved before pruning was removed
         return True
     return p.preregistered and state.phase not in (Phase.PREDICTION,)
 
@@ -148,8 +160,8 @@ def _view(state: GameState, seat: int | None) -> dict[str, Any]:
                     for t, c in r.staff.items()
                 },
                 "ideas": len(r.ideas),
-                "fresh": {"observations": len(r.fresh.observations), "cards": len(r.fresh.cards)},
-                "stale": {"observations": len(r.stale.observations), "cards": len(r.stale.cards)},
+                "records": len(positions(r)),
+                "archived": len(slips(r)) - len(positions(r)),
                 "patents": sum(p.patents.count(r.seat) for p in state.published),
                 "committed": state.phase in SIMULTANEOUS and r.seat not in state.waiting,
             }
@@ -236,14 +248,14 @@ def _lab(state: GameState, seat: int, all_rounds: bool = False) -> dict[str, Any
     return {
         "seat": seat,
         "ideas": [_idea(i) for i in r.ideas],
-        "fresh": _area(r.fresh),
-        "stale": _area(r.stale),
+        "records": _records(state, r),
         "leaving_students": r.leaving_students,
         "pending": {
             "allocation": pending.allocation,
             "leaving_students": pending.leaving_students,
             "leave_alliances": pending.leave_alliances,
             "development": [_idea(i) for i in pending.development],
+            "archive": list(pending.archive),
             "votes": {str(k): v for k, v in pending.votes.items()},
             "scoring_order": pending.scoring_order,
         },

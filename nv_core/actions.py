@@ -108,6 +108,14 @@ class DevelopMethod(_Action):
     parameter: str
 
 
+class ArchiveRecords(_Action):
+    """Development phase: the record slips (experiment or observation ids) to archive. Replaces the
+    earlier choice of this phase; an empty list archives nothing."""
+
+    type: Literal["archive_records"] = "archive_records"
+    records: list[int]
+
+
 class CancelDevelopment(_Action):
     type: Literal["cancel_development"] = "cancel_development"
     index: int  # position in this round's list of development choices
@@ -202,6 +210,7 @@ Action = Annotated[
         FormulateTheory,
         DevelopMethod,
         CancelDevelopment,
+        ArchiveRecords,
         Submit,
         Revise,
         WithdrawSubmission,

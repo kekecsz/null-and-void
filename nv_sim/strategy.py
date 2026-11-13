@@ -781,14 +781,18 @@ class StrategyBot:
         return plan
 
     def _reveals(self, view, by_type) -> list[BaseModel]:
-        if self.motive == "cooperative":
-            return []
         seat = view["seat"]
-        papers = {p["id"]: p for p in self._theories(view)}
         mine = {p["id"]: p for p in view["predictions"] if p["seat"] == seat}
         listed = [x for x in by_type["reveal_prediction"].actions if x.reveal]
         prereg = sum(1 for p in mine.values() if p["preregistered"])
         room = self._staff(view, Task.DATA_COLLECTION) - prereg
+        if self._me(view)["credit"] == 0:
+            # Academic credit rules: every staff member that can be used must be; only successful
+            # predictions are listed at 0 credit.
+            return listed[:room]
+        if self.motive == "cooperative":
+            return []
+        papers = {p["id"]: p for p in self._theories(view)}
         kills, wins = [], []
         for x in listed:
             p = mine[x.prediction]

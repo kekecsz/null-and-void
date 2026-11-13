@@ -53,10 +53,10 @@ def _submission_state():
         Idea(id=902, kind="method", parameter="IP2"),
     ]
     cards = lambda e, values: [ExperimentCard(experiment=e, card=Card(var=k, state=v, origin="supply")) for k, v in values.items()]
-    r.fresh.cards = cards(801, {"IP1": "a", "IP2": "x", "IP3": "p", "WO1": "up"}) + cards(
+    r.records.cards = cards(801, {"IP1": "a", "IP2": "x", "IP3": "p", "WO1": "up"}) + cards(
         802, {"IP1": "b", "IP2": "y", "IP3": "q", "WO1": "down"}
     )
-    r.fresh.observations = [
+    r.records.observations = [
         Observation(
             id=701, probe=0, round=1,
             cards=[Card(var="IP1", state="a", origin="supply"), Card(var="IP2", state=None, origin="supply"),
@@ -79,7 +79,7 @@ def test_submission_needs_the_tier_records_and_no_mismatch():
     state = do(state, a.Submit(seat=0, manuscript=901, tier=tier, records=[a.ObservationRecord(observation=701)]))
     m = state.manuscript(901)
     assert m.area == "review" and m.position == 1 and not m.records[0].fabricated
-    assert not state.researcher(0).fresh.observations  # the record went with the manuscript
+    assert not state.researcher(0).records.observations  # the record went with the manuscript
     assert state.researcher(0).money == 10 - S.journal_tiers[tier].submission_fee
 
 
@@ -108,7 +108,7 @@ def test_methods_only_where_accepted_and_tier_zero_goes_to_accept_area():
 # Article processing ------------------------------------------------------------------------
 def _manuscript(state, tier, records=0, inputs=None, open_access=False, kind="theory"):
     idea = Idea(id=950, kind=kind, inputs=inputs or {"IP1": "a"}, outcomes={"WO1": "up"}, parameter="IP2" if kind == "method" else None)
-    record = SupportRecord(kind="observation", area="fresh", cards=[])
+    record = SupportRecord(kind="observation", cards=[])
     return Manuscript(idea=idea, author=0, tier=tier, open_access=open_access, records=[record] * records, round_submitted=1, area="accept")
 
 
@@ -194,16 +194,15 @@ def test_cleanup_counts_students_as_unused_and_unpaid_postdocs_leave():
     assert r.credit == 20 + 2 * S.unused_staff_penalty + 1 * S.unpaid_postdoc_penalty
 
 
-def test_cleanup_patent_income_and_record_ageing():
+def test_cleanup_patent_income_and_records_capacity():
     state = game()
     theory = publish(state, 1, inputs={"IP1": "a"}, outcomes={"WO1": "up"})
     theory.patents = [0, 0]
     r = state.researcher(0)
-    r.fresh.observations = [Observation(id=1, probe=0, round=1, cards=[])]
-    r.stale.observations = [Observation(id=2, probe=0, round=0, cards=[])]
+    r.records.observations = [Observation(id=i, probe=0, round=1, cards=[]) for i in range(1, S.records_capacity + 2)]
     cleanup(Ctx(state))
     assert r.money == S.grant_track[r.grant_position - 1].funding + 2 * S.patent_funding
-    assert [o.id for o in r.stale.observations] == [1] and not r.fresh.observations
+    assert sorted(o.id for o in r.records.observations) == list(range(2, S.records_capacity + 2))  # the oldest went
 
 
 def test_crisis_ends_after_its_last_round_with_credit_victory():

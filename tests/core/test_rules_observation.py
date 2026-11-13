@@ -67,7 +67,7 @@ def test_probe_time_holder_records_the_full_visible_column():
     assert state.phase == Phase.DEVELOPMENT
     world = tiny_world()
     for probe, seat in holders.items():
-        records = [o for o in state.researcher(seat).fresh.observations if o.probe == probe]
+        records = [o for o in state.researcher(seat).records.observations if o.probe == probe]
         assert len(records) == 1
         cards = records[0].cards
         assert len(cards) == len(world.input_ids) + len(world.outcome_ids)

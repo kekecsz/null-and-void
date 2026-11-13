@@ -37,10 +37,6 @@ def free_position(ctx: Ctx) -> int | None:
     return None
 
 
-def _area(r: Researcher, name: str) -> RecordArea:
-    return r.fresh if name == "fresh" else r.stale
-
-
 def build_records(ctx: Ctx, r: Researcher, specs: list) -> list[SupportRecord]:
     """Check the supporting records and turn them into record stacks (cards are not removed yet)."""
     records: list[SupportRecord] = []
@@ -49,48 +45,32 @@ def build_records(ctx: Ctx, r: Researcher, specs: list) -> list[SupportRecord]:
     variables = [v.id for v in ctx.world.variables]
     for number, spec in enumerate(specs, start=1):
         if isinstance(spec, ObservationRecord):
-            found = None
-            for area_name in ("fresh", "stale"):
-                for observation in _area(r, area_name).observations:
-                    if observation.id == spec.observation:
-                        found = (area_name, observation)
-            if not found:
+            observation = next((o for o in r.records.observations if o.id == spec.observation), None)
+            if observation is None:
                 raise IllegalAction(f"record {number}: you have no observation O{spec.observation}")
             if spec.observation in used_observations:
                 raise IllegalAction(f"record {number}: O{spec.observation} is used twice")
             used_observations.add(spec.observation)
-            area_name, observation = found
-            records.append(
-                SupportRecord(kind="observation", area=area_name, cards=list(observation.cards), observation=observation.id)
-            )
+            records.append(SupportRecord(kind="observation", cards=list(observation.cards), observation=observation.id))
             continue
         assert isinstance(spec, ExperimentRecord)
         if sorted(var for _, var in spec.cards) != sorted(variables):
             raise IllegalAction(f"record {number}: an experiment record has exactly one card per row")
-        areas = set()
         cards: list[Card] = []
         for experiment, var in spec.cards:
             if (experiment, var) in used_cards:
                 raise IllegalAction(f"record {number}: card E{experiment}:{var} is used twice")
             used_cards.add((experiment, var))
-            match = None
-            for area_name in ("fresh", "stale"):
-                for item in _area(r, area_name).cards:
-                    if item.experiment == experiment and item.card.var == var:
-                        match = (area_name, item.card)
-            if not match:
+            match = next((i.card for i in r.records.cards if i.experiment == experiment and i.card.var == var), None)
+            if match is None:
                 raise IllegalAction(f"record {number}: you have no card E{experiment}:{var}")
-            areas.add(match[0])
-            cards.append(match[1])
-        if len(areas) > 1:
-            raise IllegalAction(f"record {number}: all cards of a record stack come from one record area")
+            cards.append(match)
         order = {v: i for i, v in enumerate(variables)}
         cards.sort(key=lambda c: order[c.var])
         experiments = sorted({e for e, _ in spec.cards})
         records.append(
             SupportRecord(
                 kind="experiment",
-                area=areas.pop(),
                 cards=cards,
                 experiments=experiments,
                 fabricated=len(experiments) > 1,
@@ -99,28 +79,27 @@ def build_records(ctx: Ctx, r: Researcher, specs: list) -> list[SupportRecord]:
     return records
 
 
-def _remove_records(r: Researcher, specs: list) -> dict[str, RecordArea]:
-    """Take the records' cards out of the record areas; return what was taken, by area."""
-    taken = {"fresh": RecordArea(), "stale": RecordArea()}
+def _remove_records(r: Researcher, specs: list) -> RecordArea:
+    """Take the records' cards out of the Records area; return what was taken. A slip keeps its
+    record position while it holds cards (Records area; open question R4)."""
+    taken = RecordArea()
+    area = r.records
     for spec in specs:
-        for name in ("fresh", "stale"):
-            area = _area(r, name)
-            if isinstance(spec, ObservationRecord):
-                taken[name].observations += [o for o in area.observations if o.id == spec.observation]
-                area.observations = [o for o in area.observations if o.id != spec.observation]
-            else:
-                cards = set(spec.cards)
-                taken[name].cards += [c for c in area.cards if (c.experiment, c.card.var) in cards]
-                area.cards = [c for c in area.cards if (c.experiment, c.card.var) not in cards]
+        if isinstance(spec, ObservationRecord):
+            taken.observations += [o for o in area.observations if o.id == spec.observation]
+            area.observations = [o for o in area.observations if o.id != spec.observation]
+        else:
+            cards = set(spec.cards)
+            taken.cards += [c for c in area.cards if (c.experiment, c.card.var) in cards]
+            area.cards = [c for c in area.cards if (c.experiment, c.card.var) not in cards]
     return taken
 
 
-def _return_records(ctx: Ctx, r: Researcher, taken: dict[str, RecordArea]) -> None:
+def _return_records(ctx: Ctx, r: Researcher, taken: RecordArea) -> None:
     order = {v.id: i for i, v in enumerate(ctx.world.variables)}
-    for name, records in taken.items():
-        area = _area(r, name)
-        area.observations = sorted(area.observations + records.observations, key=lambda o: o.id)
-        area.cards = sorted(area.cards + records.cards, key=lambda c: (c.experiment, order[c.card.var]))
+    area = r.records
+    area.observations = sorted(area.observations + taken.observations, key=lambda o: o.id)
+    area.cards = sorted(area.cards + taken.cards, key=lambda c: (c.experiment, order[c.card.var]))
 
 
 def _elements(idea: Idea) -> int:
@@ -249,30 +228,28 @@ def supporting_records(ctx: Ctx, r: Researcher, idea: Idea) -> tuple[list[Observ
     do not mismatch ``idea``. Experiment records keep the cards of one experiment together where
     possible, so cards are only mixed (fabricated) when nothing else fits."""
     values = {**idea.inputs, **idea.outcomes} if idea.kind == "theory" else {}
+    area = r.records
     observations = [
         ObservationRecord(observation=o.id)
-        for area in (r.fresh, r.stale)
-        for o in area.observations
+        for o in sorted(area.observations, key=lambda o: o.id)
         if not mismatch(values, {c.var: c for c in o.cards})
     ]
     experiments: list[ExperimentRecord] = []
     variables = [v.id for v in ctx.world.variables]
-    for area in (r.fresh, r.stale):
-        fitting = {
-            var: [c for c in area.cards if c.card.var == var and (var not in values or c.card.state == values[var])]
-            for var in variables
-        }
-        whole = sorted(
-            e
-            for e in {c.experiment for c in area.cards}
-            if all(any(c.experiment == e for c in fitting[var]) for var in variables)
-        )
-        for e in whole:
-            experiments.append(ExperimentRecord(cards=[(e, var) for var in variables]))
-            for var in variables:
-                fitting[var] = [c for c in fitting[var] if c.experiment != e]
-        while all(fitting[var] for var in variables):
-            experiments.append(ExperimentRecord(cards=[(fitting[var].pop(0).experiment, var) for var in variables]))
+    fitting = {
+        var: [c for c in area.cards if c.card.var == var and (var not in values or c.card.state == values[var])]
+        for var in variables
+    }
+    whole = sorted(
+        (e for e in {c.experiment for c in area.cards} if all(any(c.experiment == e for c in fitting[var]) for var in variables)),
+        # the oldest first: they are the first to leave the Records area at Clean-up
+    )
+    for e in whole:
+        experiments.append(ExperimentRecord(cards=[(e, var) for var in variables]))
+        for var in variables:
+            fitting[var] = [c for c in fitting[var] if c.experiment != e]
+    while all(fitting[var] for var in variables):
+        experiments.append(ExperimentRecord(cards=[(fitting[var].pop(0).experiment, var) for var in variables]))
     return observations, experiments
 
 

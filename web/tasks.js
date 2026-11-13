@@ -68,6 +68,28 @@ function useRecordButton(record) {
   if (!spec || box.records.some((r) => specKey(r) === specKey(spec))) return null;
   return useButton(() => { box.records.push(spec); task.open.add(`box${task.target}`); redraw(); });
 }
+function archiveButton(record) {  // Archiving records (Development phase): add to or take from this phase's choice
+  const option = optionOf("archive_records");
+  if (!option) return null;
+  const chosen = option.template.chosen;
+  if (chosen.includes(record.id)) {
+    return h("button", { class: "on", title: "Chosen for the archive; click to take it back",
+      onclick: () => send({ type: "archive_records", records: chosen.filter((x) => x !== record.id) }) }, "archive \u2713");
+  }
+  if (!option.template.records.includes(record.id)) return null;
+  return h("button", { title: `Archive this record (one development staff member per ${option.template.per_staff_member} records)`,
+    onclick: () => send({ type: "archive_records", records: [...chosen, record.id] }) }, "archive");
+}
+function archiveForm(t) {
+  const names = t.chosen.map((id) => `#${t.records.indexOf(id) + 1}`);
+  return [
+    h("p", { class: "small" }, `Press "archive" on records in the Records panel. Archived records keep no position, so they are not discarded at Clean-up; `
+      + `they can still be used. One development staff member archives up to ${t.per_staff_member} records.`),
+    t.chosen.length
+      ? h("div", {}, `Chosen: ${t.chosen.length} record(s) (${names.join(", ")}) `, h("button", { onclick: () => send({ type: "archive_records", records: [] }) }, "Clear"))
+      : h("span", { class: "muted" }, "None chosen."),
+  ];
+}
 function useIdeaButton(idea) {
   const option = optionOf("submit");
   if (!option || !option.actions.some((a) => a.manuscript === idea.id)) return null;
@@ -315,7 +337,7 @@ function boxCandidates(box) {  // every record the engine lists for this manuscr
 
 function recordRow(spec) {  // a record as an action names it
   const lab = view().lab;
-  const areas = [lab.fresh, lab.stale];
+  const areas = [lab.records];
   if (spec.kind === "observation") {
     const o = areas.flatMap((x) => x.observations).find((x) => x.id === spec.observation);
     return { key: `${lab.seat}/O${spec.observation}`, head: `O${spec.observation}`, sub: o ? `P${o.probe + 1}, round ${o.round}` : "", slots: o ? o.cards : {} };
@@ -575,11 +597,11 @@ const TASK_ROWS = {
 const FORMS = {
   allocate_staff: (o) => allocateForm(o.template), choose_leaving_students: (o) => leavingForm(o.template),
   order_predictions: (o) => orderForm(o.template), revise: (o) => manuscriptActionRows(o, "Revise"),
-  withdraw_submission: (o) => manuscriptActionRows(o, "Withdraw"),
+  withdraw_submission: (o) => manuscriptActionRows(o, "Withdraw"), archive_records: (o) => archiveForm(o.template),
 };
 const TITLES = {
   allocate_staff: "Hiring and task allocation", choose_leaving_students: "Student task check", claim_probe_time: "Probe time",
-  order_predictions: "Scoring order", develop_method: "Develop a method", revise: "Revise a manuscript",
+  order_predictions: "Scoring order", develop_method: "Develop a method", revise: "Revise a manuscript", archive_records: "Archive records",
   withdraw_submission: "Undo this step's submission or revision", leave_alliance: "Last chance to leave an alliance",
   stay_in_alliance: "Stay in an alliance",
 };

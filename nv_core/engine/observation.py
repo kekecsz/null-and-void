@@ -497,7 +497,7 @@ def _clear_probe(ctx: Ctx, probe: Probe) -> None:
     hidden = [c for v, c in stack_cards(ctx, probe.stack).items() if c not in visible]
     if probe.probe_time is not None:
         observation = Observation(id=ctx.state.new_id(), probe=probe.index, round=ctx.state.round, cards=visible)
-        ctx.state.researcher(probe.probe_time).fresh.observations.append(observation)
+        ctx.state.researcher(probe.probe_time).records.observations.append(observation)  # at record position 1
         ctx.log(
             "observation",
             f"{ctx.name(probe.probe_time)} records P{probe.index + 1} as O{observation.id}",

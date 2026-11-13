@@ -244,25 +244,39 @@ function renderGrid() {
 // Records and unpublished work -----------------------------------------------------------------------
 const shownLabs = () => (msg.spectator ? view().labs : [view().lab]);
 
+// The Records area: record positions (the newest is 1), then the archive.
 function labRecords(lab) {
   const specified = (id) => {
     const e = lab.experiments.find((x) => x.id === id);
     return e && Object.keys(e.specified).length ? `, specified ${Object.keys(e.specified).join(" ")}` : "";
   };
-  return ["fresh", "stale"].map((area) => [area, [
-    ...lab[area].observations.map((o) => ({ id: o.id, kind: "observation", head: `O${o.id}`, sub: `P${o.probe + 1}, round ${o.round}`, slots: o.cards })),
-    ...lab[area].experiments.map((e) => ({ id: e.id, kind: "experiment", head: `E${e.id}`, sub: `experiment${specified(e.id)}`, slots: e.cards })),
-  ]]);
+  const all = [
+    ...lab.records.observations.map((o) => ({ id: o.id, kind: "observation", head: `O${o.id}`, sub: `P${o.probe + 1}, round ${o.round}`, slots: o.cards, position: o.position })),
+    ...lab.records.experiments.map((e) => ({ id: e.id, kind: "experiment", head: `E${e.id}`, sub: `experiment${specified(e.id)}`, slots: e.cards, position: e.position })),
+  ];
+  const placed = all.filter((r) => r.position !== null).sort((a, b) => a.position - b.position);
+  const archived = all.filter((r) => r.position === null).sort((a, b) => b.id - a.id);
+  return [["records", placed], ["archive", archived]];
 }
 const recordArea = (owner, title, strips) => h("div", { class: "record-area" }, groupLabel(owner, title), strips);
+function recordTail(lab, r) {  // the position, a warning beyond the capacity, and this step's buttons
+  const capacity = lab.records.capacity;
+  const beyond = r.position !== null && capacity !== null && r.position > capacity;
+  const place = r.position === null ? info("archived")
+    : h("span", { class: beyond ? "bad" : "", title: beyond ? "Beyond the Records capacity: discarded at Clean-up unless used or archived" : "Record position" },
+      `#${r.position}${beyond ? " (discarded at Clean-up)" : ""}`);
+  return [place, msg.spectator ? null : useRecordButton(r), msg.spectator ? null : archiveButton(r)];
+}
 function renderRecords() {
   const rows = [];
   for (const lab of shownLabs()) {
     const owner = () => (msg.spectator ? [chip(lab.seat), " "] : []);
     for (const [area, records] of labRecords(lab)) {
       if (!records.length) continue;
-      rows.push(recordArea(owner(), area === "fresh" ? "Fresh records" : "Stale records",
-        records.map((r) => strip({ key: `${lab.seat}/${r.head}`, head: r.head, sub: r.sub, slots: r.slots, tail: msg.spectator ? null : useRecordButton(r) }))));
+      const capacity = lab.records.capacity;
+      const title = area === "records" ? `Records area${capacity === null ? "" : ` (capacity ${capacity})`}` : "Archive";
+      rows.push(recordArea(owner(), title,
+        records.map((r) => strip({ key: `${lab.seat}/${r.head}`, head: r.head, sub: r.sub, slots: r.slots, tail: recordTail(lab, r) }))));
     }
     if (msg.spectator && lab.experiments.length) {
       rows.push(recordArea(owner(), "Experiments, every round", lab.experiments.map((e) =>

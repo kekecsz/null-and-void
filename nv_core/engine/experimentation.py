@@ -150,7 +150,7 @@ def run_experiment(ctx: Ctx, action: RunExperiment) -> None:
         )
     )
     # Recording experimental findings
-    r.fresh.cards += [ExperimentCard(experiment=experiment_id, card=c) for c in cards]
+    r.records.cards += [ExperimentCard(experiment=experiment_id, card=c) for c in cards]  # at record position 1
     cited = f" citing {', '.join(f'M{m.id}' for m in methods)}" if methods else ""
     ctx.log("experiment", f"{ctx.name(seat)} runs an experiment{cited}", seat=seat, cited=action.cited_methods)
     shown = ", ".join(f"{k}={v}" for k, v in {**inputs, **outcomes}.items())

@@ -44,6 +44,9 @@ DESCRIPTIONS: dict[str, str] = {
     "formulate_theory": "Development phase: formulate a theory (at least one input parameter and one world outcome).",
     "develop_method": "Development phase: develop a method for one input parameter.",
     "cancel_development": "Development phase: drop one of this phase's choices (0-based index).",
+    "archive_records": "Archiving records: the records (experiment or observation ids) to archive this phase; "
+    "replaces your earlier list ([] for none). Each started group of max_archive_per_staff_member records uses "
+    "one development staff member.",
     "submit": "Submission: submit a development stack to a journal tier with supporting records "
     "(observation records by id, experiment records as [experiment id, row id] cards, one per row).",
     "revise": "Revisions: move your manuscript from the Revise area to the Accept area.",

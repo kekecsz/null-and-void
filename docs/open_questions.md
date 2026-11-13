@@ -8,17 +8,14 @@ Each entry gives the document and section, the exact text, the possible readings
 
 ---
 
-## Rule changes of 2026-11-12: open points (review before implementing)
+## Rule changes of 2026-11-12: open points
 
-### R4. What is one record, for the Records capacity?
+### R4. What is one record, for the Records capacity? (answered; the rulebook text is still to be clarified)
 - **Where:** Recording experimental findings; Recording observations; Supporting observational and experimental records; Clean-up phase.
 - **Text:** "New records always enter at the first record position, and push older records one position higher." and "each card can be used only once"; experiment records "can be mixed across cards involved in several experiments".
-- **Questions:** (a) Is one experiment one record (all its cards in one position), and one Probe observation one record? (b) When some cards of an experiment are used in a submission (a mixed stack), does the rest of that experiment keep its position and count toward the capacity? (c) When a record leaves (used in a submission, or archived), do the older records close the gap, moving one position lower?
-- **Suggestion:** (a) yes; (b) yes, until all its cards are used; (c) yes.
-
-### R6. Archiving
-- **Where:** Development phase; Archiving records.
-- **Questions:** (a) Do other players see that someone archived (as they see that someone developed something), or is it hidden behind the lab shield? (b) The archive has no limit, so over many rounds a lab can still build up a large table of experiments, the behaviour the change is meant to stop, at the price of Development staff. Intended? (c) The Development list says "Archive a record", while the section allows up to [max_archive_per_staff_member] records per staff member: "Archive records" would match.
+- **Zoltan's answers (2026-11-13):** (a) one slip (an experiment's cards, or one Probe observation) takes one position; (b) when a submission uses only some cards of an experiment, the slip keeps its position unless it becomes invalid (no longer at least one input parameter card and one world outcome card), in which case it is discarded; (c) when a record leaves, the older ones move down to close the gap.
+- **For the rulebook:** these three points, in Recording experimental findings, Supporting observational and experimental records and the Clean-up phase.
+- **When an invalid slip is discarded:** the engine discards it at Clean-up, before the Records capacity is applied, so it never pushes a valid record out. Until then its remaining cards can still go into a mixed experiment record. (Discarding it at once would mean a withdrawn submission has to take cards back from the discard pile.) Is Clean-up right, or should it go at once?
 
 ### R8. A theory retracted during scoring
 - **Where:** Scoring predictions; Failed predictions; Retraction.

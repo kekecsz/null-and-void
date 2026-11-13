@@ -16,7 +16,9 @@ from nv_core.engine.context import Ctx, IllegalAction
 from nv_core.engine.experimentation import MAX_SENSOR_LEVEL, check_expand_lab
 from nv_core.engine.hiring import POSTDOC_ONLY
 from nv_core.engine.observation import _capacity, _revealable, _success, mismatch, same_theory_on_probe
+from nv_core.engine.development import staff_chosen
 from nv_core.engine.publication import possible_submissions
+from nv_core.engine.records import positions
 from nv_core.state import GameState, Phase, Task
 
 
@@ -181,7 +183,7 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
         options.append(Option(type="order_predictions", template={"predictions": ids}))
     elif phase == Phase.DEVELOPMENT and waiting:
         pending = s.pending[seat].development
-        if len(pending) < r.allocated(Task.DEVELOPMENT):
+        if staff_chosen(ctx, seat) < r.allocated(Task.DEVELOPMENT):
             options.append(
                 Option(
                     type="formulate_theory",
@@ -199,6 +201,22 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
                 Option(
                     type="develop_method",
                     actions=[a.DevelopMethod(seat=seat, parameter=v) for v in ctx.world.input_ids],
+                )
+            )
+        per = ctx.settings.max_archive_per_staff_member
+        archivable = positions(r)
+        if per is not None and (archivable or s.pending[seat].archive):
+            options.append(
+                Option(
+                    type="archive_records",
+                    template={
+                        "records": archivable,  # in record position order, the first is position 1
+                        "chosen": list(s.pending[seat].archive),
+                        "per_staff_member": per,
+                        "staff_free": r.allocated(Task.DEVELOPMENT) - len(pending),
+                        "rule": "the list replaces the earlier choice; every started group of "
+                        "per_staff_member records uses one development staff member",
+                    },
                 )
             )
         if pending:

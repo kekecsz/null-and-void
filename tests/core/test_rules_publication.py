@@ -61,7 +61,7 @@ def _manuscript(idea_id, author, area, position=None, tier=1, inputs=None, recor
     )
     return Manuscript(
         idea=idea, author=author, tier=tier, open_access=open_access,
-        records=[SupportRecord(kind="observation", area="fresh", cards=[]) for _ in range(records)],
+        records=[SupportRecord(kind="observation", cards=[]) for _ in range(records)],
         round_submitted=1, area=area, position=position, votes=[], tokens=None,
     )
 
@@ -70,10 +70,9 @@ def _submission(write_up=3, other_write_up=1, positions=None, manuscripts=()):
     """Reach the Submission step with researcher 0 holding:
     ideas   901 theory IP1=a, IP2=x -> WO1=up (3 elements); 903 theory IP1=a -> WO1=up (2 elements);
             902 method for IP2
-    fresh   experiments 801 (a x p up), 802 (a x q up), 804 (b y q down), 805 (a x p down);
-            observation 701 (a x blank up)
-    stale   experiment 803 (a x p up); observation 702 (a x q up)
-    Researcher 1 holds theory 911 IP1=b, IP2=y -> WO1=down with fresh experiment 811 (b y q down).
+    records experiments 801 (a x p up), 802 (a x q up), 803 (a x p up), 804 (b y q down),
+            805 (a x p down); observations 701 (a x blank up), 702 (a x q up)
+    Researcher 1 holds theory 911 IP1=b, IP2=y -> WO1=down with experiment 811 (b y q down).
     """
     overrides = {"journal_tiers": TIERS}
     if positions:
@@ -87,20 +86,19 @@ def _submission(write_up=3, other_write_up=1, positions=None, manuscripts=()):
         Idea(id=903, kind="theory", inputs={"IP1": "a"}, outcomes={"WO1": "up"}),
         Idea(id=902, kind="method", parameter="IP2"),
     ]
-    r.fresh.cards = (
+    r.records.cards = (
         _experiment(801, ("a", "x", "p", "up"))
         + _experiment(802, ("a", "x", "q", "up"))
+        + _experiment(803, ("a", "x", "p", "up"))
         + _experiment(804, ("b", "y", "q", "down"))
         + _experiment(805, ("a", "x", "p", "down"))
     )
-    r.fresh.observations = [_observation(701, ("a", "x", None, "up"))]
-    r.stale.cards = _experiment(803, ("a", "x", "p", "up"))
-    r.stale.observations = [_observation(702, ("a", "x", "q", "up"))]
+    r.records.observations = [_observation(701, ("a", "x", None, "up")), _observation(702, ("a", "x", "q", "up"))]
     other = state.researcher(1)
     other.money = 10
     other.ideas = [Idea(id=911, kind="theory", inputs={"IP1": "b", "IP2": "y"}, outcomes={"WO1": "down"})]
-    other.fresh.cards = _experiment(811, ("b", "y", "q", "down"))
-    other.fresh.observations = []
+    other.records.cards = _experiment(811, ("b", "y", "q", "down"))
+    other.records.observations = []
     state.manuscripts.extend(manuscripts)
     state = do(state, a.CommitPhase(seat=0), a.CommitPhase(seat=1))
     assert state.phase == Phase.SUBMISSION
@@ -248,16 +246,16 @@ def test_record_stack_has_one_card_per_row():
     _refused(state, a.Submit(seat=0, manuscript=901, tier=1, records=[doubled]))
 
 
-def test_record_stack_comes_from_one_record_area():
-    """Supporting records: all cards of one stack come from the same record area; different stacks
-    may come from different areas."""
+def test_record_stack_may_mix_cards_of_several_experiments():
+    """Supporting records: experiment records can be mixed across cards of several experiments
+    (flagged as fabricated for the debrief, specification 5.5); the cards leave the Records area."""
     state = _submission()
     mixed = a.ExperimentRecord(cards=[(801, "IP1"), (801, "IP2"), (803, "IP3"), (801, "WO1")])
-    _refused(state, a.Submit(seat=0, manuscript=901, tier=1, records=[mixed]))
-    state = do(state, a.Submit(seat=0, manuscript=901, tier=1, records=[_exp_record(803), _exp_record(801)]))
+    state = do(state, a.Submit(seat=0, manuscript=901, tier=1, records=[mixed, _exp_record(802)]))
+    assert [rec.fabricated for rec in state.manuscript(901).records] == [True, False]
     r = state.researcher(0)
-    assert not any(c.experiment == 803 for c in r.stale.cards)
-    assert not any(c.experiment == 801 for c in r.fresh.cards)
+    assert not any(c.experiment == 802 for c in r.records.cards)
+    assert [c.card.var for c in r.records.cards if c.experiment == 803] == ["IP1", "IP2", "WO1"]
 
 
 def test_a_mismatching_world_outcome_is_refused():
@@ -298,7 +296,7 @@ def test_withdrawing_a_submission_undoes_it_completely():
     r = state.researcher(0)
     assert not any(m.id == 901 for m in state.manuscripts)
     assert r.money == before.money and r.ideas == before.ideas
-    assert r.fresh == before.fresh and r.stale == before.stale
+    assert r.records == before.records
     assert r.remaining(Task.WRITE_UP) == 1
     state = do(state, a.Submit(seat=0, manuscript=903, tier=0, records=[]))  # the staff member can be used again
     assert state.manuscript(903).area == "accept"

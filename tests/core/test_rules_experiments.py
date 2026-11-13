@@ -42,7 +42,7 @@ def test_specified_states_come_from_supply_unspecified_from_the_input_deck():
     before = {v: _deck_size(state, v) for v in ("IP1", "IP2", "IP3")}
     state = do(state, a.RunExperiment(seat=seat, specified={"IP1": "a"}))
     experiment = state.researcher(seat).experiments[-1]
-    cards = {c.card.var: c.card for c in state.researcher(seat).fresh.cards if c.experiment == experiment.id}
+    cards = {c.card.var: c.card for c in state.researcher(seat).records.cards if c.experiment == experiment.id}
     assert cards["IP1"].origin == "supply" and cards["IP1"].state == "a"
     assert cards["IP2"].origin == "input_deck" and cards["IP3"].origin == "input_deck"
     assert _deck_size(state, "IP1") == before["IP1"]

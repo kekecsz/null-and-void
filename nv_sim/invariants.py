@@ -92,9 +92,8 @@ def _input_cards(state: GameState, builds: dict[str, int]) -> list[str]:
         counts[parameter] += len(deck) + len(state.input_discards[parameter])
     cards = []
     for r in state.researchers:
-        for area in (r.fresh, r.stale):
-            cards += [c for o in area.observations for c in o.cards]
-            cards += [item.card for item in area.cards]
+        cards += [c for o in r.records.observations for c in o.cards]
+        cards += [item.card for item in r.records.cards]
     for m in state.manuscripts:
         cards += [c for record in m.records for c in record.cards]
     if state.phase in _LIVE_PROBE_PHASES:

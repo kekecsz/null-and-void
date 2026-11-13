@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from nv_core.rng import Rng
-from nv_core.state import Card, GameState, Paper, RecordArea, Researcher
+from nv_core.state import Card, GameState, Paper, Researcher
 
 
 class IllegalAction(ValueError):
@@ -102,15 +102,6 @@ class Ctx:
         elif card.origin == "probe":
             self.state.probe_discard.append(card)
         # State Cards go back to the general supply, which is unlimited.
-
-    def discard_area(self, area: RecordArea) -> None:
-        for observation in area.observations:
-            for card in observation.cards:
-                self.discard_card(card)
-        for item in area.cards:
-            self.discard_card(item.card)
-        area.observations = []
-        area.cards = []
 
     # Probe deck (Revealing input parameters; specification 5.7) --------------------------------
     def draw_probe_stack(self) -> int:

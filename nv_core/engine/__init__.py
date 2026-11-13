@@ -137,6 +137,7 @@ HANDLERS: dict[type, tuple[Phase | None, Callable]] = {
     a.FormulateTheory: (Phase.DEVELOPMENT, development.formulate_theory),
     a.DevelopMethod: (Phase.DEVELOPMENT, development.develop_method),
     a.CancelDevelopment: (Phase.DEVELOPMENT, development.cancel_development),
+    a.ArchiveRecords: (Phase.DEVELOPMENT, development.archive_records),
     a.Submit: (Phase.SUBMISSION, publication.submit),
     a.Revise: (Phase.SUBMISSION, publication.revise),
     a.WithdrawSubmission: (Phase.SUBMISSION, publication.withdraw_submission),
