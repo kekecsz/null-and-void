@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.13. 22:47
+Last updated: 2026.11.13. 23:06
 
 # Summary
 
@@ -380,7 +380,7 @@ For each staff member allocated to Write-up, the researcher can choose one of th
 
 Theories and Methods are published in scientific journals. Journals are ordered in tiers based on journal prestige. There are some low tier journals that will publish anything fast, and there are high tier journals that are more selective and are slower.
 
-- Each journal tier sets the minimum number of supporting records (observations and experiments combined, plus any separate minimums for each kind), the minimum number of elements in the theory, the rounds in processing, whether there is peer review, and whether methods are accepted. The values are in parameter\_defaults.yaml in the \[journal\_tiers\] table. Each journal tier also charges its \[submission\_fee\]. 
+- Each journal tier sets the minimum number of supporting records (observations and experiments combined, plus any separate minimums for each kind), the minimum number of elements in the theory, the rounds in processing, whether there is peer review, whether methods are accepted, and the academic credit reward for the publication in each tier. The values are in parameter\_defaults.yaml in the \[journal\_tiers\] table. Each journal tier also charges its \[submission\_fee\]. 
 
 Theories and Methods need to be submitted to one of the journal tiers, and once submitted, they are called Manuscripts. Manuscripts are submitted parallel by every researcher, turn order does not have to be respected. 
 
