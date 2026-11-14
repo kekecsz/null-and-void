@@ -329,7 +329,10 @@ class StrategyBot:
 
     def _method_to_develop(self, view) -> str | None:
         """Cooperative: a method for the parameter most Probes do not show, while fewer than the
-        highest sensor level are published or underway."""
+        highest sensor level are published or underway. Not in the Crisis, when sensors cannot be
+        installed or upgraded."""
+        if view["period"] == "crisis":
+            return None
         counts = {v: 0 for v in self.inputs}
         for p in view["published"]:
             if p["kind"] == "method":
@@ -453,7 +456,9 @@ class StrategyBot:
         return FILL_ORDER
 
     def _sensor_methods(self, view) -> bool:
-        """A published method that could install or upgrade a sensor somewhere."""
+        """A published method that could install or upgrade a sensor somewhere (never in the Crisis)."""
+        if view["period"] == "crisis":
+            return False
         methods: dict[str, int] = {}
         for p in view["published"]:
             if p["kind"] == "method" and (not p["fresh"] or p["author"] == view["seat"]):

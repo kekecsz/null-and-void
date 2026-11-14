@@ -169,6 +169,8 @@ def run_experiment(ctx: Ctx, action: RunExperiment) -> None:
 def install_sensor(ctx: Ctx, action: InstallSensor) -> None:
     seat, state, s = action.seat, ctx.state, ctx.settings
     _check_turn(ctx, seat)
+    if state.period == "crisis":
+        raise IllegalAction("sensors cannot be installed or upgraded during the Crisis period")
     if not 0 <= action.probe < len(state.probes):
         raise IllegalAction(f"there is no Probe P{action.probe + 1}")
     probe = state.probes[action.probe]

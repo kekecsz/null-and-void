@@ -194,6 +194,25 @@ def test_sensor_installed_this_round_shows_a_reading_this_round():
     assert state.probes[0].probe_time == seat
 
 
+def test_no_sensor_installation_or_upgrade_in_the_crisis():
+    """Sensor installation and upgrade: during the Crisis period, sensor installation and upgrades
+    are no longer allowed (neither offered nor accepted)."""
+    state = _experimentation()
+    seat = state.current
+    state.probes[0].sensors = {}
+    method = publish(state, seat, parameter="IP3")
+    install = a.InstallSensor(seat=seat, probe=0, parameter="IP3", cited_methods=[method.id])
+    assert any(o.type == "install_sensor" for o in legal_actions(state, seat))
+    state.period = "crisis"
+    assert not any(o.type == "install_sensor" for o in legal_actions(state, seat))
+    with pytest.raises(IllegalAction, match="Crisis"):
+        apply(state, install)
+    state.probes[0].sensors = {"IP3": 1}
+    upgrade = a.InstallSensor(seat=seat, probe=0, parameter="IP3", cited_methods=[method.id, publish(state, seat, parameter="IP3").id])
+    with pytest.raises(IllegalAction, match="Crisis"):
+        apply(state, upgrade)
+
+
 def test_experiment_uses_an_experimentation_staff_member():
     """Task resolution: a staff member who resolves a task is used."""
     state = _experimentation(k=2)

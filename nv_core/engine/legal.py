@@ -114,7 +114,7 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
             )
         )
         sensors = []
-        for probe in s.probes:
+        for probe in s.probes if s.period != "crisis" else []:  # Sensor installation and upgrade
             for parameter in ctx.world.input_ids:
                 if parameter in probe.specialty:
                     continue
