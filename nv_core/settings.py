@@ -5,12 +5,17 @@ What each setting does is in the rulebook.
 """
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, ValidationError, model_validator
 
 from nv_core.paths import PARAMETER_DEFAULTS
+
+
+# Settings chosen when a game is created rather than read from the parameter file (specification
+# section 11): they may be given as overrides, and the parameter file does not list them.
+CHOICES = {"mode"}
 
 
 class SettingsError(ValueError):
@@ -53,6 +58,9 @@ class TalentPosition(BaseModel):
 
 
 class Settings(_Strict):
+    # Basic mechanics: the gameplay mode, chosen when the game is created (not in the parameter
+    # file). A game saved before the modes existed is a normal game.
+    mode: Literal["normal", "simplified"] = "normal"
     # Players
     min_players: StrictInt
     max_players: StrictInt
@@ -67,6 +75,8 @@ class Settings(_Strict):
     starting_academic_credit: StrictInt
     talent_development_track_starting_position: StrictInt
     grant_track_starting_position: StrictInt
+    # None only in a game saved before the simplified game existed. The parameter file must list it.
+    funding_simplified: StrictInt | None = None
     talent_track_max: StrictInt
     # Game Period Deck
     calm_cards_per_player_top: StrictInt
@@ -87,7 +97,8 @@ class Settings(_Strict):
     experiment_method_citation_AC_reward: StrictInt
     # A game saved before these settings existed keeps the rules it was started under (no lab
     # capacity, no Records capacity, no archiving). The parameter file must still list them: see _validate.
-    starting_lab_capacity_advanced: StrictInt | None = None
+    starting_lab_capacity: StrictInt | None = None
+    starting_lab_capacity_simplified: StrictInt | None = None
     bonus_lab_capacity_1: StrictInt | None = None
     bonus_lab_capacity_2: StrictInt | None = None
     bonus_lab_capacity_3: StrictInt | None = None
@@ -130,6 +141,22 @@ class Settings(_Strict):
         reward = self.journal_tiers[tier].ac_reward
         return (tier if reward is None else reward) + (self.OA_publication_AC_reward if open_access else 0)
 
+    @property
+    def simplified(self) -> bool:
+        """Basic mechanics: the simplified game (the rulebook's "Simplified game" and "Normal game" rules)."""
+        return self.mode == "simplified"
+
+    def first_lab_capacity(self) -> int | None:
+        """Game setup: the lab capacity each researcher starts with (None: no lab capacity, in a
+        game saved before it existed)."""
+        return self.starting_lab_capacity_simplified if self.simplified else self.starting_lab_capacity
+
+    def first_money(self) -> int:
+        """Game setup: the funds each researcher starts with."""
+        if self.simplified:
+            return self.funding_simplified
+        return self.grant_track[self.grant_track_starting_position - 1].funding
+
     def lab_capacity_costs(self) -> list[int]:
         """Experimentation and equipment phase: the cost of each step of lab capacity above the
         start, in order (bonus_lab_capacity_1, _2, ...). The last step is the maximum."""
@@ -160,8 +187,21 @@ class Settings(_Strict):
         track = self.talent_development_track
         return self.student_unassigned_base_threshold - (track[talent_position].student_reliability if track is not None else talent_position)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _renamed(cls, data: Any) -> Any:
+        """A game saved before the simplified game called the starting lab capacity
+        starting_lab_capacity_advanced."""
+        if isinstance(data, dict) and "starting_lab_capacity_advanced" in data:
+            data = dict(data)
+            value = data.pop("starting_lab_capacity_advanced")
+            data.setdefault("starting_lab_capacity", value)
+        return data
+
     @model_validator(mode="after")
     def _check_tables(self) -> "Settings":
+        if self.simplified and (self.funding_simplified is None or self.starting_lab_capacity_simplified is None):
+            raise ValueError("mode: a game saved before the simplified game existed cannot be simplified")
         if not self.grant_track:
             raise ValueError("grant_track: needs at least one position")
         if not self.journal_tiers:
@@ -196,7 +236,8 @@ def _location(error: dict[str, Any]) -> str:
 
 def _validate(data: dict[str, Any], path: Path, overridden: set[str]) -> Settings:
     """Validate; each problem names its setting and whether it came from the file or an override."""
-    absent = [name for name, field in Settings.model_fields.items() if not field.is_required() and name not in data]
+    absent = [name for name, field in Settings.model_fields.items()
+              if not field.is_required() and name not in data and name not in CHOICES]
     if absent:
         raise SettingsError("; ".join(f"{path}: {name}: missing" for name in absent))
     tiers = data.get("journal_tiers")
@@ -232,7 +273,7 @@ def load_settings(overrides: dict[str, Any] | None = None, path: Path = PARAMETE
     if not isinstance(data, dict):
         raise SettingsError(f"{path}: expected a mapping of settings")
     overrides = overrides or {}
-    unknown = sorted(set(overrides) - set(data))
+    unknown = sorted(set(overrides) - set(data) - CHOICES)
     if unknown:
         raise SettingsError(f"parameter_overrides: unknown setting(s) {', '.join(unknown)}")
     return _validate({**data, **overrides}, Path(path), set(overrides))

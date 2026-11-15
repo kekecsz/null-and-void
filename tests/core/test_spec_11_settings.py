@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 from nv_core.paths import PARAMETER_DEFAULTS
-from nv_core.settings import SettingsError, load_settings
+from nv_core.settings import CHOICES, SettingsError, load_settings
 
 TABLES = ("grant_track", "journal_tiers", "talent_development_track")
 
@@ -53,7 +53,7 @@ def _raises_naming(name: str, call):
 def test_loads_the_parameter_file():
     """11. Configuration: game settings come from docs/parameter_defaults.yaml."""
     settings = load_settings()
-    assert settings.model_dump() == DEFAULTS
+    assert settings.model_dump(exclude=CHOICES) == DEFAULTS
 
 
 def test_every_top_level_setting_is_an_attribute():
@@ -264,8 +264,8 @@ def test_table_override_is_not_merged_with_the_defaults(table):
 
 def test_empty_or_missing_overrides_change_nothing():
     """11. Configuration: without overrides the defaults stand."""
-    assert load_settings({}).model_dump() == DEFAULTS
-    assert load_settings(None).model_dump() == DEFAULTS
+    assert load_settings({}).model_dump(exclude=CHOICES) == DEFAULTS
+    assert load_settings(None).model_dump(exclude=CHOICES) == DEFAULTS
 
 
 def test_unknown_override_is_named():

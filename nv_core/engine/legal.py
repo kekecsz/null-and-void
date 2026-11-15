@@ -67,8 +67,8 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
                 template={
                     "postdocs_now": r.postdocs,
                     "postdocs_after": [min_postdocs, max_postdocs],
-                    "max_students": ctx.settings.student_hire_cap(r.talent_position),
-                    "tasks": [t.value for t in Task],
+                    "max_students": ctx.student_cap(r),
+                    "tasks": [t.value for t in ctx.tasks()],
                     "postdoc_only": [t.value for t in POSTDOC_ONLY],
                     "at_most_one": [Task.TALENT_DEVELOPMENT.value],
                     # the most staff members (postdocs and students together) a task can take
@@ -126,7 +126,7 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
                     )
         if sensors:
             options.append(Option(type="install_sensor", template={"choices": sensors}))
-        if r.credit > 0:
+        if not ctx.must_use_staff(r):
             options.append(Option(type="pass", actions=[a.Pass(seat=seat)]))
     elif phase == Phase.PROBE_TIME and s.current == seat:
         options.append(
@@ -278,7 +278,7 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
         options.append(Option(type="commit", actions=[a.CommitPhase(seat=seat)]))
 
     # Alliance actions, any time the rulebook allows
-    if phase != Phase.LAST_CHANCE:
+    if phase != Phase.LAST_CHANCE and not ctx.settings.simplified:  # Alliance (normal game only)
         alliance: list = []
         for other in range(s.n_players):
             if other == seat:

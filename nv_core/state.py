@@ -85,7 +85,7 @@ class Idea(_Model):
 
 
 class Observation(_Model):
-    """An observation record: a full, intact Probe column (Recording observations)."""
+    """An observation record: a full, intact Probe row (Recording observations)."""
 
     id: int
     probe: int
@@ -220,7 +220,7 @@ class Manuscript(_Model):
 
 
 class Probe(_Model):
-    """A Probe column of the World Grid."""
+    """A Probe row of the World Grid."""
 
     index: int
     specialty: list[str]
@@ -362,7 +362,7 @@ class GameState(_Model):
     queue: list[int] = []  # Probe time: seats still to choose, in order
     # World Grid
     probes: list[Probe] = []
-    hot_topic: int = 0
+    hot_topic: int | None = 0  # None: no Hot topic (simplified game)
     probe_deck: list[int] = []  # stack ids, top first
     stack_rows: list[int] = []  # stack id -> World Table row
     probe_discard: list[Card] = []

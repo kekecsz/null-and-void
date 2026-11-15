@@ -285,7 +285,7 @@ def find_submission(ctx: Ctx, seat: int) -> Submit | None:
 
 def check_commit_submission(ctx: Ctx, seat: int) -> None:
     r = ctx.state.researcher(seat)
-    if r.credit != 0 or r.remaining(Task.WRITE_UP) < 1:
+    if not ctx.must_use_staff(r) or r.remaining(Task.WRITE_UP) < 1:
         return
     message = "at 0 academic credit you must use every staff member that can still be used"
     revisable = [m.id for m in ctx.state.manuscripts if m.author == seat and m.area == "revise"]

@@ -104,7 +104,7 @@ The `GameState` (Pydantic, serialisable to JSON) contains:
 
 - **Setup:** scenario id, world id, settings, seed, player seats and turn order, alliance list.
 - **Clock:** round number, period (Calm or Crisis), current phase and step, Game Period Deck, crisis tracker (rounds in crisis, unsuccessful predictions).
-- **World Grid:** per Probe column — specialty parameters, sensor level per non-specialty parameter, the current Probe stack (true inputs and outcomes), the readings shown, Probe time owner, Hot topic marker.
+- **World Grid:** per Probe row — specialty parameters, sensor level per non-specialty parameter, the current Probe stack (true inputs and outcomes), the readings shown, Probe time owner, Hot topic marker.
 - **Per researcher:** academic credit, money, Grant funding and Talent development track positions, lab capacity, staff (postdocs and students, each with a task), unpublished theories and methods, experiment card pool, records (the Records area with its record positions, and the archive), predictions, patents owned.
 - **Submission Portal:** awaiting-review positions, Revise area, Accept area with rounds-in-processing tokens.
 - **Published papers:** each theory or method with its author, journal tier, open-access flag, Nobel Prize and Retraction counters, Fresh-out-of-print marker and attached patents.
@@ -133,6 +133,8 @@ The engine runs the phases in the order, and with the steps, that the rulebook g
 
 Win and loss checks (Nobel Prize, Crisis Crash, end of the Crisis period) run after every event that can trigger them, so the game ends at exactly the moment the rules say.
 
+**Game modes.** The rulebook's simplified and normal games (Basic mechanics) are one engine: the `mode` setting (section 11) switches the rules the rulebook marks "Simplified game" or "Normal game". In the simplified game the steps whose staff cannot be hired (Student task check, Publication submission and peer review, Talent development, the alliance stage) are skipped as having nobody to wait for, the same way as in a normal round where nobody has staff for them.
+
 ### 5.3 Actions
 
 Every action is a typed Pydantic model in one discriminated union, so the server, the AI player and the simulator all validate the same way. Illustrative examples (the action union in the code is authoritative): `AllocateStaff`, `HirePostdocs`, `FirePostdoc`, `HireStudents`, `ChooseLeavingStudents`, `RunExperiment(specified_states, cited_methods)`, `InstallSensor(probe, parameter, cited_methods)`, `Pass`, `ExpandLab`, `ClaimProbeTime(probe)`, `BuildRecord(cards)`, `MakePrediction(theory, probe)`, `Preregister(predictions)`, `RevealPredictions(predictions)`, `FormulateTheory(inputs, outcomes)`, `DevelopMethod(parameter)`, `ArchiveRecords(records)`, `Submit(manuscript, tier, records, pay_apc)`, `Revise(manuscript)`, `WithdrawSubmission(manuscript)`, `ReviewVote(position, vote)`, `ProposeAlliance`, `AcceptAlliance`, `LeaveAlliance`, `CommitPhase`.
@@ -160,13 +162,13 @@ All randomness comes from one seeded generator per game, split into named stream
 The rulebook is written for human readers and leaves some details to common sense. The designer's answers on those details are listed here, by rulebook section, so the engine and its tests read them the same way. The rulebook still wins where it says otherwise.
 
 - **Formulating predictions and preregistration (identical theories).** Only theories the predictor may use are candidates (not someone else's theory with a Fresh out of print marker). When the rulebook's preferences still leave a tie (theories published in the same round), the one whose author is earlier in turn order is cited.
-- **Supporting observational and experimental records.** Every record stack has exactly one card per input parameter and world outcome. An observation record is always a full, intact Probe column. Observation and experiment cards are never mixed in one stack.
+- **Supporting observational and experimental records.** Every record stack has exactly one card per input parameter and world outcome. An observation record is always a full, intact Probe row (all its slots). Observation and experiment cards are never mixed in one stack.
 - **Supporting records for methods.** A method manuscript must meet the tier's record minimums (`min_records`, `min_observations`, `min_experiments`), with any full record stacks. `min_elements` does not apply to methods.
 - **Archiving records.** The other researchers see that a researcher archives records, and how many; which records stay hidden behind the lab shield. Each started group of `[max_archive_per_staff_member]` records uses one development staff member.
 - **Peer review.** A researcher can be dealt, and vote on, their own manuscript. Every allocation card a researcher receives gives one vote, so a researcher dealt two cards for the same manuscript votes twice. Votes on a manuscript that has not yet reached `[min_reviews_for_decision]` votes stay with it into later rounds.
 - **Research grants (staff used).** The number of Grants staff counted as used is the admin requirement of the position held before that round's grant check moves the marker.
 - **Revealing input parameters (rebuilding the Probe deck).** When the Probe deck is exhausted and the discard pile holds fewer than `[probe_deck_min_rebuild_stacks]` complete Probe stacks, the full Probe deck is rebuilt and reshuffled instead. Likewise, when an Input Parameter Deck is exhausted and its discard pile is empty (every card is held in records or manuscripts), a fresh full Input Parameter Deck is built and shuffled.
-- **Academic credit rules (at 0 academic credit).** A researcher at 0 academic credit cannot fire a postdoc other than the un-fundable ones the rulebook makes them fire, must use every staff member that can still be used at the steps where staff are used (experiments and sensors, prediction reveal, development, write-up; they need not make predictions, and their staff allocation is not restricted), and cannot reveal a non-preregistered prediction that failed.
+- **Academic credit rules (at 0 academic credit).** A researcher at 0 academic credit cannot fire a postdoc other than the un-fundable ones the rulebook makes them fire, must use every staff member that can still be used at the steps where staff are used (experiments and sensors, prediction reveal, development, write-up; they need not make predictions, and their staff allocation is not restricted), and cannot reveal a non-preregistered prediction that failed. In the simplified game, which has no unused staff penalty, the duty to use every staff member does not apply.
 
 ## 6. Multiplayer server (`nv_server`)
 
@@ -189,7 +191,7 @@ The server is a stateless FastAPI app: every request rebuilds the game from stor
 
 ### 6.3 Creating and joining games
 
-1. The host opens the lobby (on a server with an **organiser password**, which the deployed server must have, entering it is needed to create a game or see the list of games; players only need their link), chooses a scenario and world (or generates a new one), a settings preset, and the seats (within the player limits in parameter\_defaults.yaml), each marked human, AI (with its model and persona) or scripted bot (9.4).
+1. The host opens the lobby (on a server with an **organiser password**, which the deployed server must have, entering it is needed to create a game or see the list of games; players only need their link), chooses a scenario and world (or generates a new one), the game mode (normal or simplified; normal by default), a settings preset, and the seats (within the player limits in parameter\_defaults.yaml), each marked human, AI (with its model and persona) or scripted bot (9.4).
 2. The host gets a **join link** and an optional password, and an optional **spectator password**. Without a spectator password, only the host link can spectate.
 3. A player opens the link, enters a nickname and picks a free seat and a colour from a fixed list. The browser keeps a seat token, so a refresh or a dropped connection rejoins the same seat; a link with the token (`#seat=...`) takes the seat to another device.
 4. The host starts the game when all human seats are filled. Settings are locked from then on.
@@ -231,7 +233,7 @@ Plain and functional, desktop-first, English only. Section 7.4 replaces how the 
 
 | Area | Shows | Player can |
 | --- | --- | --- |
-| World Grid | Probe columns: readings, sensor levels, Probe time, Hot topic; outcomes once revealed | claim Probe time, install sensors |
+| World Grid | Probe rows: readings, sensor levels, Probe time, Hot topic; outcomes once revealed | claim Probe time, install sensors |
 | Lab (behind the shield) | staff and tasks, money, hand of theories and methods, experiment pool, records, predictions | allocate staff, run experiments, build records, formulate, predict, preregister |
 | Literature | published theories and methods with counters, authors, tiers, patents | cite, inspect |
 | Submission Portal | manuscripts by position, tier and author; Revise and Accept areas | submit, revise, vote in peer review |
@@ -239,7 +241,7 @@ Plain and functional, desktop-first, English only. Section 7.4 replaces how the 
 | Status bar | round, phase, who is still deciding, AI cost so far | commit the phase |
 | Event log | public events in order, filterable | — |
 
-- Theories, predictions and records are built by picking a state per row from dropdowns that mirror the card layout (a blank option for unspecified rows).
+- Theories, predictions and records are built by picking a state per slot (input parameter or world outcome) from dropdowns that mirror the card layout (a blank option for unspecified slots).
 - A "show as text" toggle replaces the board with the same `render_text` output the AI sees.
 - Each player uses their own device, so their lab is always open on their screen and never sent to anyone else's. Players at the same table are trusted not to look at each other's screens, as with a physical lab shield.
 
@@ -257,6 +259,8 @@ Every page's top row links to the **credits** page (`/credits`), which opens in 
 The web UI's world states become icons in strips. This section records the design agreed with the prototype; where a detail is not listed here, the prototype shows the intent.
 
 **Strips and columns.** Every thing that holds world states is one horizontal strip: Probes, records, theories (unpublished and published), manuscripts, and whatever is being formulated (a theory, an experiment, a prediction, a submission). All strips share one column order, input parameters then world outcomes, so that the panels line up above each other and each state's column can be scanned downwards. The World Grid, experimentation and theory formulation are horizontal like the rest. A blank slot is an empty dashed box and a hidden outcome a "?". Every state has its icon (`web/icons/<scenario>/`, made by `asset_generation/make_icons.py`) with its name.
+
+**Simplified game.** In a simplified game (5.2) the status line says so, and the client leaves out what that game does not have: the Students column and student hiring in the Hiring form, the Submission Portal and Alliances panels, the Publication and Talent development phases in the phase bar, and the Grant, Talent, student and patent figures in the lab and Tracks panels.
 
 **Look.** The client has two themes, a player setting remembered in the browser and used by every page (game, lobby, debrief, credits). *Light*, the default, follows the rulebook PDF (7.5): paper background, serif headings, a rust accent, tables ruled like a journal's. *Dark* is a control room in amber and gold. A theme changes colours and type only: layout, columns and behaviour are the same in both. On wide screens the right column is wider than the minimum, using space the strips leave free.
 
@@ -305,8 +309,8 @@ The round overview page is drawn from this table. A heading that is not a main h
 | Probe time | Probe time | In order of academic credit | None |
 | Observation and prediction phase | Observation and prediction | Everyone, in secret | Data collection |
 | Development phase | Development | Everyone, in secret | Development |
-| Publication | Publication | Everyone, then secret votes | Write-up, Peer-review |
-| Talent development phase | Talent development | Automatic | Talent development |
+| Publication (normal game only) | Publication | Everyone, then secret votes | Write-up, Peer-review |
+| Talent development phase (normal game only) | Talent development | Automatic | Talent development |
 | Clean-up phase | Clean-up | Automatic | Grants |
 
 ## 8. AI opponents (`nv_ai`)
@@ -399,7 +403,7 @@ There are two motives, **selfish** and **cooperative**, and an optional **patien
 
 **Expected value.** A prediction is worth making when its expected credit is positive: the estimated success rate times the reward for a success, plus the failure rate times the (zero or negative) credit for a failure, both from the rulebook's Scoring predictions and Failed predictions sections and the current settings.
 
-**Memory.** Every round, each remembered Probe reading is replaced by a random state of its row with probability `bot_memory_corruption`, so older memories are noisier (intact after *a* rounds with probability (1 − rate)^*a*). At 0, memory is perfect. Records are cards and are never affected.
+**Memory.** Every round, each remembered Probe reading is replaced by a random state of its input parameter with probability `bot_memory_corruption`, so older memories are noisier (intact after *a* rounds with probability (1 − rate)^*a*). At 0, memory is perfect. Records are cards and are never affected.
 
 **Patient modifier.** While waiting, the bot hires no staff, takes Probe time when the rules give it a turn, and keeps its tally. It wakes up when it is confident in any theory, or when the Warning shot is revealed, whichever comes first, and from then on plays its motive. It also wakes after round `bot_max_wait_rounds`: without staff the Game Period Deck does not move, so a table of patient bots that never becomes confident would play forever.
 
@@ -409,10 +413,10 @@ There are two motives, **selfish** and **cooperative**, and an optional **patien
 
 | Phase | Selfish | Cooperative |
 | --- | --- | --- |
-| Hiring and task allocation | Plans the round's tasks, then hires to fill them within its money and student cap: postdocs for Development (only when it can pay them), Grants for the admin requirement of its position, Write-up for its ideas and manuscripts to revise, Data collection for its own theories worth predicting with (plus one if a rival's theory is a kill target, below), one Experimentation staff member. Spare postdocs go to these needs, then to Experimentation. Students who may leave in the Student task check are covered by extra students in Experimentation, who leave first. | The same planning, with Data collection for the theories it can confirm or refute, Peer-review staff for half the manuscripts awaiting review (at most 2), and one more Experimentation staff member while a sensor can be installed or upgraded. When the Crisis is near, Data collection for every Probe, filled first. |
+| Hiring and task allocation | Plans the round's tasks, then hires to fill them within its money and student cap: postdocs for Development (only when it can pay them), Grants for the admin requirement of its position, Write-up for its ideas and manuscripts to revise, Data collection for its own theories worth predicting with (plus one if a rival's theory is a kill target, below), one Experimentation staff member. Spare postdocs go to these needs, then to Experimentation. Students who may leave in the Student task check are covered by extra students in Experimentation, who leave first. | The same planning, with Data collection for the theories it can confirm or refute, Peer-review staff for half the manuscripts awaiting review (at most 2), and one more Experimentation staff member while a sensor can be installed or upgraded. When the Crisis is near, Data collection for every Probe, filled first. In the simplified game, both motives plan only the tasks the game offers. |
 | Student task check | Students leave from the least needed tasks first: Experimentation, Peer-review, Data collection, Write-up, Grants; in the Crisis, Data collection last. | The same; Data collection last when the Crisis is near. |
-| Experimentation | Never installs sensors (they help everyone). Confirmatory experiments: specifies the inputs of the theory it plans to publish (citing methods for inputs beyond the free ones); keeps the records that fit and ignores the rest. With no such theory, experiments like the cooperative bot. | Installs and upgrades sensors when it can, preferring the Hot topic and the Probes with the most hidden rows. Otherwise, with a theory waiting in its lab, a confirmatory experiment for it (like the selfish bot), so the theory gets a fitting record and can reach a journal with peer review. Otherwise discriminating experiments: specifies the inputs where its most likely theories disagree most about the outcome, or, with no disagreement, the least observed combination. |
-| Probe time | Readings are not dealt yet, so: the Probe where most rows of its planned theory will be blank (a record is then unlikely to mismatch). | The Probe with the most visible rows (Specialty rows and sensors). |
+| Experimentation | Never installs sensors (they help everyone). Confirmatory experiments: specifies the inputs of the theory it plans to publish (citing methods for inputs beyond the free ones); keeps the records that fit and ignores the rest. With no such theory, experiments like the cooperative bot. | Installs and upgrades sensors when it can, preferring the Hot topic and the Probes with the most hidden slots. Otherwise, with a theory waiting in its lab, a confirmatory experiment for it (like the selfish bot), so the theory gets a fitting record and can reach a journal with peer review. Otherwise discriminating experiments: specifies the inputs where its most likely theories disagree most about the outcome, or, with no disagreement, the least observed combination. |
+| Probe time | Readings are not dealt yet, so: the Probe where most slots of its planned theory will be blank (a record is then unlikely to mismatch). | The Probe with the most visible slots (Specialty slots and sensors). |
 | Prediction and preregistration | Cites rivals' theories only as a last resort: when one is worth `bot_rival_citation_factor` times its best own prediction, or to kill it (below). Preregisters confident predictions with its own theories whose Nobel counter is still 0 (a preregistered failure would reset it). Makes hidden predictions with all its other theories on every eligible Probe, and with rivals' theories whose Nobel counter is at least `bot_kill_counter`. | Always preregisters, up to its Data collection staff, one prediction per theory. Refutes first (published theories it is confident fail, highest Nobel counter first; a preregistered failure costs `failed_prereg_pred_ac` in the Calm period), then confirms the theories it is confident in. Uses the best theory, whoever wrote it. |
 | Outcome and Prediction Reveal | Reveals failures of rivals' kill targets first (resetting their Nobel counters), then its successes, best first; never its own failures (selective reporting). | Nothing to reveal: it makes no hidden predictions. |
 | Development | Formulates the promising theory worth the most per Probe: its *reach* (how often its input states occur, judged from the visible readings: the product of each state's share) × its success rate (the Wilson lower bound, so thin evidence loses) × (credit for a successful prediction + its citation). Each input cuts the reach, so broad theories of one or two inputs usually win: they can be used often, which brings citations and Nobel Prize progress. | Formulates the promising theory that covers the most new ground: its success rate (as for the selfish bot) × every combination of input states it fits, weighted by how often the combination occurs and divided by 1 + the number of theories of the field (published, or in its lab and manuscripts) that fit it already. So once theories for some states exist, it turns to Probes no theory fits yet, which matters in the Crisis, when every input is visible. From the Warning shot on, with no promising theory, the best-supported theory (estimated success rate above one half) for input combinations that too few published theories cover: a theory backs only one revealed prediction a round, so each combination wants as many different theories as there are Probes. Also develops a method for the input parameter most Probes do not show, while fewer methods than the highest sensor level exist for it (not in the Crisis, when sensors cannot be installed or upgraded). Both motives choose at random among the theories scoring at least 90% of the best, so bots with the same evidence do not all formulate the same theory, and formulate no new theory while two of theirs wait unpublished (their Development postdocs would cost the money that submission fees need). |
@@ -448,7 +452,7 @@ Sabotage is inferred, not certain: the debrief labels it "failed despite contrar
 
 ## 11. Configuration
 
-Game settings come from `docs/parameter_defaults.yaml`, then the scenario's `parameter_overrides`, then any changes the host makes in the lobby before the game starts. Every game stores the full settings it was played with. The settings loader:
+Game settings come from `docs/parameter_defaults.yaml`, then the scenario's `parameter_overrides`, then any changes the host makes in the lobby before the game starts. Every game stores the full settings it was played with. One setting is a choice, not a number, so it is not in the parameter file: `mode` (`normal` or `simplified`, the rulebook's gameplay modes), chosen in the lobby or given as an override (`mode: simplified`, also `--set mode=simplified` in the simulator). A game saved before the modes existed is a normal game. The settings loader:
 
 - reads the YAML file and validates it against a schema: value types (whole-number settings must be written as integers, e.g. `4`, not `4.0`), required settings, and the shape of `grant_track` and `journal_tiers`;
 - checks that `talent_development_track` has an entry for every position a researcher can reach;

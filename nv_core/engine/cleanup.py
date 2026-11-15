@@ -34,7 +34,8 @@ def cleanup(ctx: Ctx) -> None:
         if r.unpaid:
             ctx.log("unpaid", f"{ctx.name(seat)} cannot pay {r.unpaid} postdoc(s)", seat=seat)
 
-    state.hot_topic = (state.hot_topic + 1) % len(state.probes)
+    if state.hot_topic is not None:  # Hot topic (normal game only)
+        state.hot_topic = (state.hot_topic + 1) % len(state.probes)
     for probe in state.probes:
         probe.probe_time = None
         probe.probe_time_from_sensor = False
@@ -72,14 +73,14 @@ def cleanup(ctx: Ctx) -> None:
             paper=paper.id,
         )
         state.researcher(paper.author).publications_this_round += 1
-        reward = s.publication_reward(paper.tier, paper.open_access)
-        ctx.credit(paper.author, reward, f"{letter}{paper.id} published")
+        if not s.simplified:  # Publication scoring: normal game only
+            ctx.credit(paper.author, s.publication_reward(paper.tier, paper.open_access), f"{letter}{paper.id} published")
     for manuscript in state.manuscripts:
         if manuscript.area == "accept" and manuscript.tokens:
             manuscript.tokens -= 1
 
-    # Research grants
-    for seat in order:
+    # Research grants (normal game only)
+    for seat in order if not s.simplified else []:
         r = state.researcher(seat)
         position = s.grant_track[r.grant_position - 1]
         grants_staff = r.allocated(Task.GRANTS)
@@ -97,7 +98,7 @@ def cleanup(ctx: Ctx) -> None:
     for seat in order:
         r = state.researcher(seat)
         unused = sum(r.remaining(task) for task in r.staff)
-        if unused:
+        if unused and not s.simplified:  # the unused staff penalty: normal game only
             ctx.credit(seat, s.unused_staff_penalty * unused, f"{unused} unused staff member(s)")
         if r.unpaid:
             r.postdocs -= r.unpaid
@@ -115,6 +116,9 @@ def cleanup(ctx: Ctx) -> None:
     # Funding
     for seat in order:
         r = state.researcher(seat)
+        if s.simplified:  # Funding in the simplified game: a flat rate
+            r.money = s.funding_simplified
+            continue
         patents = sum(p.patents.count(seat) for p in state.published)
         r.money = s.grant_track[r.grant_position - 1].funding + patents * s.patent_funding
 

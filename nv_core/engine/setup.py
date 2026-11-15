@@ -34,7 +34,7 @@ def create_game(world: WorldData, settings: Settings, seed: int, players: list[s
     state = GameState(world=world, settings=settings, seed=seed, players=list(players))
     ctx = Ctx(state)
     state.period_deck = build_period_deck(ctx, n)
-    state.hot_topic = 0
+    state.hot_topic = None if settings.simplified else 0  # Hot topic (normal game only)
     state.probes = [Probe(index=i, specialty=specialty_parameters(world, i)) for i in range(n + 1)]
     state.probe_deck = build_probe_deck(ctx)
     ctx.rng.shuffle("probe_deck", state.probe_deck)
@@ -50,10 +50,10 @@ def create_game(world: WorldData, settings: Settings, seed: int, players: list[s
             seat=seat,
             name=name,
             credit=settings.starting_academic_credit,
-            money=settings.grant_track[start - 1].funding,
+            money=settings.first_money(),
             grant_position=start,
             talent_position=settings.talent_development_track_starting_position,
-            lab_capacity=settings.starting_lab_capacity_advanced,
+            lab_capacity=settings.first_lab_capacity(),
         )
         for seat, name in enumerate(players)
     ]

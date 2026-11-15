@@ -5,7 +5,10 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from nv_core.rng import Rng
-from nv_core.state import Card, GameState, Paper, Researcher
+from nv_core.state import Card, GameState, Paper, Researcher, Task
+
+# Hiring and task allocation phase: the tasks of the simplified game.
+SIMPLIFIED_TASKS = (Task.EXPERIMENTATION, Task.DATA_COLLECTION, Task.DEVELOPMENT)
 
 
 class IllegalAction(ValueError):
@@ -73,6 +76,22 @@ class Ctx:
             applied=change,
             reason=reason,
         )
+
+    # Game modes -------------------------------------------------------------------------------
+    def tasks(self) -> list[Task]:
+        """Hiring and task allocation phase: the tasks staff can be allocated to."""
+        return list(SIMPLIFIED_TASKS) if self.settings.simplified else list(Task)
+
+    def student_cap(self, researcher: Researcher) -> int:
+        """Hiring and task allocation phase: the most students a researcher may hire (none in the
+        simplified game)."""
+        return 0 if self.settings.simplified else self.settings.student_hire_cap(researcher.talent_position)
+
+    def must_use_staff(self, researcher: Researcher) -> bool:
+        """Academic credit rules: at 0 credit, leaving a staff member unused would cause the unused
+        staff penalty, so every staff member that can be used must be. The simplified game has no
+        such penalty (Task resolution)."""
+        return researcher.credit == 0 and not self.settings.simplified
 
     # Spending (Academic credit rules: at 0 credit, keep enough to pay the postdocs) -------------
     def spendable(self, researcher: Researcher) -> int:

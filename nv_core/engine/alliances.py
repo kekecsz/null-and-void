@@ -14,6 +14,8 @@ def _partner(ctx: Ctx, seat: int, partner: int) -> list[int]:
 def propose(ctx: Ctx, action: ProposeAlliance) -> None:
     state = ctx.state
     pair = _partner(ctx, action.seat, action.partner)
+    if ctx.settings.simplified:
+        raise IllegalAction("there are no alliances in the simplified game")
     if state.crisis_revealed:
         raise IllegalAction("alliances can only be formed before the Crisis card is revealed")
     if pair in state.alliances:

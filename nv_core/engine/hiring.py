@@ -34,9 +34,10 @@ def check_allocation(ctx: Ctx, r: Researcher, a: AllocateStaff) -> None:
         raise IllegalAction(
             f"paying {postdocs} postdoc(s) would cost {postdocs * s.cost_of_postdoc}, you have {r.money} money"
         )
-    cap = s.student_hire_cap(r.talent_position)
+    cap = ctx.student_cap(r)
     if a.hire_students > cap:
-        raise IllegalAction(f"you can hire at most {cap} students")
+        raise IllegalAction("researchers cannot hire students in the simplified game" if s.simplified
+                            else f"you can hire at most {cap} students")
     if any(c.postdocs < 0 or c.students < 0 for c in a.allocation.values()):
         raise IllegalAction("staff numbers cannot be negative")
     allocated_postdocs = sum(c.postdocs for c in a.allocation.values())
@@ -46,6 +47,10 @@ def check_allocation(ctx: Ctx, r: Researcher, a: AllocateStaff) -> None:
             f"allocate every staff member: {postdocs} postdoc(s) and {a.hire_students} student(s) "
             f"(you allocated {allocated_postdocs} and {allocated_students})"
         )
+    tasks = ctx.tasks()
+    for task, count in a.allocation.items():
+        if count.total and task not in tasks:
+            raise IllegalAction(f"there is no {task.value.replace('_', ' ')} task in the simplified game")
     for task in POSTDOC_ONLY:
         if a.allocation.get(task, StaffCount()).students:
             raise IllegalAction(f"{task.value} is a postdoc-only task")

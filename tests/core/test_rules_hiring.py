@@ -231,8 +231,8 @@ def test_the_parameter_file_must_list_the_table(tmp_path):
 
 # Lab capacity caps Experimentation ----------------------------------------------------------------
 def test_researchers_start_with_the_starting_lab_capacity():
-    """Game setup: each researcher starts with a lab capacity of [starting_lab_capacity_advanced]."""
-    assert all(r.lab_capacity == S.starting_lab_capacity_advanced for r in game(3).researchers)
+    """Game setup: each researcher starts with a lab capacity of [starting_lab_capacity]."""
+    assert all(r.lab_capacity == S.starting_lab_capacity for r in game(3).researchers)
 
 
 @pytest.mark.parametrize("students", [0, 1])
@@ -255,7 +255,7 @@ def test_experimentation_staff_are_capped_at_the_lab_capacity(students):
 def test_a_game_saved_before_lab_capacity_has_no_cap():
     state = game()
     state.researcher(0).lab_capacity = None
-    n = S.starting_lab_capacity_advanced + 2
+    n = S.starting_lab_capacity + 2
     state.researcher(0).money = n * S.cost_of_postdoc
     action = a.AllocateStaff(seat=0, hire_postdocs=n, allocation={Task.EXPERIMENTATION: StaffCount(postdocs=n)})
     assert validate(state, action) is None

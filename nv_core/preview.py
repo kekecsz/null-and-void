@@ -13,7 +13,9 @@ from nv_core.engine.publication import possible_submissions, processing_time
 from nv_core.state import GameState, Paper, Phase, Prediction, Researcher, Task
 
 
-def _patent(paper: Paper) -> tuple[str, int | None]:
+def _patent(ctx: Ctx, paper: Paper) -> tuple[str | None, int | None]:
+    if ctx.settings.simplified:  # Patent (normal game only)
+        return None, None
     return ("held", paper.patents[0]) if paper.patents else ("new", None)
 
 
@@ -36,7 +38,7 @@ def _theories(ctx: Ctx, seat: int) -> dict[int, dict[str, Any]]:
             for preregistered in (False, True)
         }
         own = cited.author == seat
-        patent, patent_holder = _patent(cited)
+        patent, patent_holder = _patent(ctx, cited)
         result[paper.id] = {
             "plain": None if crisis else {"success": changes[False][True][0], "failure": changes[False][False][0]},
             "preregistered": {"success": changes[True][True][0], "failure": changes[True][False][0]},
@@ -59,7 +61,7 @@ def _reveals(ctx: Ctx, seat: int) -> dict[int, dict[str, Any]]:
         success = _success(ctx, p)
         gained, author_gained = credit_changes(ctx.settings, crisis, len(p.inputs), len(p.outcomes), p.preregistered, success)
         paper = state.paper(p.cited)
-        patent, patent_holder = _patent(paper) if success else (None, None)
+        patent, patent_holder = _patent(ctx, paper) if success else (None, None)
         result[p.id] = {
             "success": success,
             "credit": gained,

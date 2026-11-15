@@ -64,10 +64,10 @@ def _paper(state: GameState, paper: Paper) -> dict[str, Any]:
 def _lab_capacity_cost(state: GameState, r: Researcher) -> int | None:
     """The cost of the next step of lab capacity, None at the maximum (Experimentation and equipment phase)."""
     s = state.settings
-    if r.lab_capacity is None or s.starting_lab_capacity_advanced is None:
+    if r.lab_capacity is None or s.starting_lab_capacity is None or s.simplified:
         return None
     costs = s.lab_capacity_costs()
-    step = r.lab_capacity - s.starting_lab_capacity_advanced
+    step = r.lab_capacity - s.starting_lab_capacity
     return costs[step] if 0 <= step < len(costs) else None
 
 
@@ -181,6 +181,7 @@ def _view(state: GameState, seat: int | None) -> dict[str, Any]:
         "seat": seat,
         "players": list(state.players),
         "scenario": {"id": state.world.scenario_id, "title": state.world.title, "world": state.world.world_id},
+        "mode": state.settings.mode,  # Basic mechanics: "normal" or "simplified"
         "round": state.round,
         "period": state.period,
         "phase": state.phase.value,

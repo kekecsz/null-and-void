@@ -75,14 +75,16 @@ def check_expand_lab(ctx: Ctx, seat: int) -> int:
     """Raise if the researcher cannot increase their lab capacity now; return the cost."""
     s = ctx.settings
     r = ctx.state.researcher(seat)
-    if r.lab_capacity is None or s.starting_lab_capacity_advanced is None:
+    if r.lab_capacity is None or s.starting_lab_capacity is None:
         raise IllegalAction("this game was started before lab capacity was part of the rules")
+    if s.simplified:
+        raise IllegalAction("lab capacity cannot be increased in the simplified game")
     if r.allocated(Task.EXPERIMENTATION) < 1:
         raise IllegalAction("only a researcher with staff on experimentation this round can increase their lab capacity")
     if r.lab_expanded:
         raise IllegalAction("lab capacity can be increased by only 1 per round")
     costs = s.lab_capacity_costs()
-    step = r.lab_capacity - s.starting_lab_capacity_advanced
+    step = r.lab_capacity - s.starting_lab_capacity
     if not 0 <= step < len(costs):
         raise IllegalAction(f"your lab is at its maximum capacity ({r.lab_capacity})")
     cost = costs[step]
@@ -211,7 +213,7 @@ def install_sensor(ctx: Ctx, action: InstallSensor) -> None:
 def pass_turn(ctx: Ctx, action: Pass) -> None:
     seat = action.seat
     _check_turn(ctx, seat)
-    if ctx.state.researcher(seat).credit == 0:
+    if ctx.must_use_staff(ctx.state.researcher(seat)):
         # An experiment is always possible, so a staff member could still be used.
         raise IllegalAction("at 0 academic credit you must use every staff member that can still be used")
     ctx.state.passed.append(seat)

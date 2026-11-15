@@ -3,7 +3,7 @@
 from nv_core.actions import ArchiveRecords, CancelDevelopment, DevelopMethod, FormulateTheory
 from nv_core.engine.context import Ctx, IllegalAction
 from nv_core.engine.records import positions
-from nv_core.state import Idea, Researcher, Task
+from nv_core.state import Idea, Manuscript, Researcher, Task
 
 
 def start(ctx: Ctx) -> None:
@@ -96,7 +96,7 @@ def cancel_development(ctx: Ctx, action: CancelDevelopment) -> None:
 
 def check_commit(ctx: Ctx, seat: int) -> None:
     r = ctx.state.researcher(seat)
-    if r.credit == 0 and staff_chosen(ctx, seat) < r.allocated(Task.DEVELOPMENT):
+    if ctx.must_use_staff(r) and staff_chosen(ctx, seat) < r.allocated(Task.DEVELOPMENT):
         # A method can always be developed, so every development staff member can be used.
         raise IllegalAction("at 0 academic credit you must use every staff member that can still be used")
 
@@ -124,3 +124,21 @@ def finish(ctx: Ctx) -> None:
                 visible_to=[seat],
             )
         state.pending[seat].development = []
+        if ctx.settings.simplified:
+            to_accept_area(ctx, seat, made)
+
+
+def to_accept_area(ctx: Ctx, seat: int, ideas: list[Idea]) -> None:
+    """Publication in the simplified game: after the Development phase, the new theories and
+    methods go straight to the Accept area, in tier 0, with no supporting records, 0 Rounds in
+    processing tokens and no submission fee."""
+    state = ctx.state
+    r = state.researcher(seat)
+    for idea in ideas:
+        r.ideas.remove(idea)
+        state.manuscripts.append(Manuscript(
+            idea=idea, author=seat, tier=0, open_access=False, records=[], round_submitted=state.round,
+            area="accept", tokens=0,
+        ))
+    if ideas:
+        ctx.log("accept", f"{ctx.name(seat)}'s {len(ideas)} development stack(s) go to the Accept area", seat=seat)

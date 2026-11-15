@@ -253,7 +253,7 @@ def test_lab_capacity_can_be_increased_when_it_is_not_your_turn():
     other = 1 - state.current
     assert _expand_options(state, other)
     state = do(state, a.ExpandLab(seat=other))
-    assert state.researcher(other).lab_capacity == S.starting_lab_capacity_advanced + 1
+    assert state.researcher(other).lab_capacity == S.starting_lab_capacity + 1
 
 
 def test_only_once_per_round():
@@ -286,7 +286,7 @@ def test_not_outside_the_experimentation_phase():
 
 
 def test_each_step_costs_more_up_to_the_maximum():
-    """Lab capacity: the cost increases with the lab size, up to [starting_lab_capacity_advanced]
+    """Lab capacity: the cost increases with the lab size, up to [starting_lab_capacity]
     plus the number of steps in the cost list."""
     state = _experimentation(k=1)
     seat = state.current

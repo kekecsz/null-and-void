@@ -254,7 +254,7 @@ def reveal_prediction(ctx: Ctx, action: RevealPrediction) -> None:
 
 
 def check_commit_reveal(ctx: Ctx, seat: int) -> None:
-    if ctx.state.researcher(seat).credit != 0:
+    if not ctx.must_use_staff(ctx.state.researcher(seat)):
         return
     chosen = [p for p in ctx.state.predictions if p.seat == seat and not p.preregistered and p.revealed]
     if len(chosen) >= _capacity(ctx, seat):
@@ -437,7 +437,9 @@ def score(ctx: Ctx, p: Prediction, adjusted: set[tuple[int, int]] | None = None)
         ctx.credit(p.seat, gained, "successful prediction")
         ctx.credit(paper.author, author_gained, f"T{paper.id} cited")
         # Funding > Patents: one patent per theory, kept by the first successful predictor.
-        if paper.patents:
+        if ctx.settings.simplified:  # Patent (normal game only)
+            pass
+        elif paper.patents:
             p.patent, p.patent_holder = "held", paper.patents[0]
         else:
             p.patent, p.patent_holder = "new", p.seat
@@ -467,15 +469,18 @@ def score(ctx: Ctx, p: Prediction, adjusted: set[tuple[int, int]] | None = None)
 
 
 def retract(ctx: Ctx, paper: Paper) -> None:
-    """Retraction: the theory is unpublished and returned to its author."""
+    """Retraction: the theory is unpublished and returned to its author (in the simplified game,
+    discarded)."""
     state = ctx.state
     state.published.remove(paper)
-    idea = Idea(id=state.new_id(), kind="theory", inputs=dict(paper.idea.inputs), outcomes=dict(paper.idea.outcomes))
-    state.researcher(paper.author).ideas.append(idea)
+    if not ctx.settings.simplified:
+        idea = Idea(id=state.new_id(), kind="theory", inputs=dict(paper.idea.inputs), outcomes=dict(paper.idea.outcomes))
+        state.researcher(paper.author).ideas.append(idea)
     for entry in state.paper_log:
         if entry.paper == paper.id:
             entry.retracted_round = state.round
-    ctx.log("retraction", f"T{paper.id} is retracted and returned to {ctx.name(paper.author)}", theory=paper.id)
+    where = "discarded" if ctx.settings.simplified else f"returned to {ctx.name(paper.author)}"
+    ctx.log("retraction", f"T{paper.id} is retracted and {where}", theory=paper.id)
     ctx.credit(paper.author, ctx.settings.retraction_ac_penalty, f"T{paper.id} retracted")
 
 
