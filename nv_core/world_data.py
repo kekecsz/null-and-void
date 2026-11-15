@@ -34,6 +34,8 @@ class WorldData(_Frozen):
     input_parameters: list[Variable]
     world_outcomes: list[Variable]
     rows: list[WorldRow]
+    # The scenario's names in other languages (specification 7.6); a game saved before has none.
+    translations: dict[str, dict[str, str]] = {}
 
     @property
     def variables(self) -> list[Variable]:

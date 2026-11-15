@@ -180,7 +180,8 @@ def _view(state: GameState, seat: int | None) -> dict[str, Any]:
     view: dict[str, Any] = {
         "seat": seat,
         "players": list(state.players),
-        "scenario": {"id": state.world.scenario_id, "title": state.world.title, "world": state.world.world_id},
+        "scenario": {"id": state.world.scenario_id, "title": state.world.title, "world": state.world.world_id,
+                     "translations": state.world.translations},
         "mode": state.settings.mode,  # Basic mechanics: "normal" or "simplified"
         "round": state.round,
         "period": state.period,

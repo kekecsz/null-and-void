@@ -21,6 +21,7 @@ def world_data(scenario: Scenario, world: World, world_id: str) -> WorldData:
         input_parameters=[Variable(id=v.id, name=v.name, states=list(v.states)) for v in scenario.input_parameters],
         world_outcomes=[Variable(id=v.id, name=v.name, states=list(v.states)) for v in scenario.world_outcomes],
         rows=[WorldRow(inputs=dict(r.inputs), outcomes=dict(r.outcomes)) for r in world.rows],
+        translations=scenario.translations,
     )
 
 

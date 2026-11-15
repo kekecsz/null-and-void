@@ -80,6 +80,27 @@ acceptance_criteria:
 
 # Settings from docs/parameter_defaults.yaml that this scenario changes. Empty = none.
 parameter_overrides: {}
+
+# The scenario's names on the game's screens in other languages (specification 7.6). English is
+# the default; a name left out shows in English. These do not change the world.
+translations:
+  hu:
+    "Null & Void: Venus Expedition": "Null & Void: Vénusz-expedíció"
+    parent microbe type: szülőmikroba típusa
+    parent microbe surface: szülőmikroba felszíne
+    nutrient: tápanyag
+    weather: időjárás
+    child microbe type: utódmikroba típusa
+    child microbe surface: utódmikroba felszíne
+    fat blue: kövér kék
+    green ameba: zöld amőba
+    smooth: sima
+    cratered: kráteres
+    spiky: tüskés
+    sugar: cukor
+    sulfur: kén
+    scorching hot: perzselő hőség
+    acid rain: savas eső
 ```
 
 ## How these values are used

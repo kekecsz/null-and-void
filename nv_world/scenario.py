@@ -7,7 +7,7 @@ The pydantic models below define only the shape of that block; the values come f
 import hashlib
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -91,6 +91,9 @@ class _ScenarioData(_Strict):
     effect_model: EffectModel
     acceptance_criteria: AcceptanceCriteria
     parameter_overrides: dict[str, Any] = {}
+    # The scenario's names in other languages, for the game's screens (specification 7.6):
+    # language code -> English name -> translation. A name left out shows in English.
+    translations: dict[str, dict[str, str]] = {}
 
 
 @dataclass(frozen=True)
@@ -115,6 +118,7 @@ class Scenario:
     settings: Settings
     yaml_hash: str
     path: Path | None = None
+    translations: dict[str, dict[str, str]] = field(default_factory=dict)
 
     def variable(self, variable_id: str) -> Variable:
         for variable in self.input_parameters + self.world_outcomes:
@@ -141,6 +145,18 @@ def extract_yaml_block(text: str) -> str:
     if not match:
         raise ScenarioError("scenario file: no fenced yaml block found")
     return match.group(1)
+
+
+def _check_translations(data: _ScenarioData) -> None:
+    """Every translated name must be a name of this scenario (its title, a parameter or outcome, a state)."""
+    names = {data.scenario.title}
+    for v in [*data.input_parameters, *data.world_outcomes]:
+        names.add(v.name)
+        names.update(v.states)
+    for lang, table in data.translations.items():
+        unknown = sorted(set(table) - names)
+        if unknown:
+            raise ScenarioError(f"translations.{lang}: not a name in this scenario: {', '.join(unknown)}")
 
 
 def _check_variables(data: _ScenarioData) -> None:
@@ -241,6 +257,7 @@ def parse_scenario(text: str, parameter_defaults: Path = PARAMETER_DEFAULTS, pat
         raise ScenarioError("; ".join(problems)) from None
 
     _check_variables(data)
+    _check_translations(data)
     _check_effect_model(data)
     _check_acceptance_criteria(data)
     try:
@@ -265,8 +282,10 @@ def parse_scenario(text: str, parameter_defaults: Path = PARAMETER_DEFAULTS, pat
         acceptance_criteria=data.acceptance_criteria,
         parameter_overrides=dict(data.parameter_overrides),
         settings=settings,
-        yaml_hash=yaml_hash(raw),
+        # Translations do not change the world, so a world file stays current when they change.
+        yaml_hash=yaml_hash({k: v for k, v in raw.items() if k != "translations"}),
         path=path,
+        translations={lang: dict(names) for lang, names in data.translations.items()},
     )
 
 
