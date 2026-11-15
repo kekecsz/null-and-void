@@ -49,8 +49,10 @@ COLUMN = (WIDTH - GUTTER) / 2
 BODY_TOP, BODY_BOTTOM = H - 20 * mm, 15 * mm
 BODY_HEIGHT = BODY_TOP - BODY_BOTTOM
 # Full-width figures at the top of a page take at most this much of it, so the columns below keep
-# room for a main heading with its first lines (and the Crisis figure); a taller picture is shrunk.
+# room for a main heading with its first lines (and the Crisis figure); taller pictures are shrunk.
 FIGURE_AREA = BODY_HEIGHT * 0.5
+MAX_LAYOUTS = 30  # attempts to put every figure on the page that refers to it
+MIN_FIGURE_SCALE = 0.6  # a figure shrunk to keep its reference on its page; below this, the reference moves
 FIGURE_GAP = 5 * mm  # between a figure's caption and what follows
 
 INK, PAPER, RUST, GREY, BOX = [colors.HexColor(x) for x in ("#1C1A17", "#FAF6EC", "#A8481F", "#6B655B", "#F1E9D8")]
@@ -344,40 +346,47 @@ def crisis_figure(content: Content, number: int) -> list:
 
 @dataclass
 class PageFigure:
-    """A picture printed across the page, at the top of the first page after the text that
-    refers to it (_Issue.handle_pageBegin)."""
+    """A picture printed across the top of the page whose text refers to it (make_pdf)."""
 
     path: Path
     number: int
+    scale: float = 1.0  # shrunk to keep the text that refers to it on its page (place_figures)
 
     @property
     def caption(self) -> Paragraph:  # the file name in words
         words = re.sub(r"^\d+\s*", "", self.path.stem.replace("_", " ")).strip()
         return Paragraph(f"<b>Figure {self.number}.</b> {escape(words[:1].upper() + words[1:])}.", _STYLES["figure_caption"])
 
-    def size(self) -> tuple[float, float]:
-        width, height = ImageReader(str(self.path)).getSize()
-        scale = min(WIDTH / width, (FIGURE_AREA - self._caption_height() - FIGURE_GAP) / height)
-        return width * scale, height * scale
-
-    def _caption_height(self) -> float:
+    def caption_height(self) -> float:
         return self.caption.wrap(WIDTH, BODY_HEIGHT)[1] + 3
 
-    def height(self) -> float:
-        return self.size()[1] + self._caption_height() + FIGURE_GAP
+    def size(self, shrink: float = 1.0) -> tuple[float, float]:
+        width, height = ImageReader(str(self.path)).getSize()
+        scale = min(WIDTH / width, (FIGURE_AREA - self.caption_height() - FIGURE_GAP) / height) * self.scale * shrink
+        return width * scale, height * scale
 
-    def draw(self, canvas, top: float) -> float:
+    def height(self, shrink: float = 1.0) -> float:
+        return self.size(shrink)[1] + self.caption_height() + FIGURE_GAP
+
+    def draw(self, canvas, top: float, shrink: float) -> float:
         """Draws the figure below ``top``; returns where the next one starts."""
-        width, height = self.size()
+        width, height = self.size(shrink)
         canvas.drawImage(str(self.path), MARGIN + (WIDTH - width) / 2, top - height, width, height, mask="auto")
         caption = self.caption
         _, caption_height = caption.wrap(WIDTH, BODY_HEIGHT)
         caption.drawOn(canvas, MARGIN, top - height - 3 - caption_height)
-        return top - self.height()
+        return top - self.height(shrink)
+
+
+def page_shrink(figures: list[PageFigure]) -> float:
+    """How much the pictures of one page are shrunk so that together they fit in FIGURE_AREA."""
+    pictures = sum(f.size()[1] for f in figures)
+    rest = sum(f.caption_height() + FIGURE_GAP for f in figures)
+    return min(1.0, (FIGURE_AREA - rest) / pictures) if pictures else 1.0
 
 
 class FigureAnchor(Flowable):
-    """Where the text refers to a full-width figure: once laid out, the figure waits for the next page."""
+    """Where the text refers to a full-width figure; the layout notes on which page it lands."""
 
     def __init__(self, figure: PageFigure):
         super().__init__()
@@ -390,22 +399,8 @@ class FigureAnchor(Flowable):
         pass
 
 
-class FlushFigures(Flowable):
-    """Leaves the rest of each column empty while figures still wait, so that every figure is
-    printed before what follows (the Credits)."""
-
-    def __init__(self, waiting: list[PageFigure]):
-        super().__init__()
-        self.waiting = waiting
-
-    def wrap(self, available_width, available_height):
-        return (available_width, available_height + 1) if self.waiting else (0, 0)
-
-    def split(self, available_width, available_height):
-        return [Spacer(available_width, available_height), FlushFigures(self.waiting)] if self.waiting else []
-
-    def draw(self):
-        pass
+class FigureStart(FigureAnchor):
+    """Where the paragraph that refers to a figure starts."""
 
 
 # Pages -------------------------------------------------------------------------------------------
@@ -418,7 +413,7 @@ def _body(canvas, doc) -> None:
     _paper(canvas, doc)
     top = BODY_TOP
     for figure in doc.page_figures:
-        top = figure.draw(canvas, top)
+        top = figure.draw(canvas, top, doc.shrink)
     if doc.page_figures:
         canvas.setStrokeColor(INK)
         canvas.setLineWidth(0.5)
@@ -500,15 +495,21 @@ def _cover(canvas, doc) -> None:
 class _Issue(BaseDocTemplate):
     """Page furniture, PDF bookmarks, and where each main section starts."""
 
-    def __init__(self, target, content: Content, known_pages: dict[str, int]):
+    def __init__(self, target, content: Content, known_pages: dict[str, int], figures: dict[int, PageFigure] | None = None,
+                 plan: dict[int, int] | None = None):
         super().__init__(target, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=20 * mm, bottomMargin=15 * mm,
                          title="Null & Void: Rulebook", author="Zoltan Kekecs")
         self.content, self.known_pages = content, known_pages
         self.found_pages: dict[str, int] = {}
         self.running = "A round at a glance"
         self._bookmarks = 0
-        self.waiting: list[PageFigure] = []  # figures referred to, not yet printed
+        self.figures = figures or {}  # by number
+        self.plan = plan or {}  # figure number -> the page it is printed on
+        self.anchor_pages: dict[int, int] = {}  # figure number -> the page whose text refers to it
+        self.anchor_room: dict[int, float] = {}  # figure number -> column space left on that page after the reference
+        self.start_pages: dict[int, int] = {}  # figure number -> the page where its referring paragraph starts
         self.page_figures: list[PageFigure] = []  # those at the top of this page
+        self.shrink = 1.0
         self.printed: list[int] = []  # the numbers of the figures printed so far
         whole = lambda: Frame(MARGIN, BODY_BOTTOM, WIDTH, BODY_HEIGHT, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
         self.addPageTemplates([
@@ -518,20 +519,25 @@ class _Issue(BaseDocTemplate):
         ])
 
     def handle_pageBegin(self) -> None:
-        """The waiting figures that fit go to the top of a body page; the columns take the rest."""
+        """The figures planned for this page go across its top; the columns take the rest."""
         self.page_figures = []
         if self.pageTemplate.id == "body":
-            used = 0.0
-            while self.waiting and (not self.page_figures or used + self.waiting[0].height() <= FIGURE_AREA):
-                used += self.waiting[0].height()
-                self.page_figures.append(self.waiting.pop(0))
-                self.printed.append(self.page_figures[-1].number)
-            self.pageTemplate.frames = _columns(BODY_HEIGHT - used)
+            # the page number is counted up by the base class, in super().handle_pageBegin()
+            self.page_figures = [self.figures[n] for n in sorted(self.plan) if self.plan[n] == self.page + 1]
+            self.shrink = page_shrink(self.page_figures)
+            self.printed += [f.number for f in self.page_figures]
+            self.pageTemplate.frames = _columns(BODY_HEIGHT - sum(f.height(self.shrink) for f in self.page_figures))
         super().handle_pageBegin()
 
     def afterFlowable(self, flowable) -> None:
+        if isinstance(flowable, FigureStart):
+            self.start_pages[flowable.figure.number] = self.page
+            return
         if isinstance(flowable, FigureAnchor):
-            self.waiting.append(flowable.figure)
+            frames = self.pageTemplate.frames
+            later = frames[frames.index(self.frame) + 1:] if self.frame in frames else []
+            self.anchor_pages[flowable.figure.number] = self.page
+            self.anchor_room[flowable.figure.number] = (self.frame._y - self.frame._y1) + sum(f._height for f in later)
             return
         heading = getattr(flowable, "heading", None)
         if heading is None:
@@ -583,12 +589,12 @@ def _overview(content: Content, pages: dict[str, int]) -> list:
             figure, caption, Paragraph("<b>Contents</b>", _STYLES["caption"]), contents]
 
 
-def build_story(content: Content, pages: dict[str, int], waiting: list[PageFigure]) -> list:
+def build_story(content: Content, pages: dict[str, int], breaks: set[int] = frozenset()) -> list:
+    """``breaks``: figures whose referring paragraph starts a new page (see place_figures)."""
     story: list = [Spacer(1, 1), NextPageTemplate("overview"), PageBreak(), *_overview(content, pages), NextPageTemplate("body"), PageBreak()]
     section = sub = 0
     tables = 1
     figures = 1
-    pending_figure = False
     for kind, item in content.body:
         if kind == "h1":
             section, sub = section + 1, 0
@@ -604,7 +610,9 @@ def build_story(content: Content, pages: dict[str, int], waiting: list[PageFigur
             if path == CRISIS_IMAGE:  # a photo with the Crisis numbers, in the column
                 story += crisis_figure(content, figures)
             else:
-                story += [Paragraph(f"See Figure {figures}.", _STYLES["see_figure"]), FigureAnchor(PageFigure(path, figures))]
+                figure = PageFigure(path, figures)
+                story[-1:-1] = [PageBreak()] * (figures in breaks) + [FigureStart(figure)]  # before the referring paragraph
+                story += [Paragraph(f"See Figure {figures}.", _STYLES["see_figure"]), FigureAnchor(figure)]
         elif kind == "h2":
             sub += 1
             icon = f' <img src="{ICONS / "fire.png"}" width="13" height="13" valign="-2"/>' if item == "Hot topic" else ""
@@ -621,7 +629,7 @@ def build_story(content: Content, pages: dict[str, int], waiting: list[PageFigur
             story.append(Paragraph(_inline(item), _STYLES[kind], bulletText="•" if kind == "bullet0" else "–"))
         else:
             story.append(Paragraph(_inline(item), _BODY))
-    story += [FlushFigures(waiting), NeedRoom(95), _heading("h1", "Credits", None, 0)]
+    story += [NeedRoom(95), _heading("h1", "Credits", None, 0)]
     names = [item for kind, item in content.credits if kind == "bullet0" and len(item.split()) <= 3 and "http" not in item]
     for kind, item in content.credits:
         if kind == "bullet0" and item in names:  # a list of short names reads better as one line
@@ -636,6 +644,58 @@ def build_story(content: Content, pages: dict[str, int], waiting: list[PageFigur
     return story
 
 
+def lay_out(content: Content, known_pages: dict[str, int], plan: dict[int, int], breaks: set[int], target,
+            scales: dict[int, float] | None = None) -> _Issue:
+    story = build_story(content, known_pages, breaks)
+    figures = {f.figure.number: f.figure for f in story if type(f) is FigureAnchor}
+    for n, scale in (scales or {}).items():
+        figures[n].scale = scale
+    doc = _Issue(target, content, known_pages, figures, plan)
+    doc.build(story)
+    return doc
+
+
+def place_figures(content: Content) -> tuple[dict[int, int], set[int], dict[int, float], dict[str, int]]:
+    """Each figure goes on a page with the paragraph that refers to it (from its first line to
+    its "See Figure" line). Placing figures moves the text, so the layout is repeated, each figure
+    moved to the nearest such page of the last layout, until nothing has to move. A figure that
+    pushes its whole paragraph to the next page (and without which the paragraph moves back) is
+    shrunk until the paragraph stays (two columns lose its height each); when that would leave
+    less than MIN_FIGURE_SCALE, the paragraph starts the next page and the figure goes there too.
+    Returns (figure number -> page, the figures with such a page break, figure number -> scale,
+    the page of each section)."""
+    plan: dict[int, int] = {}
+    breaks: set[int] = set()
+    scales: dict[int, float] = {}
+    moves: set[tuple[int, int, int]] = set()  # (figure, planned page, page it had to move to)
+    doc = None
+    for _ in range(MAX_LAYOUTS):
+        doc = lay_out(content, {}, plan, breaks, io.BytesIO(), scales)
+        wrong = {n for n, end in doc.anchor_pages.items() if not doc.start_pages[n] <= plan.get(n, 0) <= end}
+        if not wrong:
+            break
+        for n in sorted(wrong):
+            start, end, planned = doc.start_pages[n], doc.anchor_pages[n], plan.get(n)
+            page = end if planned is None or planned > end else start
+            plan[n] = page
+            if planned is None:
+                continue
+            if (n, page, planned) in moves and page < planned:  # back and forth; now without it on its page
+                figure = doc.figures[n]
+                fits = doc.anchor_room[n] / 2 / 1.1 - figure.caption_height() - FIGURE_GAP  # with some slack
+                scale = min(fits / (figure.size()[1] / figure.scale), scales.get(n, 1.0) * 0.85)
+                if scale >= MIN_FIGURE_SCALE:
+                    scales[n] = scale
+                else:
+                    breaks.add(n)
+                    scales.pop(n, None)
+                    plan[n] = planned
+            moves.add((n, planned, page))
+    else:
+        print(f"warning: figure(s) {sorted(wrong)} are not on a page with the text that refers to them", file=sys.stderr)
+    return plan, breaks, scales, doc.found_pages
+
+
 def make_pdf(out: Path = DEFAULT_OUT, rulebook: Path = RULEBOOK) -> Path:
     """Write the filled-in rulebook to ``out``, using the defaults in parameter_defaults.yaml."""
     _register_fonts()
@@ -643,12 +703,10 @@ def make_pdf(out: Path = DEFAULT_OUT, rulebook: Path = RULEBOOK) -> Path:
     filled = fill_rulebook(read_markdown(rulebook), settings)
     check_printable(filled)
     content = read_content(filled, settings)
-    first = _Issue(io.BytesIO(), content, {})  # a first pass finds the page of each section
-    first.build(build_story(content, {}, first.waiting))
+    plan, breaks, scales, pages = place_figures(content)  # the passes also find the page of each section
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    final = _Issue(str(out), content, first.found_pages)
-    final.build(build_story(content, first.found_pages, final.waiting))
+    lay_out(content, pages, plan, breaks, str(out), scales)
     return out
 
 

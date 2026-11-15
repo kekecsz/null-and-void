@@ -222,16 +222,17 @@ def test_a_missing_illustration_stops_the_build(tmp_path):
         make_pdf(tmp_path / "out.pdf", rulebook)
 
 
-def test_every_figure_the_text_refers_to_is_printed_across_the_page_in_order():
+def test_every_figure_is_printed_on_a_page_with_the_paragraph_that_refers_to_it():
     import io
 
     from nv_rulebook.fill import fill_rulebook
-    from nv_rulebook.pdf import FigureAnchor, _Issue, build_story, read_content
+    from nv_rulebook.pdf import MIN_FIGURE_SCALE, lay_out, place_figures, read_content
 
     settings = load_settings().model_dump()
     content = read_content(fill_rulebook(read_markdown(RULEBOOK), settings), settings)
-    doc = _Issue(io.BytesIO(), content, {})
-    story = build_story(content, {}, doc.waiting)
-    referred = [f.figure.number for f in story if isinstance(f, FigureAnchor)]
-    doc.build(story)
-    assert referred and doc.printed == referred and doc.waiting == []
+    plan, breaks, scales, pages = place_figures(content)
+    doc = lay_out(content, pages, plan, breaks, io.BytesIO(), scales)
+    assert doc.anchor_pages and sorted(doc.printed) == sorted(doc.anchor_pages)  # each printed once
+    for n, end in doc.anchor_pages.items():
+        assert doc.start_pages[n] <= plan[n] <= end, f"Figure {n}"
+    assert all(scale >= MIN_FIGURE_SCALE for scale in scales.values())
