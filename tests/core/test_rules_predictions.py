@@ -215,7 +215,7 @@ def test_failure_counters_move_once_per_theory_per_probe():
 
 
 def test_a_theory_retracted_during_scoring_still_scores_the_later_predictions():
-    """Open question R8: a theory retracted by an earlier failed prediction; a later prediction that
+    """Scoring predictions (a theory retracted during scoring): a theory retracted by an earlier failed prediction; a later prediction that
     cited it is scored for the researcher who made it."""
     state = _at_prediction()
     first, second = state.turn_order()[:2]

@@ -423,7 +423,7 @@ def score(ctx: Ctx, p: Prediction, adjusted: set[tuple[int, int]] | None = None)
     try:
         paper = state.paper(p.cited)
     except KeyError:
-        # Retracted earlier in this scoring (open question R8): only the predictor is scored.
+        # Retracted earlier in this scoring (Failed predictions: a theory retracted during scoring): only the predictor is scored.
         ctx.credit(p.seat, gained, "successful prediction" if success else "failed prediction")
         if crisis and not success:
             state.unsuccessful_predictions += 1
