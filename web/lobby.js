@@ -105,6 +105,7 @@ $("create").onsubmit = async (event) => {
       kind: row.querySelector(".seat-kind").value, name: row.querySelector(".seat-name").value,
     })),
     seed: number("seed"),
+    mode: document.querySelector("input[name=mode]:checked").value,
     overrides: $("overrides").value,
     join_password: $("join-password").value,
     spectator_password: $("spectator-password").value,

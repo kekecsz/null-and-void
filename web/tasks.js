@@ -109,6 +109,7 @@ const preview = () => msg.preview || {};
 const signed = (n) => (n > 0 ? `+${n}` : String(n));
 const authorPart = (n) => (n ? `, ${signed(n)} as author` : "");
 function patentPart(x) {
+  if (!x.patent) return "";  // no patents in the simplified game
   if (x.patent === "new") return ", patent";
   return x.patent_holder === msg.you ? ", you already hold its patent" : `, no patent (${nameOf(x.patent_holder)} holds it)`;
 }
@@ -501,6 +502,7 @@ function allocateForm(t) {
   const [low, high] = t.postdocs_after;
   const postdocs = numberInput(pending ? now + pending.hire_postdocs - pending.fire_postdocs : now, low, high);
   const students = numberInput(pending ? pending.hire_students : 0, 0, t.max_students);
+  const noStudents = simplified();  // the simplified game has no students: no Students column
   const inputs = {};
   const caps = t.task_caps || {};  // the most staff a task takes: Talent development, and Experimentation (lab capacity)
   const cap = (task) => (task in caps ? caps[task] : t.at_most_one.includes(task) ? 1 : null);
@@ -512,10 +514,12 @@ function allocateForm(t) {
     inputs[task] = [p, s];
     rowsByTask[task] = [p, s];
     const limit = task in caps && !t.at_most_one.includes(task) ? h("div", { class: "muted" }, `at most ${caps[task]} (lab capacity)`) : null;
-    return [h("span", {}, taskLabel(task), limit), TASK_WHEN[task] || "", p.box, s.box];
+    return [h("span", {}, taskLabel(task), limit), TASK_WHEN[task] || "", p.box, ...(noStudents ? [] : [s.box])];
   });
   const totals = { postdocs: h("b", {}), students: h("b", {}) };
-  const allocationTable = table(["Task", "When", "Postdocs", "Students"], [...rows, [h("b", {}, "Allocated"), "", totals.postdocs, totals.students]]);
+  const allocationTable = noStudents
+    ? table(["Task", "When", "Postdocs"], [...rows, [h("b", {}, "Allocated"), "", totals.postdocs]])
+    : table(["Task", "When", "Postdocs", "Students"], [...rows, [h("b", {}, "Allocated"), "", totals.postdocs, totals.students]]);
   allocationTable.classList.add("alloc");
   const button = h("button", { class: "primary", title: "Hire, fire and allocate as shown, and commit: final for this round", onclick: () => {
     const after = Number(postdocs.value);
@@ -560,10 +564,11 @@ function allocateForm(t) {
   update();
   return [
     h("div", { class: "form-row hire-row" }, `You have ${now} postdoc(s). Postdocs after hiring/firing: `, postdocs.box, maxButton(postdocs, high),
-      ` (${low} to ${high === null ? "any" : high}) \u00b7 students to hire: `, students.box, maxButton(students, t.max_students), ` (at most ${t.max_students}) `,
+      ` (${low} to ${high === null ? "any" : high}) `,
+      ...(noStudents ? [] : ["\u00b7 students to hire: ", students.box, maxButton(students, t.max_students), ` (at most ${t.max_students}) `]),
       h("button", { type: "button", disabled: previous ? null : true, title: "Fill in the task allocation of your last round", onclick: repeat }, "Repeat")),
     allocationTable,
-    h("div", { class: "small muted" }, "Every staff member needs a task; Development and Talent development take postdocs only; at most one on Talent development"
+    h("div", { class: "small muted" }, noStudents ? "Every staff member needs a task" : "Every staff member needs a task; Development and Talent development take postdocs only; at most one on Talent development"
       + (caps.experimentation !== undefined ? `; at most ${caps.experimentation} on Experimentation (your lab capacity).` : ".")),
     button,
   ];

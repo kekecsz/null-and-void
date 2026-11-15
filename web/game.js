@@ -192,6 +192,7 @@ function render() {
     return;
   }
   loadIcons(v.scenario.id);
+  for (const id of ["portal", "alliances"]) $(id).closest(".panel").style.display = simplified() ? "none" : "";  // normal game only
   if (spectator) { renderReplay(); renderWorld(); renderNotes(); } else renderActions();
   renderGrid();
   renderRecords();
@@ -211,7 +212,7 @@ function renderStatus() {
   const v = view();
   const parts = [];
   if (v) {
-    parts.push(h("b", {}, `Round ${v.round}`), ` \u00b7 ${v.phase} \u00b7 `, periodStatus(v), " \u00b7 ");
+    parts.push(h("b", {}, `Round ${v.round}`), simplified() ? " (simplified game)" : "", ` \u00b7 ${v.phase} \u00b7 `, periodStatus(v), " \u00b7 ");
     const waiting = v.current !== null && v.current !== undefined ? [v.current] : v.waiting;
     if (v.result) parts.push("game over");
     else if (msg.status !== "running") parts.push(`game ${msg.status}`);
@@ -273,14 +274,20 @@ const ROUND_PHASES = [
 // and Grants work after the last step (Talent development and Clean-up phases), so they are never
 // "past" within a round.
 const STEP_ORDER = ROUND_PHASES.flatMap(([, steps]) => steps);
+// Basic mechanics: the simplified game (no publication steps, Talent development, grants, patents,
+// students or alliances; new theories and methods are published in Clean-up).
+const simplified = () => Boolean(view() && view().mode === "simplified");
+const NORMAL_ONLY_PHASES = ["Publication", "Talent development"];
+const roundPhases = () => (simplified() ? ROUND_PHASES.filter(([name]) => !NORMAL_ONLY_PHASES.includes(name)) : ROUND_PHASES);
 
 function renderPhaseBar() {
   const v = view();
   const bar = $("phase-bar");
   bar.style.display = v ? "" : "none";
   if (!v) return;
-  const now = v.result ? -1 : ROUND_PHASES.findIndex(([, steps]) => steps.includes(v.phase));
-  fill(bar, h("span", { class: "phase-label" }, "This round"), ROUND_PHASES.map(([name], i) =>
+  const phases = roundPhases();
+  const now = v.result ? -1 : phases.findIndex(([, steps]) => steps.includes(v.phase));
+  fill(bar, h("span", { class: "phase-label" }, "This round"), phases.map(([name], i) =>
     h("span", { class: `phase-step${now < 0 ? "" : i < now ? " done" : i === now ? " now" : ""}`, title: i === now ? "The current phase" : null }, h("b", {}, String(i + 1)), name)));
 }
 const TASK_STEPS = {
@@ -315,7 +322,8 @@ function renderLab() {
 
 function labInto(box, v, me, lab) {
   const capacity = me.lab_capacity === null ? "" : ` \u00b7 Lab capacity ${me.lab_capacity}`;
-  box.append(h("p", {}, `Credit ${me.credit} \u00b7 money ${me.money} \u00b7 Grant ${me.grant_position} \u00b7 Talent ${me.talent_position}${capacity}`,
+  if (simplified()) box.append(h("p", {}, `Credit ${me.credit} \u00b7 money ${me.money}${capacity}`, h("br"), `${me.postdocs} postdoc(s)`));
+  else box.append(h("p", {}, `Credit ${me.credit} \u00b7 money ${me.money} \u00b7 Grant ${me.grant_position} \u00b7 Talent ${me.talent_position}${capacity}`,
     h("br"), `${me.postdocs} postdoc(s), ${me.students} student(s) \u00b7 ${me.patents} patent(s)`));
   const staff = Object.entries(me.staff).filter(([, c]) => c.postdocs + c.students)
     .sort(([a], [b]) => taskOrder(a) - taskOrder(b));
@@ -345,9 +353,14 @@ function labInto(box, v, me, lab) {
 
 function renderTracks() {
   const v = view();
+  const who = (r) => h("span", {}, chip(r.seat), r.committed ? h("span", { class: "muted" }, " ready") : null);
+  if (simplified()) {
+    fill($("tracks"), table(["", "Credit", "Money", "Lab", "Postdocs"],
+      v.researchers.map((r) => [who(r), r.credit, r.money, r.lab_capacity ?? "\u2013", r.postdocs])));
+    return;
+  }
   const rows = v.researchers.map((r) => [
-    h("span", {}, chip(r.seat), r.committed ? h("span", { class: "muted" }, " ready") : null),
-    r.credit, r.money, r.grant_position, r.talent_position, r.lab_capacity ?? "\u2013", `${r.postdocs}p ${r.students}s`, r.patents,
+    who(r), r.credit, r.money, r.grant_position, r.talent_position, r.lab_capacity ?? "\u2013", `${r.postdocs}p ${r.students}s`, r.patents,
   ]);
   fill($("tracks"), table(["", "Credit", "Money", "Grant", "Talent", "Lab", "Staff", "Pat."], rows));
 }

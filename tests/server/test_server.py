@@ -112,6 +112,18 @@ def test_settings_overrides_apply(db):
         assert client.app.state.manager.storage.get_meta(game)["settings"]["nobel_condition"] == 4
 
 
+def test_the_host_chooses_the_game_mode(db):
+    """Specification 6.3: the host chooses the game mode (normal by default)."""
+    with TestClient(create_app(db=db)) as client:
+        normal, _ = _create(client, [{"kind": "human"}, {"kind": "selfish"}])
+        simple, _ = _create(client, [{"kind": "human"}, {"kind": "selfish"}], mode="simplified")
+        storage = client.app.state.manager.storage
+        assert storage.get_meta(normal)["settings"]["mode"] == "normal"
+        assert storage.get_meta(simple)["settings"]["mode"] == "simplified"
+        bad = client.post("/api/games", json={"world": WORLD, "seats": [{"kind": "human"}, {"kind": "selfish"}], "mode": "easy"})
+        assert bad.status_code == 422
+
+
 def test_joining_needs_the_password_a_free_seat_and_a_nickname(db):
     with TestClient(create_app(db=db)) as client:
         game, host = _create(client, [{"kind": "human"}, {"kind": "human"}, {"kind": "selfish"}], join_password="secret")

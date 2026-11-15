@@ -19,7 +19,7 @@ import random
 import socket
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import unquote
 
 import yaml
@@ -50,6 +50,7 @@ class CreateGame(BaseModel):
     world_seed: int | None = None  # ...with this seed
     seats: list[SeatSpec]
     seed: int | None = None
+    mode: Literal["normal", "simplified"] = "normal"  # Basic mechanics: the gameplay mode
     overrides: str = ""  # YAML: setting: value
     join_password: str = ""
     spectator_password: str = ""
@@ -125,6 +126,8 @@ def _setup(request: CreateGame):
         settings = scenario.settings
     else:
         raise GameError("choose a world or a scenario")
+    if request.mode != settings.mode:
+        settings = Settings.model_validate({**settings.model_dump(), "mode": request.mode})
     if request.overrides.strip():
         try:
             overrides = yaml.safe_load(request.overrides)
