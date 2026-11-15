@@ -481,6 +481,8 @@ class StrategyBot:
             allocation = {Task.EXPERIMENTATION: StaffCount(postdocs=postdocs)} if postdocs else {}
             return [a.AllocateStaff(seat=seat, fire_postdocs=now - postdocs, allocation=allocation)]
         development, needs = self._needs(view)
+        offered = {Task(x) for x in t["tasks"]}  # the simplified game has three tasks
+        needs = {task: (n if task in offered else 0) for task, n in needs.items()}
         money = self._me(view)["money"]
         cost = s.cost_of_postdoc
         affordable = money // cost if cost else now + development
