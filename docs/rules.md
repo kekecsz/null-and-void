@@ -46,9 +46,9 @@ There are two gameplay modes: simplified and normal. Normal mode gives the most 
 
 The Game Period Deck is prepared by completing the following steps:
 
-- One Crisis card is shuffled into a deck of (\[calm\_cards\_per\_player\_crisis\] \* player number) “Calm period” cards and the  deck is placed face down.  
-- One Warning shot card is shuffled into a another deck of (\[calm\_cards\_per\_player\_warning\] \* player number) “Calm period” cards, and this deck is placed face down on top of the previously prepared deck.  
-- (\[calm\_cards\_per\_player\_top\] \* player number) “Calm period” cards are put face down on top of the previously prepared decks.
+- One Crisis card is shuffled into a deck of (\[calm\_cards\_per\_player\_crisis\] \* player number) “Calm period” cards and the  deck is placed face down. In the simplified game, it is shuffled into a deck of (\[calm\_cards\_per\_player\_crisis\_simplified\] \* player number) instead.  
+- One Warning shot card is shuffled into a another deck of (\[calm\_cards\_per\_player\_warning\] \* player number) “Calm period” cards, and this deck is placed face down on top of the previously prepared deck. In the simplified game, it is shuffled into a deck of (\[calm\_cards\_per\_player\_warning\_simplified\] \* player number) instead.  
+- (\[calm\_cards\_per\_player\_top\] \* player number) “Calm period” cards are put face down on top of the previously prepared decks. In the simplified game the size of this deck is (\[calm\_cards\_per\_player\_top\_simplified\] \* player number) instead
 
 Normal game only: The Hot topic counter starts at the first Probe.
 

@@ -63,6 +63,27 @@ def test_normal_setup_is_unchanged():
     assert state.hot_topic == 0
 
 
+@pytest.mark.parametrize("players", [2, 3])
+def test_simplified_game_period_deck(players):
+    """Game setup: in the simplified game the Game Period Deck parts hold
+    [calm_cards_per_player_top_simplified], [..._warning_simplified] and [..._crisis_simplified]
+    Calm period cards per player, with the Warning shot card in the middle part and the Crisis
+    card in the bottom part."""
+    deck = game(players, **SIMPLE).period_deck
+    top = S.calm_cards_per_player_top_simplified * players
+    warning = S.calm_cards_per_player_warning_simplified * players + 1
+    crisis = S.calm_cards_per_player_crisis_simplified * players + 1
+    assert len(deck) == top + warning + crisis
+    assert set(deck[:top]) == {"c"}
+    assert deck[top:top + warning].count("w") == 1 and "x" not in deck[:top + warning]
+    assert deck[top + warning:].count("x") == 1
+
+
+def test_normal_game_period_deck_is_unchanged():
+    deck = game(3).period_deck
+    assert len(deck) == 3 * (S.calm_cards_per_player_top + S.calm_cards_per_player_warning + S.calm_cards_per_player_crisis) + 2
+
+
 # Hiring and task allocation phase ------------------------------------------------------------------
 def test_simplified_hiring_offers_three_tasks_and_no_students():
     state = game(2, **SIMPLE)

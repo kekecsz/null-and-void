@@ -15,12 +15,12 @@ def specialty_parameters(world: WorldData, probe_index: int) -> list[str]:
 
 
 def build_period_deck(ctx: Ctx, n_players: int) -> str:
-    s = ctx.settings
-    crisis_part = list("c" * (s.calm_cards_per_player_crisis * n_players) + "x")
-    warning_part = list("c" * (s.calm_cards_per_player_warning * n_players) + "w")
+    top_cards, warning_cards, crisis_cards = ctx.settings.calm_cards_per_player()
+    crisis_part = list("c" * (crisis_cards * n_players) + "x")
+    warning_part = list("c" * (warning_cards * n_players) + "w")
     ctx.rng.shuffle("setup", crisis_part)
     ctx.rng.shuffle("setup", warning_part)
-    top = "c" * (s.calm_cards_per_player_top * n_players)
+    top = "c" * (top_cards * n_players)
     return top + "".join(warning_part) + "".join(crisis_part)
 
 

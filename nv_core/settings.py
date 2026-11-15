@@ -82,6 +82,11 @@ class Settings(_Strict):
     calm_cards_per_player_top: StrictInt
     calm_cards_per_player_warning: StrictInt
     calm_cards_per_player_crisis: StrictInt
+    # None only in a game saved before the simplified game had its own deck sizes (it then uses
+    # the normal ones). The parameter file must list them.
+    calm_cards_per_player_top_simplified: StrictInt | None = None
+    calm_cards_per_player_warning_simplified: StrictInt | None = None
+    calm_cards_per_player_crisis_simplified: StrictInt | None = None
     # A game saved before this setting existed keeps the rule it was started under (no minimum).
     # The parameter file must still list it: see _validate.
     min_cards_burn_each_round_per_player: StrictInt = 0
@@ -145,6 +150,16 @@ class Settings(_Strict):
     def simplified(self) -> bool:
         """Basic mechanics: the simplified game (the rulebook's "Simplified game" and "Normal game" rules)."""
         return self.mode == "simplified"
+
+    def calm_cards_per_player(self) -> tuple[int, int, int]:
+        """Game setup: the Calm period cards per player in the top, Warning shot and Crisis parts
+        of the Game Period Deck, for this game's mode."""
+        normal = (self.calm_cards_per_player_top, self.calm_cards_per_player_warning, self.calm_cards_per_player_crisis)
+        if not self.simplified:
+            return normal
+        simplified = (self.calm_cards_per_player_top_simplified, self.calm_cards_per_player_warning_simplified,
+                      self.calm_cards_per_player_crisis_simplified)
+        return tuple(n if s is None else s for n, s in zip(normal, simplified))
 
     def first_lab_capacity(self) -> int | None:
         """Game setup: the lab capacity each researcher starts with (None: no lab capacity, in a

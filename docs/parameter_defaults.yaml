@@ -29,6 +29,9 @@ talent_track_max: 6
 calm_cards_per_player_top: 45
 calm_cards_per_player_warning: 25
 calm_cards_per_player_crisis: 20
+calm_cards_per_player_top_simplified: 35
+calm_cards_per_player_warning_simplified: 20
+calm_cards_per_player_crisis_simplified: 15
 min_cards_burn_each_round_per_player: 1 
 
 # Probes and sensors

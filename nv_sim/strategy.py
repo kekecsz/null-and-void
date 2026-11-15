@@ -447,7 +447,7 @@ class StrategyBot:
         its last part, which holds the Crisis card (Game setup). The deck count is public."""
         if view["period"] == "crisis":
             return True
-        last_part = self.settings.calm_cards_per_player_crisis * len(view["players"]) + 1
+        last_part = self.settings.calm_cards_per_player()[2] * len(view["players"]) + 1
         return view["warning_revealed"] and view["period_deck"] <= last_part
 
     def _fill_order(self, view) -> list[Task]:
