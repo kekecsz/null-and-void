@@ -1,6 +1,14 @@
 # Null and Void
 
-Last updated: 2026.11.15. 00:43
+Last updated: 2026.11.15. 21:43
+
+\[Front page goes here\]
+
+\[Illustration: Venus (Mariner 10).jpg\]
+
+\[A round at a glance goes here\]
+
+\[Illustration: example\_slip.png\]
 
 # Summary
 
@@ -31,6 +39,8 @@ Researchers can form an alliance, where if either of them wins the game, the oth
 Amazing scientific breakthrough\! Astrobiologists reveal that they have found unmistakable evidence that clouds of Venus harbor primitive life. The life is mainly microbial with a few small multi-celled organisms. Researchers from all over the world send missions to Venus to find out more about this new lifeform. Researchers live in Zeppelin-like research labs floating in temperature safe-zones in the clouds of venus, send probes to observe the creatures, collect samples, and conduct experiments in the labs. Academic journals are hungry for any findings, and would publish almost anything coming from Venus with “fast-track review”. Possible applications are numerous, findings are implemented in medicine, chemistry, material science, and even consumer products, whenever new aspects of this new lifeform are seen as sufficiently understood. Industry is only slightly more cautious than the publishers. Everyone wants to ship new products incorporating advanced Venus biotech.
 
 Because the race between countries, research institutions, and companies is so fierce, safety regulations are lax. Every shipment going from Venus to Earth, be it carrying biosamples or research staff, increases the risk of contamination. It is only a matter of time until Venus fauna finds a foothold on our planet. As long as research is ongoing on Venus, a crisis seems to be inevitable.
+
+\[Illustration: Mars\_rock\_microbes.jpg\]
 
 # Basic mechanics
 
@@ -70,13 +80,6 @@ Both input parameters and world outcomes are kept secret until they are revealed
 
 \[See the Specs document for rules on world generation. See the scenario.md for values that should be used for the world generation.\]
 
-# Research Staff 
-
-There are two types of research staff: 
-
-- Postdocs: Postdocs are highly trained and can work independently.  
-- Students: Students don’t require funding, but they require training and guidance.
-
 # World grid
 
 The World grid shows what the researchers can observe of the world. Each row is a Probe: a probe sent out to gather data. There are as many Probes as players \+ 1\. Each column is one input parameter or one world outcome. The scenario names them and their possible states, for example:
@@ -97,6 +100,13 @@ However, the true states of the world cannot be seen exactly by the researchers.
 Every Probe has two Specialty input parameters that are always shown, and always correct: input parameter 1, and one more that differs from Probe to Probe. The first Probe's second Specialty is input parameter 2, the second Probe's is input parameter 3, and so on. After the last input parameter, it starts again at input parameter 2 (with 4 input parameters, Probe 4's second Specialty is input parameter 2). (This resembles that each Probe has very accurate equipment for two input parameters.) Other input parameters show a blank card until a sensor is installed on that slot (see Sensor installation and upgrade). A sensor shows a reading, but sensors are noisy, so a reading can be wrong (see Revealing input parameters).
 
 World outcomes are hidden until they are revealed later in the round (see Revealing world outcomes).
+
+# Research Staff 
+
+There are two types of research staff: 
+
+- Postdocs: Postdocs are highly trained and can work independently.  
+- Students: Students don’t require funding, but they require training and guidance.
 
 # Hiring and task allocation phase
 
@@ -152,6 +162,8 @@ During the Student task check phase, each researcher throws as many six sided di
 
 In general, whenever a task is resolved by a staff member, it is removed from the task allocation mat. Unless it is explicitly specified otherwise, it is possible to not use a staff member to resolve the action they were allocated to. However, this indicates bad planning on the part of the researcher, and can hurt their reputation (In the normal game mode an academic credit penalty is incurred in the Clean-up phase for each staff member left on the task allocation mat).
 
+\[Illustration: 2438\_pioneer\_venus\_map\_of\_venus.jpg\]
+
 # Experimentation and equipment phase
 
 For each staff member allocated to Experimentation, the researcher can choose one of the following actions:
@@ -189,6 +201,8 @@ Methods with the Fresh out of print marker can only be used by their authors.
 
 The authors of the methods cited immediately get \[experiment\_method\_citation\_AC\_reward\] academic credit each.
 
+\[Illustration: example\_experiment\_specification.png\]
+
 The specified Input Parameter states are taken from the State Cards directly (not the Input Parameter Deck or the Probes).
 
 The unspecified Input Parameter states are determined by randomly drawing from the Input Parameter Deck of that parameter.
@@ -201,9 +215,13 @@ Following the experiments, researchers place the cards from the experiments in t
 
 New records always enter at the first record position, and push older records one position higher. (Older records in positions beyond the Records capacity of \[records\_capacity\] will be discarded during Clean-up).
 
+\[Illustration: records\_are\_with\_example\_experiment\_slips.png\]
+
 ## Sensor installation and upgrade
 
 Researchers can install or upgrade a sensor on a Probe to make it more versatile and reliable. A researcher can install a sensor on any Input Parameter slot of a Probe, except Specialty slots, or upgrade a sensor that is already there by one level. Each time, published Methods for that slot's Input Parameter need to be cited, equal to the new sensor level (e.g. 1 method has to be cited to install a new level 1 sensor, while 3 methods have to be cited to upgrade a level 2 sensor to level 3). Note that Sensor level can only be increased by one level at a time, but the same Sensor can be upgraded multiple times in the same round.
+
+\[Illustration: world\_grid\_exp\_with\_different\_sensor\_levels.png\]
 
 Rewards for sensor installation or upgrade:
 
@@ -241,6 +259,8 @@ Sensor level 3: \[probe\_fake\_input\_deck\_size\]/4 (rounded down)
 
 Shuffle the sensor deck and show its top card in the slot. (It may be a Noise card, showing a wrong state.) (If the Input Parameter Deck is depleted, refer to the Decks and discard piles in the Pieces section.)
 
+\[Illustration: world\_grid\_obs\_before\_prediction\_reveal.png\]
+
 During the Crisis period, Probes show the true states (see probes in crisis).
 
 ## Revealing world outcomes
@@ -260,6 +280,8 @@ During the Crisis period, all Probes have all of their input parameters revealed
 Formulating predictions is done in parallel across researchers and in secret, behind their lab shield. To formulate a prediction, the researcher must have at least one research staff member assigned to data collection.
 
 Predictions mimic the structure of Probes and Theories. They specify input parameter states and world outcome states. Each prediction cites a published theory, it must be an exact copy of that theory, and it needs to be linked to a Probe. There can be no mismatching input parameter states between the prediction and the Probe. (This means that a theory including only one input parameter state can be used for prediction on a Probe that has multiple input parameters revealed. Also, a theory that includes four input parameter states can be used for prediction on a Probe that has only two input parameters revealed). The no mismatching input parameter state between theory and Probe reading is checked against the visible Probe readings (which can differ from the true world state due to sensor noise). One theory can only be cited once by the same Researcher on the same Probe within the same round. Also, no identical prediction can be made by the same Researcher on the same Probe within the same round through using another identical theory. 
+
+\[Illustration: prediction\_formulation\_task\_panel.png\]
 
 Theories with the Fresh out of print marker can only be used by their authors.
 
@@ -293,7 +315,7 @@ Only revealed predictions count for scoring purposes.
 
 A prediction is considered successful when all world outcomes shown on the theory used for the prediction matches the world outcome revealed for the Probe for which that prediction was made. If a theory shows only one world outcome, it only needs to match that world outcome on the Probe, the other world outcome is disregarded. A prediction is considered failed in every other case.
 
-Predictions are scored in the order they were revealed, so Preregistered predictions are scored first. Furthermore, predictions are scored in turn order, then in Probe order. If there are multiple predictions revealed for the same Probe by the same player, the player can decide the order in which these predictions are scored. (Precise Probe scoring order matters for determining who gets the patent for the successful prediction, and which theory wins the Nobel prize, in cases when there is no competition for these, probe scoring order can be ignored). 
+Predictions are scored in the order they were revealed, so Preregistered predictions are scored first. Furthermore, predictions are scored in turn order, then in Probe order. If there are multiple predictions revealed for the same Probe by the same player, the player can decide the order in which these predictions are scored. (Precise Probe scoring order matters for determining who gets the patent for the successful prediction, and which theory wins the Nobel prize, in cases when there is no competition for these, probe scoring order can be ignored).
 
 ## Failed predictions: 
 
@@ -335,6 +357,8 @@ Counters
 
 Self-citation is possible, and it yields the same reward (or penalty) as being cited by another researcher.
 
+\[Illustration: example\_predictions\_report\_page.png\]
+
 ## Recording observations
 
 At the end of the Observation and prediction phase, the researcher who has Probe time for a given Probe takes all cards from the Probe, resembling that they record the observations. This observational record can be used to support a theory when it is submitted to a journal (see journal tiers). Since Probe readings are taken directly as observations, and Probe readings can be inaccurate, the observations carry these inaccuracies with them.
@@ -375,6 +399,8 @@ A researcher cannot formulate a theory that is already published.
 
 (Theories need to be published before anyone can use them for prediction.)
 
+\[Illustration: example\_theory\_formation.png\]
+
 ## Developing methods
 
 Researchers can develop new research methods that will allow them to run more precise experiments or to install sensors.
@@ -390,6 +416,8 @@ When developing a method, researchers build a stack of cards including one card 
 Researchers can archive their records, preserving them for the long term. At most \[max\_archive\_per\_staff\_member\] records can be archived for each staff member used for this action.
 
 Archived records no longer have a record position, thus, they are not discarded at Clean-up, nor do they count toward Records capacity. Nevertheless, archived records count as being in the Records area for all other purposes, so they can be used for theory formation, or as supporting records during submission.
+
+\[Illustration: overflowing\_records\_area\_with\_archive\_buttons.png\]
 
 # Publication (normal game only)
 
@@ -421,6 +449,8 @@ Note, that at no time do other researchers see the cards involved in experiments
 (Designer’s note: the experimentation and data collection process is almost always hidden, allowing for questionable research practices, data falsification, and fabrication. The game is supposed to show that pressures on the field may drive an otherwise honest researcher to utilize questionable means to achieve goals. The game is also supposed to demonstrate that even if the individual researchers might get short term gains from these practices, the field, and society as a whole loses.)
 
 Supporting observation records are taken as is, containing exactly what was visible on the Probe, including blanks and noisy sensor readings.
+
+\[Illustration: example\_tier2\_submission\_with\_supporting\_records.png\]
 
 ## Revisions
 
@@ -463,6 +493,8 @@ Crisis fast-track: a manuscript that enters the Accept area during the Crisis pe
 A method publication can only benefit from the APC and the Crisis fast-track time-reduction bonuses.
 
 Rounds in processing tokens according to the journal tier and any of the above modifiers are placed next to the Manuscript when it advances to the Accept area of the Submission Portal, to indicate how many rounds the Manuscript will spend in processing before it is published. (These are gradually removed during the clean-up phase.)
+
+\[Illustration: submission\_portal\_all\_three\_areas\_containing\_submissions.png\]
 
 ## Publication
 
@@ -534,7 +566,11 @@ Once the Retraction counter reaches \[retraction\_threshold\], the theory become
 
 Retractions are only made during the Calm period. The Retraction counters are not tracked during the Crisis period.
 
+\[Illustration: literature\_theory\_close\_to\_nobel\_another\_close\_to\_retraction.png\]
+
 # Crisis
+
+\[Illustration: Venus mountain.jpg\]
 
 The Crisis period starts immediately when the Crisis card is revealed from the Game Period Deck (at the end of the Hiring phase).
 
@@ -590,7 +626,9 @@ During the Crisis period, advance the rounds in crisis track by one. When the cr
 
 Records in the Records area that are in positions beyond their \[records\_capacity\] are discarded.
 
-The First researcher token moves to the next player counterclockwise. 
+The First researcher token moves to the next player counterclockwise.
+
+\[Illustration: example\_cleanup\_report.png\]
 
 # Alliance (normal game only)
 
