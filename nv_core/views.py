@@ -8,6 +8,7 @@ from typing import Any
 
 from nv_core.engine import SIMULTANEOUS
 from nv_core.engine.context import Event
+from nv_core.engine.reports import player_reports
 from nv_core.engine.records import positions, slips
 from nv_core.state import Card, GameState, Idea, Manuscript, Paper, Phase, Prediction, RecordArea, Researcher
 
@@ -228,6 +229,7 @@ def _view(state: GameState, seat: int | None) -> dict[str, Any]:
         "review_cards": {str(s): cards for s, cards in state.review_cards.items()},
         "result": state.result.model_dump() if state.result else None,
         "prediction_report": state.prediction_report,
+        "reports": player_reports(state, seat),
     }
     if seat is not None:
         view["lab"] = _lab(state, seat)

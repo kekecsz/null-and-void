@@ -102,7 +102,7 @@ def expand_lab(ctx: Ctx, action: ExpandLab) -> None:
     r.lab_capacity += 1
     r.lab_expanded = True
     ctx.log("lab_capacity", f"{ctx.name(action.seat)} pays {cost} to increase their lab capacity to {r.lab_capacity}",
-            seat=action.seat)
+            seat=action.seat, cost=cost, capacity=r.lab_capacity)
 
 
 # Running experiments ---------------------------------------------------------------------------
@@ -154,12 +154,14 @@ def run_experiment(ctx: Ctx, action: RunExperiment) -> None:
     # Recording experimental findings
     r.records.cards += [ExperimentCard(experiment=experiment_id, card=c) for c in cards]  # at record position 1
     cited = f" citing {', '.join(f'M{m.id}' for m in methods)}" if methods else ""
-    ctx.log("experiment", f"{ctx.name(seat)} runs an experiment{cited}", seat=seat, cited=action.cited_methods)
+    ctx.log("experiment", f"{ctx.name(seat)} runs an experiment{cited}", seat=seat, cited=action.cited_methods,
+            specified=sorted(action.specified))
     shown = ", ".join(f"{k}={v}" for k, v in {**inputs, **outcomes}.items())
     ctx.log(
         "experiment_result",
         f"Experiment E{experiment_id}: {shown}",
         visible_to=[seat],
+        seat=seat,
         experiment=experiment_id,
         inputs=inputs,
         outcomes=outcomes,
@@ -201,11 +203,13 @@ def install_sensor(ctx: Ctx, action: InstallSensor) -> None:
         probe=action.probe,
         parameter=action.parameter,
         level=level + 1,
+        cited=[m.id for m in methods],
     )
     if probe.probe_time is None:
         probe.probe_time = seat
         probe.probe_time_from_sensor = True
-        ctx.log("probe_time", f"{ctx.name(seat)} gets Probe time on P{action.probe + 1}", seat=seat)
+        ctx.log("probe_time", f"{ctx.name(seat)} gets Probe time on P{action.probe + 1}", seat=seat,
+                probe=action.probe, sensor=True)
     ctx.credit(seat, s.sensor_install_and_upgrade_AC_reward * (level + 1), "sensor installed or upgraded")
     _next_turn(ctx, after=seat)
 
@@ -217,7 +221,7 @@ def pass_turn(ctx: Ctx, action: Pass) -> None:
         # An experiment is always possible, so a staff member could still be used.
         raise IllegalAction("at 0 academic credit you must use every staff member that can still be used")
     ctx.state.passed.append(seat)
-    ctx.log("pass", f"{ctx.name(seat)} passes")
+    ctx.log("pass", f"{ctx.name(seat)} passes", seat=seat)
     _next_turn(ctx, after=seat)
 
 

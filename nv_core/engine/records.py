@@ -55,4 +55,5 @@ def clean_up(ctx: Ctx, r: Researcher) -> None:
     if invalid or beyond:
         parts = [f"{len(beyond)} beyond the Records capacity"] if beyond else []
         parts += [f"{len(invalid)} no longer valid"] if invalid else []
-        ctx.log("records_discarded", f"{ctx.name(r.seat)} discards record(s): {', '.join(parts)}", visible_to=[r.seat])
+        ctx.log("records_discarded", f"{ctx.name(r.seat)} discards record(s): {', '.join(parts)}", visible_to=[r.seat],
+                beyond=len(beyond), invalid=len(invalid))

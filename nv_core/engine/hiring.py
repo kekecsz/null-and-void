@@ -93,6 +93,10 @@ def finish(ctx: Ctx) -> None:
             f"hired {a.hire_students} student(s); staff allocation: {mat}",
             seat=seat,
             allocation=data,
+            hired_postdocs=a.hire_postdocs,
+            fired_postdocs=a.fire_postdocs,
+            hired_students=a.hire_students,
+            staff={t.value: [c.postdocs, c.students] for t, c in r.staff.items()},
         )
         if a.fire_postdocs:
             ctx.credit(seat, s.fired_postdoc_penalty * a.fire_postdocs, "fired postdocs")
@@ -107,7 +111,8 @@ def reveal_period_cards(ctx: Ctx) -> None:
     minimum = ctx.settings.min_cards_burn_each_round_per_player
     total = sum(max(minimum, r.postdocs + r.students) for r in state.researchers)
     revealed, state.period_deck = state.period_deck[:total], state.period_deck[total:]
-    ctx.log("period_deck", f"{len(revealed)} Game Period card(s) revealed; {len(state.period_deck)} left")
+    ctx.log("period_deck", f"{len(revealed)} Game Period card(s) revealed; {len(state.period_deck)} left",
+            revealed=len(revealed), left=len(state.period_deck))
     if "w" in revealed:
         state.warning_revealed = True
         ctx.log("warning_shot", "The Warning shot card is revealed: last chance to leave alliances")
@@ -143,10 +148,11 @@ def finish_last_chance(ctx: Ctx) -> None:
             pair = sorted((seat, partner))
             if pair in state.alliances:
                 state.alliances.remove(pair)
-                ctx.log("alliance", f"{ctx.name(seat)} leaves the alliance with {ctx.name(partner)}")
+                ctx.log("alliance", f"{ctx.name(seat)} leaves the alliance with {ctx.name(partner)}",
+                        seat=seat, partner=partner, action="leave")
         state.pending[seat].leave_alliances = []
     state.last_chance_done = True
-    ctx.log("alliance", "Alliances are now unbreakable")
+    ctx.log("alliance", "Alliances are now unbreakable", action="final")
 
 
 # Student task check -------------------------------------------------------------------------
@@ -170,6 +176,8 @@ def start_student_check(ctx: Ctx) -> None:
             seat=seat,
             dice=dice,
             leaving=leaving,
+            students=students,
+            threshold=threshold,
         )
         tasks_with_students = [t for t, c in r.staff.items() if c.students]
         if leaving == 0:
@@ -190,7 +198,8 @@ def remove_students(ctx: Ctx, r: Researcher, available: dict[Task, int], count: 
             r.staff[task].students -= take
             r.students -= take
             left -= take
-            ctx.log("student_leaves", f"{take} of {ctx.name(r.seat)}'s student(s) on {task.value} leave the lab")
+            ctx.log("student_leaves", f"{take} of {ctx.name(r.seat)}'s student(s) on {task.value} leave the lab",
+                    seat=r.seat, count=take, task=task.value)
     r.staff = {t: c for t, c in r.staff.items() if c.total}
 
 

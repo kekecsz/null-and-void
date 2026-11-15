@@ -383,6 +383,11 @@ class GameState(_Model):
     # Hidden bookkeeping (never in player views)
     prediction_log: list[Prediction] = []
     prediction_report: dict[str, Any] | None = None  # the latest round's, public (specification 7.4)
+    # Phase reports (nv_core/engine/reports.py): the latest of each part of the round, and the
+    # events and credit so far of the part being played.
+    reports: dict[str, dict[str, Any] | None] = {}
+    report_events: list[dict[str, Any]] = []
+    report_credit: list[int] = []
     paper_log: list[PaperLog] = []
     review_log: list[ReviewLog] = []
     round_log: list[RoundLog] = []

@@ -25,7 +25,8 @@ def propose(ctx: Ctx, action: ProposeAlliance) -> None:
         return
     if [action.seat, action.partner] not in state.proposals:
         state.proposals.append([action.seat, action.partner])
-    ctx.log("alliance", f"{ctx.name(action.seat)} proposes an alliance to {ctx.name(action.partner)}")
+    ctx.log("alliance", f"{ctx.name(action.seat)} proposes an alliance to {ctx.name(action.partner)}",
+            seat=action.seat, partner=action.partner, action="propose")
 
 
 def accept(ctx: Ctx, action: AcceptAlliance) -> None:
@@ -37,7 +38,8 @@ def accept(ctx: Ctx, action: AcceptAlliance) -> None:
         raise IllegalAction(f"{ctx.name(action.partner)} has not proposed an alliance to you")
     state.proposals.remove([action.partner, action.seat])
     state.alliances.append(pair)
-    ctx.log("alliance", f"{ctx.name(action.seat)} and {ctx.name(action.partner)} form a formal alliance")
+    ctx.log("alliance", f"{ctx.name(action.seat)} and {ctx.name(action.partner)} form a formal alliance",
+            seat=action.seat, partner=action.partner, action="form")
 
 
 def leave(ctx: Ctx, action: LeaveAlliance) -> None:
@@ -53,7 +55,8 @@ def leave(ctx: Ctx, action: LeaveAlliance) -> None:
     if state.warning_revealed:
         raise IllegalAction("alliances are unbreakable after the Warning shot card")
     state.alliances.remove(pair)
-    ctx.log("alliance", f"{ctx.name(action.seat)} leaves the alliance with {ctx.name(action.partner)}")
+    ctx.log("alliance", f"{ctx.name(action.seat)} leaves the alliance with {ctx.name(action.partner)}",
+            seat=action.seat, partner=action.partner, action="leave")
 
 
 def stay(ctx: Ctx, action: StayInAlliance) -> None:

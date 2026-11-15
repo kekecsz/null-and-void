@@ -18,7 +18,8 @@ def talent_development(ctx: Ctx) -> None:
         r.used[Task.TALENT_DEVELOPMENT] = staff  # always used, even at the maximum
         if r.talent_position < s.talent_track_max:
             r.talent_position += 1
-            ctx.log("talent", f"{ctx.name(seat)} advances to {r.talent_position} on the Talent development track")
+            ctx.log("talent", f"{ctx.name(seat)} advances to {r.talent_position} on the Talent development track",
+                    seat=seat, position=r.talent_position, up=True)
 
 
 def cleanup(ctx: Ctx) -> None:
@@ -32,7 +33,7 @@ def cleanup(ctx: Ctx) -> None:
         r.money -= paid * s.cost_of_postdoc
         r.unpaid = r.postdocs - paid
         if r.unpaid:
-            ctx.log("unpaid", f"{ctx.name(seat)} cannot pay {r.unpaid} postdoc(s)", seat=seat)
+            ctx.log("unpaid", f"{ctx.name(seat)} cannot pay {r.unpaid} postdoc(s)", seat=seat, count=r.unpaid)
 
     if state.hot_topic is not None:  # Hot topic (normal game only)
         state.hot_topic = (state.hot_topic + 1) % len(state.probes)
@@ -71,6 +72,10 @@ def cleanup(ctx: Ctx) -> None:
             f"{ctx.name(paper.author)} publishes D{manuscript.id} as {letter}{paper.id} in tier {paper.tier}: "
             f"{describe(paper.idea)}",
             paper=paper.id,
+            seat=paper.author,
+            manuscript=manuscript.id,
+            tier=paper.tier,
+            idea=paper.idea.model_dump(mode="json"),
         )
         state.researcher(paper.author).publications_this_round += 1
         if not s.simplified:  # Publication scoring: normal game only
@@ -92,7 +97,8 @@ def cleanup(ctx: Ctx) -> None:
         elif position.expected_to_increase is not None and r.publications_this_round >= position.expected_to_increase:
             r.grant_position += 1
         if r.grant_position != before:
-            ctx.log("grant", f"{ctx.name(seat)} moves to position {r.grant_position} on the Grant funding track")
+            ctx.log("grant", f"{ctx.name(seat)} moves to position {r.grant_position} on the Grant funding track",
+                    seat=seat, position=r.grant_position, up=r.grant_position > before)
 
     # Unused staff, the staff who leave, unspent money, returning staff
     for seat in order:
@@ -105,7 +111,8 @@ def cleanup(ctx: Ctx) -> None:
             ctx.credit(seat, s.unpaid_postdoc_penalty * r.unpaid, "unpaid postdocs")
             if r.talent_position > 0:
                 r.talent_position -= 1
-                ctx.log("talent", f"{ctx.name(seat)} moves back to {r.talent_position} on the Talent development track")
+                ctx.log("talent", f"{ctx.name(seat)} moves back to {r.talent_position} on the Talent development track",
+                        seat=seat, position=r.talent_position, up=False)
             r.unpaid = 0
         r.students = 0
         r.lab_expanded = False
@@ -118,9 +125,12 @@ def cleanup(ctx: Ctx) -> None:
         r = state.researcher(seat)
         if s.simplified:  # Funding in the simplified game: a flat rate
             r.money = s.funding_simplified
-            continue
-        patents = sum(p.patents.count(seat) for p in state.published)
-        r.money = s.grant_track[r.grant_position - 1].funding + patents * s.patent_funding
+            patents = 0
+        else:
+            patents = sum(p.patents.count(seat) for p in state.published)
+            r.money = s.grant_track[r.grant_position - 1].funding + patents * s.patent_funding
+        ctx.log("funding", f"{ctx.name(seat)} receives {r.money} money for the next round", seat=seat, money=r.money,
+                patents=patents, patent_money=patents * s.patent_funding)
 
     state.round_log.append(RoundLog(
         round=state.round, credit=[r.credit for r in state.researchers],

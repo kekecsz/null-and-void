@@ -178,6 +178,10 @@ def submit(ctx: Ctx, action: Submit) -> None:
         f"{' open access' if action.pay_apc else ''}{where}{content}",
         seat=seat,
         manuscript=idea.id,
+        tier=action.tier,
+        records=len(records),
+        open_access=action.pay_apc,
+        position=manuscript.position,
     )
     if not tier.peer_review:
         to_accept(ctx, manuscript)
@@ -195,7 +199,7 @@ def revise(ctx: Ctx, action: Revise) -> None:
         SubmissionUndo(manuscript=manuscript.id, before=manuscript.model_copy(deep=True))
     )
     r.used[Task.WRITE_UP] = r.used.get(Task.WRITE_UP, 0) + 1
-    ctx.log("revision", f"{ctx.name(action.seat)} revises D{manuscript.id}", seat=action.seat)
+    ctx.log("revision", f"{ctx.name(action.seat)} revises D{manuscript.id}", seat=action.seat, manuscript=manuscript.id)
     to_accept(ctx, manuscript)
 
 
@@ -220,7 +224,8 @@ def withdraw_submission(ctx: Ctx, action: WithdrawSubmission) -> None:
         what = "submission"
     pending.submissions.remove(undo)
     r.used[Task.WRITE_UP] -= 1
-    ctx.log("withdrawal", f"{ctx.name(seat)} withdraws the {what} of D{action.manuscript}", seat=seat)
+    ctx.log("withdrawal", f"{ctx.name(seat)} withdraws the {what} of D{action.manuscript}", seat=seat,
+            manuscript=action.manuscript, what=what)
 
 
 def supporting_records(ctx: Ctx, r: Researcher, idea: Idea) -> tuple[list[ObservationRecord], list[ExperimentRecord]]:
@@ -332,6 +337,8 @@ def to_accept(ctx: Ctx, manuscript: Manuscript) -> None:
         "accept_area",
         f"D{manuscript.id} enters the Accept area with {manuscript.tokens} Rounds in processing token(s)",
         manuscript=manuscript.id,
+        seat=manuscript.author,
+        tokens=manuscript.tokens,
     )
 
 
@@ -358,7 +365,8 @@ def start_peer_review(ctx: Ctx) -> None:
         r = state.researcher(seat)
         if n:
             r.used[Task.PEER_REVIEW] = n  # always used, whatever the cards
-            ctx.log("review_cards", f"{ctx.name(seat)} gets peer review card(s) {state.review_cards[seat]}", seat=seat)
+            ctx.log("review_cards", f"{ctx.name(seat)} gets peer review card(s) {state.review_cards[seat]}", seat=seat,
+                    cards=list(state.review_cards[seat]))
         state.pending[seat].votes = {}
     state.review_rest = deck
     state.waiting = [seat for seat in state.turn_order() if any(state.review_cards.get(seat, []))]
@@ -387,7 +395,7 @@ def finish_peer_review(ctx: Ctx) -> None:
             by_position[cards[index]].votes.append(vote)
         state.pending[seat].votes = {}
     draws, state.review_rest = state.review_rest[: s.peer_review_random_draws], []
-    ctx.log("review_draws", f"Random peer review draws: {draws}")
+    ctx.log("review_draws", f"Random peer review draws: {draws}", draws=list(draws))
     for position in draws:
         if position:
             by_position[position].votes.append("accept")
@@ -403,7 +411,9 @@ def finish_peer_review(ctx: Ctx) -> None:
             accepts=accepts, revises=revises, accepted=decision == "Accept area",
             fabricated=sum(r.fabricated for r in manuscript.records),
         ))
-        ctx.log("review_decision", f"D{manuscript.id} (position {position}): {accepts} accept, {revises} revise -> {decision}")
+        ctx.log("review_decision", f"D{manuscript.id} (position {position}): {accepts} accept, {revises} revise -> {decision}",
+                seat=manuscript.author, manuscript=manuscript.id, position=position, accepts=accepts, revises=revises,
+                accepted=decision == "Accept area")
         if decision == "Revise area":
             manuscript.area = "revise"
             manuscript.position = None

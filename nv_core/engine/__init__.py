@@ -13,7 +13,7 @@ from collections.abc import Callable, Iterable
 from pydantic import BaseModel
 
 from nv_core import actions as a
-from nv_core.engine import alliances, cleanup, development, experimentation, hiring, observation, publication
+from nv_core.engine import alliances, cleanup, development, experimentation, hiring, observation, publication, reports
 from nv_core.engine.context import Ctx, Event, IllegalAction
 from nv_core.engine.setup import create_game
 from nv_core.settings import Settings
@@ -43,6 +43,7 @@ def _end_of_round(ctx: Ctx) -> None:
     ctx.phase_name = "Clean-up phase"
     cleanup.cleanup(ctx)
     ctx.phase_name = ""
+    reports.close_report(ctx.state, reports.CLEANUP)
 
 
 # The steps of a round, in rulebook order. ``start`` sets who must decide (or nobody);
@@ -87,6 +88,8 @@ def _advance(ctx: Ctx) -> None:
     state = ctx.state
     while state.result is None and not state.waiting and state.current is None:
         STEPS[state.phase].finish(ctx)
+        if state.phase in reports.ENDS:
+            reports.close_report(state, reports.ENDS[state.phase])
         if state.result:
             return
         index = ORDER.index(state.phase) + 1
@@ -103,6 +106,7 @@ def _advance(ctx: Ctx) -> None:
 
 def new_game(world: WorldData, settings: Settings, seed: int, players: list[str]) -> GameState:
     state = create_game(world, settings, seed, players)
+    reports.open_report(state)
     ctx = Ctx(state)
     STEPS[state.phase].start(ctx)
     _advance(ctx)

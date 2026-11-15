@@ -113,15 +113,17 @@ def finish(ctx: Ctx) -> None:
         archive = state.pending[seat].archive
         if archive:
             r.archived += archive
-            ctx.log("archive", f"{ctx.name(seat)} archives {len(archive)} record(s)", seat=seat)
-            ctx.log("archive_private", "Archived: " + ", ".join(slip_name(r, s) for s in archive), visible_to=[seat])
+            names = [slip_name(r, s) for s in archive]
+            ctx.log("archive", f"{ctx.name(seat)} archives {len(archive)} record(s)", seat=seat, count=len(archive))
+            ctx.log("archive_private", "Archived: " + ", ".join(names), visible_to=[seat], records=names)
         state.pending[seat].archive = []
         if made:
-            ctx.log("development", f"{ctx.name(seat)} adds {len(made)} development stack(s)", seat=seat)
+            ctx.log("development", f"{ctx.name(seat)} adds {len(made)} development stack(s)", seat=seat, count=len(made))
             ctx.log(
                 "development_private",
                 "New: " + ", ".join(f"D{i.id}" for i in made),
                 visible_to=[seat],
+                ideas=[i.model_dump(mode="json") for i in made],
             )
         state.pending[seat].development = []
         if ctx.settings.simplified:
@@ -141,4 +143,5 @@ def to_accept_area(ctx: Ctx, seat: int, ideas: list[Idea]) -> None:
             area="accept", tokens=0,
         ))
     if ideas:
-        ctx.log("accept", f"{ctx.name(seat)}'s {len(ideas)} development stack(s) go to the Accept area", seat=seat)
+        ctx.log("accept", f"{ctx.name(seat)}'s {len(ideas)} development stack(s) go to the Accept area", seat=seat,
+                count=len(ideas))

@@ -46,16 +46,16 @@ class Ctx:
 
     # Events ---------------------------------------------------------------------------------
     def log(self, kind: str, text: str, visible_to: list[int] | None = None, **data: Any) -> None:
-        self.events.append(
-            Event(
-                round=self.state.round,
-                phase=self.phase_name or self.state.phase.value,
-                kind=kind,
-                text=text,
-                visible_to=visible_to,
-                data=data,
-            )
+        event = Event(
+            round=self.state.round,
+            phase=self.phase_name or self.state.phase.value,
+            kind=kind,
+            text=text,
+            visible_to=visible_to,
+            data=data,
         )
+        self.events.append(event)
+        self.state.report_events.append(event.model_dump(mode="json"))  # for the phase reports
 
     def name(self, seat: int) -> str:
         return self.state.players[seat]
