@@ -6,7 +6,7 @@ from nv_core.markdown_text import parameter_references, read_markdown
 from nv_core.paths import RULEBOOK
 from nv_core.settings import load_settings
 from nv_rulebook.fill import TABLE_LINE, FillError, fill_rulebook, table_rows
-from nv_rulebook.pdf import COLUMN, _register_fonts as make_fonts, blocks, check_printable, column_table, make_pdf, round_overview, structure
+from nv_rulebook.pdf import COLUMN, IMAGES, _register_fonts as make_fonts, blocks, check_printable, column_table, make_pdf, round_overview, structure
 
 # Hand-made settings: the numbers are this test's own, not the game's.
 SETTINGS = {
@@ -199,3 +199,24 @@ def test_every_parameter_table_fits_a_column():
     make_fonts()
     for name in ("journal_tiers", "grant_track", "talent_development_track"):
         assert sum(column_table(name, settings)._colWidths) <= COLUMN + 0.01, name
+
+
+# Illustrations ---------------------------------------------------------------------------------------
+def test_an_illustration_marker_names_a_picture_and_placeholders_are_skipped():
+    text = "[Front page goes here]\n\n[Illustration: example_slip.png]\n\nText."
+    assert list(blocks(text)) == [("illustration", "example_slip.png"), ("p", "Text.")]
+
+
+def test_every_illustration_of_the_rulebook_is_in_web_images():
+    """A missing picture would stop the PDF build; nv-rulebook-illustrations makes the screenshots."""
+    names = [item for kind, item in blocks(read_markdown(RULEBOOK)) if kind == "illustration"]
+    assert names
+    assert [n for n in names if not (IMAGES / n).is_file()] == []
+
+
+def test_a_missing_illustration_stops_the_build(tmp_path):
+    rulebook = tmp_path / "rules.md"
+    text = read_markdown(RULEBOOK).replace("# Backstory", "[Illustration: no_such_picture.png]\n\n# Backstory", 1)
+    rulebook.write_text(text, encoding="utf-8")
+    with pytest.raises(ValueError, match="no_such_picture.png"):
+        make_pdf(tmp_path / "out.pdf", rulebook)

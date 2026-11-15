@@ -301,6 +301,8 @@ The web UI's world states become icons in strips. This section records the desig
 
 `nv-rulebook-pdf` writes the reader's edition of the rulebook: every `[parameter]` filled in from the defaults, styled as an issue of a scholarly journal. It is built from `docs/rules.md`, so a new export restyles itself; `docs/pieces.md` is not included. The Summary section becomes the abstract, the other main sections are numbered in order, and the text runs in two columns. Designer's notes are boxes in the column. A table too wide for a column is printed with rows and columns swapped.
 
+Illustrations: an `[Illustration: <file>]` line in the rulebook places that picture from `web/images`, column wide, as a numbered figure captioned with its file name in words; a missing picture stops the build. The cover photo's line is skipped (the cover shows it), the Crisis photo's line places the Crisis figure with its two numbers, and the `[... goes here]` lines mark what the script draws itself (the cover and the round overview page). The pictures of the game's screens are made by `nv-rulebook-illustrations` (`pip install -e ".[illustrations]"`; it drives Microsoft Edge or Google Chrome): each picture is a scene that finds its situation in a game of the scripted bots (9.4), adjusts it where the bots rarely get there (sensors of three levels, a manuscript in each area of the Submission Portal, theories near the Nobel Prize and retraction), opens it in the web client (light theme, tall tiles) as one of the players, and saves one panel. Run it again after the screens change.
+
 The round overview page is drawn from this table. A heading that is not a main heading of the rulebook stops the build.
 
 | Rulebook heading | Short name | Who decides | Staff at work |

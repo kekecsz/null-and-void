@@ -22,11 +22,13 @@ nv-play = "nv_server.text_client:main"
 nv-sim = "nv_sim.run:main"
 nv-server = "nv_server.app:main"
 nv-rulebook-pdf = "nv_rulebook.pdf:main"
+nv-rulebook-illustrations = "nv_rulebook.illustrations:main"
 
 [project.optional-dependencies]
 assets = ["pillow>=11"]  # asset_generation/make_icons.py
 cloud = ["google-cloud-firestore>=2.20"]  # the deployed server's storage
 pdf = ["reportlab>=4"]  # nv-rulebook-pdf
+illustrations = ["playwright>=1.65"]  # nv-rulebook-illustrations (drives Edge or Chrome)
 dev = ["pytest>=8", "httpx>=0.28", "google-cloud-firestore>=2.20", "reportlab>=4"]  # httpx: FastAPI's test client
 
 [tool.setuptools.packages.find]

@@ -21,6 +21,7 @@ from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (BaseDocTemplate, Flowable, Frame, Image, KeepTogether, NextPageTemplate, PageBreak,
@@ -81,6 +82,10 @@ _ITALICS = re.compile(r"(?<![\w*])\*(\S(?:[^*\n]*\S)?)\*(?![\w*])")
 _LINK = re.compile(r"\[([^\]]+)\]\((https?:[^)\s]+)\)")
 _NOTE_AT_END = re.compile(r"\s*[\[(]((?:Designer|Developer))(?:[’']s)? notes?:\s*(.*?)[\])]\.?\s*$", re.DOTALL)
 _HEADING = re.compile(r"^(#{1,2})\s+(.*)$")
+# "[Illustration: <file in web/images>]" places a picture; "[... goes here]" marks what this
+# script draws itself (the cover, the overview page).
+_ILLUSTRATION = re.compile(r"^\[Illustration:\s*(.+?)\s*\]$")
+_PLACEHOLDER = re.compile(r"^\[[^\]]* goes here\]$")
 
 
 def _register_fonts() -> None:
@@ -117,7 +122,12 @@ def blocks(text: str) -> Iterator[tuple[str, Any]]:
             continue
         table = TABLE_LINE.match(stripped)
         heading = _HEADING.match(stripped)
-        if table:
+        illustration = _ILLUSTRATION.match(stripped)
+        if _PLACEHOLDER.match(stripped):
+            continue
+        if illustration:
+            yield "illustration", illustration.group(1)
+        elif table:
             yield "table", table.group(1)
         elif heading:
             yield f"h{len(heading.group(1))}", heading.group(2).strip()
@@ -325,6 +335,14 @@ def crisis_figure(content: Content, number: int) -> list:
             Paragraph(f"<b>Figure {number}.</b> A mountain on Venus.", _STYLES["figure_caption"]), stats]
 
 
+def illustration(path: Path, number: int) -> list:
+    """A picture from web/images, column wide, captioned with its file name in words."""
+    width, height = ImageReader(str(path)).getSize()
+    words = re.sub(r"^\d+\s*", "", path.stem.replace("_", " ")).strip()
+    caption = Paragraph(f"<b>Figure {number}.</b> {escape(words[:1].upper() + words[1:])}.", _STYLES["figure_caption"])
+    return [KeepTogether([Image(str(path), width=COLUMN, height=COLUMN * height / width), caption])]
+
+
 # Pages -------------------------------------------------------------------------------------------
 def _paper(canvas, doc) -> None:
     canvas.setFillColor(PAPER)
@@ -478,9 +496,15 @@ def build_story(content: Content, pages: dict[str, int]) -> list:
         if kind == "h1":
             section, sub = section + 1, 0
             story += [NeedRoom(COLUMN + 90 if item == "Crisis" else 95), _heading("h1", item, str(section), 0)]
-            if item == "Crisis":
-                figures += 1
-                story += crisis_figure(content, figures)
+        elif kind == "illustration":
+            path = IMAGES / item
+            if path == COVER_IMAGE:  # already on the cover
+                continue
+            if not path.is_file():
+                raise ValueError(f"the rulebook's illustration {item!r} is not in web/images "
+                                 "(nv-rulebook-illustrations makes the pictures of the game's screens)")
+            figures += 1
+            story += crisis_figure(content, figures) if path == CRISIS_IMAGE else illustration(path, figures)
         elif kind == "h2":
             sub += 1
             icon = f' <img src="{ICONS / "fire.png"}" width="13" height="13" valign="-2"/>' if item == "Hot topic" else ""
