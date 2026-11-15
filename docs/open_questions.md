@@ -18,14 +18,6 @@ Each entry gives the document and section, the exact text, the possible readings
 - **When an invalid slip is discarded (confirmed by Zoltan, 2026-11-13):** at Clean-up, before the Records capacity is applied, so it never pushes a valid record out. Until then its remaining cards can still go into a mixed experiment record. The engine does this.
 - **For the rulebook, also:** this timing, in the Clean-up phase.
 
-### R8. A theory retracted during scoring (answered; the rulebook text is still to be clarified)
-- **Where:** Scoring predictions; Failed predictions; Retraction.
-- **Text:** "Increases the retraction counter of the cited theory by 1." and, from Retraction, the theory is unpublished once the counter reaches `[retraction_threshold]`.
-- **Problem:** without pruning, several revealed predictions can cite the same theory on different Probes. If an earlier one retracts the theory, the later ones cite a theory that is no longer published.
-- **Readings:** (a) the later predictions are still scored for the researchers who made them (credit for success or failure), but nothing happens to the retracted theory or its author (no counters, citation reward or patent); (b) they are discarded unscored, and their staff members are still used; (c) they are scored in full, as if the theory were still published.
-- **Zoltan's answer (2026-11-13):** (a). The engine does this.
-- **For the rulebook:** reading (a), in Scoring predictions or Retraction.
-
 ## Easier difficulty levels, to allow true racing (design idea)
 
 **Document:** `parameter_defaults.yaml`; specification 6.3 (the lobby's "settings preset").
