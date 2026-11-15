@@ -3,11 +3,13 @@
 // are lists of strips; tasks.js draws what the player can do now; game.js connects them.
 "use strict";
 
-// Remembered for each player in this browser, across games: theme, tile style, pinning, minimised panels.
+// Remembered for each player in this browser, across games: theme, tile style, pinning, minimised panels,
+// which reports are shown (reports.js).
 const prefs = (() => {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem("nv:board") || "{}") || {}; } catch { /* private window */ }
-  return { theme: saved.theme === "dark" ? "dark" : "light", tiles: saved.tiles === "compact" ? "compact" : "tall", pinTask: saved.pinTask !== false, pinSelection: saved.pinSelection !== false, closed: saved.closed || {} };
+  return { theme: saved.theme === "dark" ? "dark" : "light", tiles: saved.tiles === "compact" ? "compact" : "tall", pinTask: saved.pinTask !== false, pinSelection: saved.pinSelection !== false, closed: saved.closed || {},
+    reportsOff: saved.reportsOff || {}, reportsAllOff: saved.reportsAllOff === true };
 })();
 function savePrefs() {
   try { localStorage.setItem("nv:board", JSON.stringify(prefs)); } catch { /* private window */ }

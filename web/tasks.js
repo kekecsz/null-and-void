@@ -633,7 +633,8 @@ function actionsKey() {
   const v = view();
   const report = pendingReport();
   return JSON.stringify([msg.status, msg.you, msg.seats[msg.you] && msg.seats[msg.you].kind, Boolean(v.result), v.round, v.phase,
-    msg.options, v.lab, myReviewCards(), v.published.map((p) => p.id), v.manuscripts.map((m) => [m.id, m.area, m.position]), report && report.round]);
+    msg.options, v.lab, myReviewCards(), v.published.map((p) => p.id), v.manuscripts.map((m) => [m.id, m.area, m.position]),
+    report && [report.kind, report.report.round, Boolean(report.again)]]);
 }
 
 // While something could still be submitted or revised, and nothing has been, Commit is greyed and
@@ -665,42 +666,6 @@ function setTaskHeading(name, note, buttons) {
   $("actions-title").textContent = [phase && t(phase), name && t(name)].filter(Boolean).join(" \u00b7 ") || t("What you can do now");
   $("actions-note").textContent = note || "";
   fill($("task-buttons"), buttons || []);
-}
-
-// The prediction report (specification 7.4): each person's own, until they press Next. The game
-// does not wait for it; only this panel does. A seat handed to an automated player gets none.
-function pendingReport() {
-  const report = view().prediction_report;
-  if (!report || msg.spectator || msg.you === null || store.get("report") === String(report.round)) return null;
-  return msg.seats[msg.you] && msg.seats[msg.you].kind === "human" ? report : null;
-}
-const REPORT_OUTCOMES = { success: ["good", "Success"], failed: ["bad", "Failed"], pruned: ["muted", "Pruned"] /* older games */, unscored: ["muted", "Not scored: the game ended"] };
-function reportEntry(p) {
-  const [cls, label] = REPORT_OUTCOMES[p.outcome];
-  const patent = p.patent === "new" ? t("patent") : p.patent === "held" ? (p.patent_holder === p.seat ? t("already holds its patent") : t("no patent ({name} holds it)", { name: nameOf(p.patent_holder) })) : null;
-  const row = strip({ key: `report${p.id}`, head: `T${p.theory}`, sub: `P${p.probe + 1}${p.preregistered ? `, ${t("preregistered")}` : ""}`, slots: { ...p.inputs, ...p.outcomes }, tail: [
-    h("b", { class: cls }, t(label)),
-    p.credit === null ? null : info(t("{n} AC", { n: signed(p.credit) })),
-    p.author_credit ? info(`${nameOf(p.author)} ${t("{n} as author", { n: signed(p.author_credit) })}`) : null,
-    patent ? info(patent) : null,
-  ] });
-  if (!p.nobel) return row;
-  return h("div", { class: "report-nobel" }, row, h("div", { class: "nobel-note" }, t("Nobel Prize! This prediction completed the streak of T{theory}: {name} wins the Nobel Prize.", { theory: p.theory, name: nameOf(p.author) })));
-}
-function showReport(box, report) {
-  $("actions-title").textContent = t("Prediction report, round {n}", { n: report.round });
-  fill($("task-buttons"), h("button", { class: "primary", title: t("Go on with the game"), onclick: () => {
-    store.set("report", String(report.round));
-    actionsShown = null;
-    renderActions();
-  } }, t("Next")));
-  const seats = [...new Set(report.predictions.map((p) => p.seat))].sort((a, b) => a - b);
-  const missed = report.missed.map((p) => `P${p + 1}`).join(", ");
-  fill(box,
-    report.crisis ? h("p", { class: "small bad" }, t("Crisis: {n} of {max} unsuccessful predictions so far.", { n: report.unsuccessful, max: report.crisis_condition }),
-      missed ? ` ${t("No prediction on {list}: each counts as unsuccessful.", { list: missed })}` : "") : null,
-    seats.length ? h("div", { class: "report" }, seats.map((seat) => recordArea(chip(seat), "", report.predictions.filter((p) => p.seat === seat).map(reportEntry))))
-      : h("p", { class: "muted" }, t("Nobody revealed a prediction.")));
 }
 
 function renderActions() {

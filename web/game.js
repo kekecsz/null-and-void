@@ -174,6 +174,7 @@ function render() {
   renderLog();
   renderPhaseBar();
   renderColumns();
+  renderReportsPanel();
   const spectator = Boolean(msg.spectator);
   if (spectator) { setTaskHeading(); $("actions-title").textContent = t("Replay"); }
   $("lab-title").textContent = spectator ? t("Every lab") : t("Your lab");
