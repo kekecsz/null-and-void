@@ -220,3 +220,18 @@ def test_a_missing_illustration_stops_the_build(tmp_path):
     rulebook.write_text(text, encoding="utf-8")
     with pytest.raises(ValueError, match="no_such_picture.png"):
         make_pdf(tmp_path / "out.pdf", rulebook)
+
+
+def test_every_figure_the_text_refers_to_is_printed_across_the_page_in_order():
+    import io
+
+    from nv_rulebook.fill import fill_rulebook
+    from nv_rulebook.pdf import FigureAnchor, _Issue, build_story, read_content
+
+    settings = load_settings().model_dump()
+    content = read_content(fill_rulebook(read_markdown(RULEBOOK), settings), settings)
+    doc = _Issue(io.BytesIO(), content, {})
+    story = build_story(content, {}, doc.waiting)
+    referred = [f.figure.number for f in story if isinstance(f, FigureAnchor)]
+    doc.build(story)
+    assert referred and doc.printed == referred and doc.waiting == []

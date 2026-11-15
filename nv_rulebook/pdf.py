@@ -46,6 +46,12 @@ MARGIN = 20 * mm
 WIDTH = W - 2 * MARGIN
 GUTTER = 6 * mm
 COLUMN = (WIDTH - GUTTER) / 2
+BODY_TOP, BODY_BOTTOM = H - 20 * mm, 15 * mm
+BODY_HEIGHT = BODY_TOP - BODY_BOTTOM
+# Full-width figures at the top of a page take at most this much of it, so the columns below keep
+# room for a main heading with its first lines (and the Crisis figure); a taller picture is shrunk.
+FIGURE_AREA = BODY_HEIGHT * 0.5
+FIGURE_GAP = 5 * mm  # between a figure's caption and what follows
 
 INK, PAPER, RUST, GREY, BOX = [colors.HexColor(x) for x in ("#1C1A17", "#FAF6EC", "#A8481F", "#6B655B", "#F1E9D8")]
 RUST_HEX = "#A8481F"
@@ -62,6 +68,7 @@ _STYLES = {
     "bullet1": ParagraphStyle("Bullet1", parent=_BODY, leftIndent=20, bulletIndent=11, bulletFontName=_SERIF, spaceAfter=3),
     "caption": ParagraphStyle("Caption", fontName=_SANS, fontSize=8, leading=10.4, textColor=INK, spaceBefore=4, spaceAfter=3, keepWithNext=1),
     "figure_caption": ParagraphStyle("FigureCaption", fontName=_SANS, fontSize=8, leading=10.4, textColor=INK, spaceBefore=3, spaceAfter=8),
+    "see_figure": ParagraphStyle("SeeFigure", fontName=_ITALIC, fontSize=9.3, leading=12.1, textColor=RUST, spaceAfter=4.4),
     "note_label": ParagraphStyle("NoteLabel", fontName=_SANS_BOLD, fontSize=7, leading=9, textColor=RUST, spaceAfter=2),
     "note": ParagraphStyle("Note", fontName=_ITALIC, fontSize=8.7, leading=11.2, textColor=INK),
     "head": ParagraphStyle("Head", fontName=_SANS_BOLD, fontSize=7.2, leading=8.6, textColor=INK, alignment=TA_CENTER),
@@ -335,18 +342,92 @@ def crisis_figure(content: Content, number: int) -> list:
             Paragraph(f"<b>Figure {number}.</b> A mountain on Venus.", _STYLES["figure_caption"]), stats]
 
 
-def illustration(path: Path, number: int) -> list:
-    """A picture from web/images, column wide, captioned with its file name in words."""
-    width, height = ImageReader(str(path)).getSize()
-    words = re.sub(r"^\d+\s*", "", path.stem.replace("_", " ")).strip()
-    caption = Paragraph(f"<b>Figure {number}.</b> {escape(words[:1].upper() + words[1:])}.", _STYLES["figure_caption"])
-    return [KeepTogether([Image(str(path), width=COLUMN, height=COLUMN * height / width), caption])]
+@dataclass
+class PageFigure:
+    """A picture printed across the page, at the top of the first page after the text that
+    refers to it (_Issue.handle_pageBegin)."""
+
+    path: Path
+    number: int
+
+    @property
+    def caption(self) -> Paragraph:  # the file name in words
+        words = re.sub(r"^\d+\s*", "", self.path.stem.replace("_", " ")).strip()
+        return Paragraph(f"<b>Figure {self.number}.</b> {escape(words[:1].upper() + words[1:])}.", _STYLES["figure_caption"])
+
+    def size(self) -> tuple[float, float]:
+        width, height = ImageReader(str(self.path)).getSize()
+        scale = min(WIDTH / width, (FIGURE_AREA - self._caption_height() - FIGURE_GAP) / height)
+        return width * scale, height * scale
+
+    def _caption_height(self) -> float:
+        return self.caption.wrap(WIDTH, BODY_HEIGHT)[1] + 3
+
+    def height(self) -> float:
+        return self.size()[1] + self._caption_height() + FIGURE_GAP
+
+    def draw(self, canvas, top: float) -> float:
+        """Draws the figure below ``top``; returns where the next one starts."""
+        width, height = self.size()
+        canvas.drawImage(str(self.path), MARGIN + (WIDTH - width) / 2, top - height, width, height, mask="auto")
+        caption = self.caption
+        _, caption_height = caption.wrap(WIDTH, BODY_HEIGHT)
+        caption.drawOn(canvas, MARGIN, top - height - 3 - caption_height)
+        return top - self.height()
+
+
+class FigureAnchor(Flowable):
+    """Where the text refers to a full-width figure: once laid out, the figure waits for the next page."""
+
+    def __init__(self, figure: PageFigure):
+        super().__init__()
+        self.figure = figure
+
+    def wrap(self, available_width, available_height):
+        return 0, 0
+
+    def draw(self):
+        pass
+
+
+class FlushFigures(Flowable):
+    """Leaves the rest of each column empty while figures still wait, so that every figure is
+    printed before what follows (the Credits)."""
+
+    def __init__(self, waiting: list[PageFigure]):
+        super().__init__()
+        self.waiting = waiting
+
+    def wrap(self, available_width, available_height):
+        return (available_width, available_height + 1) if self.waiting else (0, 0)
+
+    def split(self, available_width, available_height):
+        return [Spacer(available_width, available_height), FlushFigures(self.waiting)] if self.waiting else []
+
+    def draw(self):
+        pass
 
 
 # Pages -------------------------------------------------------------------------------------------
 def _paper(canvas, doc) -> None:
     canvas.setFillColor(PAPER)
     canvas.rect(0, 0, W, H, stroke=0, fill=1)
+
+
+def _body(canvas, doc) -> None:
+    _paper(canvas, doc)
+    top = BODY_TOP
+    for figure in doc.page_figures:
+        top = figure.draw(canvas, top)
+    if doc.page_figures:
+        canvas.setStrokeColor(INK)
+        canvas.setLineWidth(0.5)
+        canvas.line(MARGIN, top + FIGURE_GAP / 2, W - MARGIN, top + FIGURE_GAP / 2)
+
+
+def _columns(height: float) -> list[Frame]:
+    return [Frame(MARGIN + i * (COLUMN + GUTTER), BODY_BOTTOM, COLUMN, height, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
+            for i in range(2)]
 
 
 def _running(canvas, doc) -> None:
@@ -426,16 +507,32 @@ class _Issue(BaseDocTemplate):
         self.found_pages: dict[str, int] = {}
         self.running = "A round at a glance"
         self._bookmarks = 0
-        height = H - 20 * mm - 15 * mm
-        whole = lambda: Frame(MARGIN, 15 * mm, WIDTH, height, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
-        columns = [Frame(MARGIN + i * (COLUMN + GUTTER), 15 * mm, COLUMN, height, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0) for i in range(2)]
+        self.waiting: list[PageFigure] = []  # figures referred to, not yet printed
+        self.page_figures: list[PageFigure] = []  # those at the top of this page
+        self.printed: list[int] = []  # the numbers of the figures printed so far
+        whole = lambda: Frame(MARGIN, BODY_BOTTOM, WIDTH, BODY_HEIGHT, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
         self.addPageTemplates([
             PageTemplate(id="cover", frames=whole(), onPage=_cover),
             PageTemplate(id="overview", frames=whole(), onPage=_paper, onPageEnd=_running),
-            PageTemplate(id="body", frames=columns, onPage=_paper, onPageEnd=_running),
+            PageTemplate(id="body", frames=_columns(BODY_HEIGHT), onPage=_body, onPageEnd=_running),
         ])
 
+    def handle_pageBegin(self) -> None:
+        """The waiting figures that fit go to the top of a body page; the columns take the rest."""
+        self.page_figures = []
+        if self.pageTemplate.id == "body":
+            used = 0.0
+            while self.waiting and (not self.page_figures or used + self.waiting[0].height() <= FIGURE_AREA):
+                used += self.waiting[0].height()
+                self.page_figures.append(self.waiting.pop(0))
+                self.printed.append(self.page_figures[-1].number)
+            self.pageTemplate.frames = _columns(BODY_HEIGHT - used)
+        super().handle_pageBegin()
+
     def afterFlowable(self, flowable) -> None:
+        if isinstance(flowable, FigureAnchor):
+            self.waiting.append(flowable.figure)
+            return
         heading = getattr(flowable, "heading", None)
         if heading is None:
             return
@@ -486,7 +583,7 @@ def _overview(content: Content, pages: dict[str, int]) -> list:
             figure, caption, Paragraph("<b>Contents</b>", _STYLES["caption"]), contents]
 
 
-def build_story(content: Content, pages: dict[str, int]) -> list:
+def build_story(content: Content, pages: dict[str, int], waiting: list[PageFigure]) -> list:
     story: list = [Spacer(1, 1), NextPageTemplate("overview"), PageBreak(), *_overview(content, pages), NextPageTemplate("body"), PageBreak()]
     section = sub = 0
     tables = 1
@@ -504,7 +601,10 @@ def build_story(content: Content, pages: dict[str, int]) -> list:
                 raise ValueError(f"the rulebook's illustration {item!r} is not in web/images "
                                  "(nv-rulebook-illustrations makes the pictures of the game's screens)")
             figures += 1
-            story += crisis_figure(content, figures) if path == CRISIS_IMAGE else illustration(path, figures)
+            if path == CRISIS_IMAGE:  # a photo with the Crisis numbers, in the column
+                story += crisis_figure(content, figures)
+            else:
+                story += [Paragraph(f"See Figure {figures}.", _STYLES["see_figure"]), FigureAnchor(PageFigure(path, figures))]
         elif kind == "h2":
             sub += 1
             icon = f' <img src="{ICONS / "fire.png"}" width="13" height="13" valign="-2"/>' if item == "Hot topic" else ""
@@ -521,7 +621,7 @@ def build_story(content: Content, pages: dict[str, int]) -> list:
             story.append(Paragraph(_inline(item), _STYLES[kind], bulletText="•" if kind == "bullet0" else "–"))
         else:
             story.append(Paragraph(_inline(item), _BODY))
-    story += [NeedRoom(95), _heading("h1", "Credits", None, 0)]
+    story += [FlushFigures(waiting), NeedRoom(95), _heading("h1", "Credits", None, 0)]
     names = [item for kind, item in content.credits if kind == "bullet0" and len(item.split()) <= 3 and "http" not in item]
     for kind, item in content.credits:
         if kind == "bullet0" and item in names:  # a list of short names reads better as one line
@@ -544,10 +644,11 @@ def make_pdf(out: Path = DEFAULT_OUT, rulebook: Path = RULEBOOK) -> Path:
     check_printable(filled)
     content = read_content(filled, settings)
     first = _Issue(io.BytesIO(), content, {})  # a first pass finds the page of each section
-    first.build(build_story(content, {}))
+    first.build(build_story(content, {}, first.waiting))
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    _Issue(str(out), content, first.found_pages).build(build_story(content, first.found_pages))
+    final = _Issue(str(out), content, first.found_pages)
+    final.build(build_story(content, first.found_pages, final.waiting))
     return out
 
 
