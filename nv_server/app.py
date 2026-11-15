@@ -213,9 +213,12 @@ def create_app(storage: Storage | None = None, ai_context=None, db: Path | str =
     async def lobby_options():
         from nv_ai.prompt import PERSONAS
         from nv_sim.bots import BOTS
+        from nv_sim.game import ai_models
         from nv_sim.strategy import SEAT_TYPES
 
-        kinds = [HUMAN, *SEAT_TYPES, *BOTS, "ai", *[f"ai:{p}" for p in PERSONAS if p != "neutral"]]
+        # an AI seat for each model and persona: ai@<model>, ai:<persona>@<model>
+        ai = [f"ai{'' if p == 'neutral' else ':' + p}@{m}" for m in ai_models() for p in PERSONAS]
+        kinds = [HUMAN, *SEAT_TYPES, *BOTS, *ai]
         settings = Settings.model_fields
         return {"worlds": _worlds(), "scenarios": _scenarios(), "seat_kinds": kinds, "colours": COLOURS,
                 "settings": sorted(settings), "organiser_required": bool(organiser_password)}

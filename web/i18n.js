@@ -70,3 +70,13 @@ function t(text, params) {
 
 // A name from the scenario (a state, input parameter, world outcome or the title).
 const tn = (name) => (name && I18N.names[name]) || name;
+
+// A seat type's name: an AI seat's type names its persona and model ("ai:selfish@gpt-6.1-terra"),
+// shown as the persona's name and the model's ("AI: selfish (GPT-6.1 Terra)").
+function kindName(kind) {
+  const [base, model] = String(kind).split("@");
+  if (!model) return t(base);
+  const [family, version, ...rest] = model.split("-");
+  const name = [`${family.toUpperCase()}-${version}`, ...rest.map((x) => x.charAt(0).toUpperCase() + x.slice(1))].join(" ");
+  return `${t(base)} (${name})`;
+}

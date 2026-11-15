@@ -16,7 +16,6 @@ from nv_sim.bots import BOTS
 from nv_sim.strategy import SEAT_TYPES, BotSettings, StrategyBot
 
 MAX_REFUSALS = 20  # a bot whose choices are refused this often in a row commits or passes instead
-RECENT_EVENTS = 25  # public events shown to an AI player with each decision
 
 
 @dataclass
@@ -25,20 +24,47 @@ class AIContext:
 
     software: Any
     ledger: Any
-    make_provider: Any  # () -> Provider
+    make_provider: Any  # (model) -> Provider; the default model when called without one
+
+
+def ai_seat(kind: str) -> tuple[str, str | None] | None:
+    """(persona, model) of an AI seat type: ``ai``, ``ai:<persona>``, ``ai@<model>`` or
+    ``ai:<persona>@<model>`` (model None: the default model); None for any other seat type."""
+    kind, _, model = kind.partition("@")
+    base, _, persona = kind.partition(":")
+    return (persona or "neutral", model or None) if base == "ai" else None
+
+
+def ai_models() -> list[str]:
+    """The models an AI seat can use: those with prices in settings/software.yaml, the default first."""
+    from nv_ai.config import load_software_settings
+
+    software = load_software_settings()
+    return sorted(software.ai_price_table, key=lambda m: m != software.ai_default_model)
+
+
+def game_log(events: list, seat: int) -> list[str]:
+    """The game's events a seat may see, oldest first, for an AI player (specification 8.1);
+    without the "is ready" lines, which the view's waiting list already shows."""
+    return [e.text for e in visible_events(events, seat) if e.kind != "commit"]
 
 
 def check_seat_types(seat_types: list[str]) -> None:
     from nv_ai.prompt import PERSONAS
 
     for kind in seat_types:
-        base, _, persona = kind.partition(":")
-        if base == "ai":
-            if persona and persona not in PERSONAS:
+        ai = ai_seat(kind)
+        if ai:
+            persona, model = ai
+            if persona not in PERSONAS:
                 raise ValueError(f"unknown persona {persona!r} (available: {', '.join(PERSONAS)})")
+            if model is not None and model not in ai_models():
+                raise ValueError(f"unknown AI model {model!r} (available: {', '.join(ai_models())}; "
+                                 "a model needs its prices in settings/software.yaml)")
         elif kind not in BOTS and kind not in SEAT_TYPES:
             raise ValueError(
-                f"unknown seat type {kind!r} (available: {', '.join([*BOTS, *SEAT_TYPES])}, ai, ai:<persona>)"
+                f"unknown seat type {kind!r} (available: {', '.join([*BOTS, *SEAT_TYPES])}, ai, ai:<persona>, "
+                "ai:<persona>@<model>)"
             )
 
 
@@ -57,15 +83,16 @@ def make_player(
 ):
     """The automated player for one seat (its random choices are seeded by game seed and seat)."""
     check_seat_types([kind])
-    base, _, persona = kind.partition(":")
-    if base == "ai":
+    if parts := ai_seat(kind):
+        persona, model = parts
         if ai is None or world is None:
             raise ValueError("AI seats need the AI settings (nv_ai)")
         from nv_ai.player import AIPlayer
 
         return AIPlayer(
-            ai.make_provider(), ai.software, ai.ledger, world.story, persona or "neutral",
+            ai.make_provider(model) if model else ai.make_provider(), ai.software, ai.ledger, world.story, persona,
             game=str(seed), name=name or f"{kind}{seat + 1}", fallback_seed=f"{seed}/seat{seat}/fallback",
+            mode=settings.mode if settings else "normal",
         )
     if kind in SEAT_TYPES:
         if world is None or settings is None:
@@ -245,7 +272,7 @@ def play_game(
             options = legal_actions(state, seat)
             if player.needs_view:
                 view = player_view(state, seat)
-                view["recent_events"] = [e.text for e in visible_events(all_events, seat)[-RECENT_EVENTS:]]
+                view["game_log"] = game_log(all_events, seat)
             else:
                 view = {"round": state.round, "phase": state.phase.value, "seat": seat}
             result = None

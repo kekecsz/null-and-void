@@ -328,15 +328,15 @@ The screens can be shown in other languages; English is the source and the defau
 
 ## 8. AI opponents (`nv_ai`)
 
-An AI seat is a language model that reads the same text view a human could and answers each decision with a tool call naming one legal action. It never sees hidden information it isn't entitled to. The provider and model are settings (section 11): the first version uses OpenAI's GPT-6 Luna, which is cheap enough for testing; Claude models can be added through the same interface.
+An AI seat is a language model that reads the same text view a human could and answers each decision with a tool call naming one legal action. It never sees hidden information it isn't entitled to. The provider and model are settings (section 11): the first version uses OpenAI's GPT-6 Luna, which is cheap enough for testing, and GPT-6.1 Terra can be chosen per seat; Claude models can be added through the same interface. Every model with prices in `ai_price_table` can be chosen: an AI seat's type names its persona and model, `ai:<persona>@<model>` (`ai` alone: the neutral persona and `ai_default_model`). The lobby offers each persona with each model.
 
 ### 8.1 One decision
 
 1. The engine signals that an AI seat must act (a sequential turn, or its commit in a simultaneous phase).
 2. `nv_ai` builds the request:
    - **Tools** (cached): the full, fixed list of action types, one tool each, with JSON schemas generated from the action models and a short description naming the rulebook section. The list never changes between decisions, because the tools come first in a request and any change would invalidate the cache for everything after them.
-   - **System prompt** (cached): the rulebook itself (`docs/rules.md` with its Markdown escapes removed, leaving out the sections a player does not need, such as the designer's tabletop notes), then the scenario story, then the seat's persona (section 8.3). The rulebook stays the only rules document; no separate summary is maintained. The rulebook comes before the persona, so every AI seat shares the same cached prefix.
-   - **Context:** the seat's `render_text` view, the actions legal now (from `legal_actions`: complete actions, or templates with their limits), the recent public event log, the seat's own notes (8.2), and the choices the engine has already accepted from it in the current step, with a reminder to commit when they are final (each decision is a fresh conversation, so without them a model repeats its choice instead of committing).
+   - **System prompt** (cached): the rulebook itself (`docs/rules.md` with its Markdown escapes removed, leaving out the sections a player does not need, such as the designer's tabletop notes), then which game is being played (the rulebook's normal or simplified game, and which of its marked rules apply), then the scenario story, then the seat's persona (section 8.3). The rulebook stays the only rules document; no separate summary is maintained. The rulebook comes before the persona, so every AI seat shares the same cached prefix.
+   - **Context:** first the game log: every event the seat was allowed to see since the start, oldest first, without the "is ready" lines (it only grows at its end, so the part already sent is cached); then the seat's `render_text` view, whose header names the game mode, the actions legal now (from `legal_actions`: complete actions, or templates with their limits), the seat's own notes (8.2), and the choices the engine has already accepted from it in the current step, with a reminder to commit when they are final (each decision is a fresh conversation, so without them a model repeats its choice instead of committing).
 3. The model replies with a tool call and a one-line reason. The engine validates it; if it is refused, the error goes back to the model for up to `ai_retry_limit` attempts.
 4. If the model still fails, goes over its token limit, or the API errors, the seat takes a safe default action (pass, or commit with no further choices), and the log records why.
 
@@ -477,11 +477,11 @@ The software's own settings live in `settings/software.yaml`:
 | Setting | Default |
 | --- | --- |
 | `ai_provider` | `openai` (Anthropic later) |
-| `ai_default_model` | `gpt-6-luna`, chosen per seat in the lobby |
+| `ai_default_model` | `gpt-6-luna`; any model in `ai_price_table` can be chosen per seat in the lobby |
 | `ai_reasoning_effort` | the model's default (`medium` for GPT-6 Luna) |
 | `ai_max_cost_per_decision` | 0.50 USD, reasoning included |
 | `ai_total_budget` | 10.00 USD for all AI calls, across runs (testing in milestones 4 and 5) |
-| `ai_max_input_tokens` | 30,000 per decision |
+| `ai_max_input_tokens` | 80,000 per decision (the rulebook and tools take about 22,000; the rest holds the game log) |
 | `ai_retry_limit` | 2 |
 | `ai_notes_max_chars` | 2,000 |
 | `ai_price_table` | per model: input, cached-input, cache-write and output price per million tokens |

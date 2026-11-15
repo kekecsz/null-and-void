@@ -35,7 +35,8 @@ def render_text(view: dict[str, Any]) -> str:
 
     # Header ---------------------------------------------------------------------------------
     period = "Crisis period" if view["period"] == "crisis" else "Calm period"
-    mode = " | SIMPLIFIED GAME (the rulebook's simplified game rules apply)" if view.get("mode") == "simplified" else ""
+    mode = (" | SIMPLIFIED GAME (the rulebook's simplified game rules apply)" if view.get("mode") == "simplified"
+            else " | NORMAL GAME (the rulebook's normal game rules apply)")
     out(f"{view['scenario']['title']} | world {view['scenario']['world']}{mode}")
     out(f"Round {view['round']} | {period} | {view['phase']}")
     if view["result"]:

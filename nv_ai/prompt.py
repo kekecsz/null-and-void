@@ -1,8 +1,10 @@
 """What an AI player is sent (specification 8.1): the fixed tool list, the instructions
-(rulebook, how to play through tools, scenario story, persona) and each decision's message.
+(rulebook, how to play through tools, the game mode, scenario story, persona) and each
+decision's message.
 
 Order matters for caching: tools and instructions are identical for every decision and every
-seat up to the persona, which comes last.
+seat up to the persona, which comes last. A decision's message starts with the game log, which
+only grows at its end, so the log seen at the previous decision is cached too.
 """
 
 import json
@@ -64,8 +66,9 @@ INTERFACE = """\
 # How you play
 
 You are one of the researchers in a game of Null & Void, played by software. The rules above are
-the full rulebook. Each message shows your current view of the game (what you are allowed to see),
-the recent public events, your private notes, and the actions you can take now.
+the full rulebook. Each message shows the game log (everything that happened that you were allowed
+to see, oldest first), your current view of the game, your private notes, and the actions you can
+take now.
 
 - Act by calling exactly one tool per message. The engine checks every action against the rules;
   if it refuses one, you get the reason and can try again.
@@ -79,6 +82,16 @@ the recent public events, your private notes, and the actions you can take now.
   (e.g. experiment results). Notes are cut to {notes_max} characters.
 - Hidden information stays hidden: other researchers cannot see your lab, and you cannot see theirs.
 """
+
+# The rulebook has rules for two games (Basic mechanics); the game being played is a setting.
+GAME_MODES = {
+    "normal": "This is the normal game. Rules marked \"Normal game\", \"Normal game only\" or \"(normal game only)\" "
+    "apply; rules marked "
+    "\"Simplified game\" do not.",
+    "simplified": "This is the simplified game. Where the rulebook marks a rule \"Simplified game\", it applies "
+    "instead of the normal rule; rules and sections marked \"Normal game\", \"Normal game only\" or "
+    "\"(normal game only)\" do not apply. The actions offered to you include only what this game allows.",
+}
 
 PERSONAS = {
     "neutral": "Play to win: a Nobel Prize, or the most academic credit when the game ends, while avoiding a "
@@ -151,14 +164,17 @@ def tool_definitions(notes_max: int) -> list[dict[str, Any]]:
     return tools
 
 
-def instructions(story: str, persona: str, notes_max: int) -> str:
-    """Rulebook first (shared by every seat), then the interface, the story and the persona."""
+def instructions(story: str, persona: str, notes_max: int, mode: str = "normal") -> str:
+    """Rulebook first (shared by every seat), then the interface, the game mode, the story and the persona."""
     if persona not in PERSONAS:
         raise ValueError(f"unknown persona {persona!r} (available: {', '.join(PERSONAS)})")
+    if mode not in GAME_MODES:
+        raise ValueError(f"unknown game mode {mode!r} (available: {', '.join(GAME_MODES)})")
     return "\n\n".join(
         [
             rules_text(),
             INTERFACE.format(notes_max=notes_max),
+            "# This game\n\n" + GAME_MODES[mode],
             "# The scenario\n\n" + story,
             "# Your persona\n\n" + PERSONAS[persona],
         ]
@@ -188,17 +204,35 @@ def options_text(options: list[Option]) -> str:
     return "\n".join(lines) or "(nothing)"
 
 
+def log_text(log: list[str], left_out: int = 0) -> str:
+    lines = ([f"  ({left_out} earlier lines left out: the request would be too long)"] if left_out else [])
+    return "GAME LOG (everything you were allowed to see, oldest first)\n" + ("\n".join(lines + [f"  {e}" for e in log]) or "  (none)")
+
+
+def fit_log(log: list[str], room: int) -> tuple[list[str], int]:
+    """The newest log lines that fit in ``room`` characters, and how many older ones are left out."""
+    kept, used = 0, 0
+    for line in reversed(log):
+        used += len(line) + 3
+        if used > room:
+            break
+        kept += 1
+    return log[len(log) - kept:], len(log) - kept
+
+
 def decision_message(
-    view: dict[str, Any], options: list[Option], events: list[str], notes: str, step_choices: list[str] = ()
+    view: dict[str, Any], options: list[Option], log: list[str], notes: str, step_choices: list[str] = (),
+    left_out: int = 0,
 ) -> str:
-    """``step_choices``: the actions of this seat the engine accepted earlier in the same step.
-    Each decision is a fresh conversation, so without them a model cannot tell that it has
-    already chosen and repeats the same choice instead of committing."""
+    """``log``: the game log (``left_out``: older lines not sent). ``step_choices``: the actions of
+    this seat the engine accepted earlier in the same step. Each decision is a fresh conversation,
+    so without them a model cannot tell that it has already chosen and repeats the same choice
+    instead of committing."""
     seat = view["seat"]
     parts = [
+        log_text(log, left_out),
         f"You are seat {seat}, {view['players'][seat]}.",
         render_text(view),
-        "RECENT EVENTS (oldest first)\n" + ("\n".join(f"  {e}" for e in events) or "  (none)"),
         "YOUR NOTES\n" + (notes or "(empty)"),
     ]
     if step_choices:

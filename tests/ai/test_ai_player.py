@@ -14,8 +14,9 @@ from nv_ai.prompt import LEFT_OUT_SECTIONS, PERSONAS, instructions, rules_text, 
 from nv_ai.provider import Reply, ToolCall
 from nv_core import actions as a
 from nv_core.engine import legal_actions, new_game
+from nv_core.text import render_text
 from nv_core.views import player_view
-from nv_sim.game import AIContext, play_game
+from nv_sim.game import AIContext, ai_models, ai_seat, check_seat_types, make_player, play_game
 from nv_world.game import load_game_world
 
 WORLD_FILE = "scenarios/venus_expedition/worlds/world_seed1.json"
@@ -368,3 +369,69 @@ def test_nv_sim_max_cost_holds_within_a_game(software, monkeypatch, tmp_path):
         rows = list(csv.DictReader(handle))
     assert sum(float(r["cost"]) for r in rows) <= 0.25 + 0.10 + 1e-9  # at most one call past the limit
     assert any("budget" in r["fallback"] for r in rows)
+
+
+# Models, the game log and the game mode (specification 8 and 8.1) ------------------------------------
+def test_an_ai_seat_type_names_its_persona_and_model():
+    assert ai_seat("ai") == ("neutral", None)
+    assert ai_seat("ai:selfish") == ("selfish", None)
+    assert ai_seat("ai@gpt-6-luna") == ("neutral", "gpt-6-luna")
+    assert ai_seat("ai:cooperative@gpt-6.1-terra") == ("cooperative", "gpt-6.1-terra")
+    assert ai_seat("cooperative") is None
+    check_seat_types(["ai:cooperative@gpt-6.1-terra", "ai"])
+    with pytest.raises(ValueError, match="unknown AI model"):
+        check_seat_types(["ai@no-such-model"])
+
+
+def test_gpt_6_1_terra_can_be_chosen_and_has_prices():
+    software = load_software_settings()
+    assert ai_models()[0] == software.ai_default_model and "gpt-6.1-terra" in ai_models()
+    assert software.prices("gpt-6.1-terra").output > 0
+
+
+def test_an_ai_seat_plays_with_the_model_its_type_names(venus, software):
+    world, settings = venus
+    asked = []
+
+    def factory(model=None):
+        asked.append(model)
+        return FakeProvider()
+
+    make_player("ai:selfish@gpt-6.1-terra", 0, 1, world, _context(software, factory), settings)
+    make_player("ai", 1, 1, world, _context(software, factory), settings)
+    assert asked == ["gpt-6.1-terra", None]  # None: the default model
+
+
+@pytest.mark.parametrize("mode", ["normal", "simplified"])
+def test_the_model_is_told_which_game_it_plays(venus, software, mode):
+    world, settings = venus
+    settings = settings.model_copy(update={"mode": mode})
+    player = make_player("ai", 0, 1, world, _context(software), settings)
+    assert f"This is the {mode} game." in player.instructions
+    assert player.instructions.startswith(rules_text())  # the shared, cached prefix stays first
+    state = new_game(world, settings, 1, ["a", "b"])
+    assert f"{mode.upper()} GAME" in render_text(player_view(state, 0))  # the view's header, in every decision
+
+
+def test_each_decision_starts_with_the_whole_game_log(venus, software):
+    world, settings = venus
+    provider = FakeProvider()
+    report = play_game(world, settings, 3, ["ai", "cooperative"], ai=_context(software, lambda model=None: provider))
+    assert report.errors == []
+    late = provider.calls[-1]["items"][0]["content"]
+    assert late.startswith("GAME LOG")
+    log = late.split("\n\n", 1)[0]
+    assert "Round 2 begins" in log and "left out" not in log  # the whole game, from its start
+    assert " is ready" not in log
+
+
+def test_the_oldest_log_lines_are_left_out_to_keep_within_the_input_limit(venus, software):
+    provider = FakeProvider()
+    small = software.model_copy(update={"ai_max_input_tokens": 40_000})
+    player = _player(provider, small)
+    state, view, options = _first_decision(venus, player)
+    view["game_log"] = [f"event number {i}" for i in range(20_000)]
+    player.choose(view, options)
+    message = provider.calls[0]["items"][0]["content"]
+    assert "earlier lines left out" in message and "event number 19999" in message and "event number 0\n" not in message
+    assert len(message) + player._fixed_chars <= small.ai_max_input_tokens * 3

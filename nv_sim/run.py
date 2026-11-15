@@ -29,7 +29,7 @@ import yaml
 from nv_core.paths import SCENARIOS_DIR
 from nv_core.record import GameRecord
 from nv_core.settings import SettingsError, load_settings
-from nv_sim.game import AIContext, GameReport, check_seat_types, play_game
+from nv_sim.game import AIContext, GameReport, ai_seat, check_seat_types, play_game
 from nv_world.cli import world_summary
 from nv_world.game import world_data
 from nv_world.generate import GenerationFailed, generate_world
@@ -40,7 +40,7 @@ CSV_FILES = ("games.csv", "rounds.csv", "theories.csv", "predictions.csv", "worl
 
 
 def has_ai(seats: list[str]) -> bool:
-    return any(s.split(":")[0] == "ai" for s in seats)
+    return any(ai_seat(s) for s in seats)
 
 
 def ai_context(spending: Any = None) -> AIContext:
@@ -56,7 +56,7 @@ def ai_context(spending: Any = None) -> AIContext:
     return AIContext(
         software,
         ledger,
-        lambda: make_provider(software.ai_provider, software.ai_default_model, software.ai_reasoning_effort),
+        lambda model=None: make_provider(software.ai_provider, model or software.ai_default_model, software.ai_reasoning_effort),
     )
 
 
@@ -207,7 +207,7 @@ def _run(args: argparse.Namespace) -> int:
         max_cost = min(args.max_cost, ai.ledger.remaining) if args.max_cost is not None else ai.ledger.remaining
         # The run's limit holds within a game too: no AI call once it is reached (the seats fall back).
         ai.ledger.budget = min(ai.ledger.budget, ai.ledger.total + max_cost)
-        n_ai = sum(1 for s in seats if s.split(":")[0] == "ai")
+        n_ai = sum(1 for s in seats if ai_seat(s))
         print(
             f"AI seats: {n_ai} per game, model {ai.software.ai_default_model}. Spent so far: "
             f"{ai.ledger.total:.2f} of {ai.software.ai_total_budget:.2f} USD (ai_total_budget). "

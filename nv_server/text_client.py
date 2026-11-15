@@ -31,12 +31,11 @@ from nv_world.game import load_game_world
 
 DEFAULT_SAVE_DIR = Path("games")
 MAX_REFUSALS = 20
-RECENT_EVENTS = 25
 
 
 def _automated_players(record: GameRecord, ai=None) -> list:
     """One player object per automated seat, None for human seats."""
-    from nv_sim.game import make_player
+    from nv_sim.game import ai_seat, make_player
 
     seats = record.seats or ["human"] * len(record.players)
     players = []
@@ -44,7 +43,7 @@ def _automated_players(record: GameRecord, ai=None) -> list:
         if kind == "human":
             players.append(None)
             continue
-        if kind.split(":")[0] == "ai" and ai is None:
+        if ai_seat(kind) and ai is None:
             from nv_sim.run import ai_context
 
             ai = ai_context()
@@ -112,7 +111,9 @@ class TextClient:
             options = legal_actions(self.state, seat)
             if player.needs_view:
                 view = player_view(self.state, seat)
-                view["recent_events"] = [e.text for e in visible_events(self.events, seat)[-RECENT_EVENTS:]]
+                from nv_sim.game import game_log
+
+                view["game_log"] = game_log(self.events, seat)
             else:
                 view = {"round": self.state.round, "phase": self.state.phase.value, "seat": seat}
             result = None

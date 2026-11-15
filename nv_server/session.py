@@ -33,7 +33,7 @@ from nv_core.preview import task_preview
 from nv_core.views import player_view, spectator_view, visible_events
 from nv_core.world_data import WorldData
 from nv_server.storage import Storage
-from nv_sim.game import RECENT_EVENTS, check_seat_types, make_player
+from nv_sim.game import ai_seat, check_seat_types, game_log, make_player
 
 log = logging.getLogger("nv_server")
 
@@ -134,7 +134,7 @@ class GameSession:
 
     def _make_player(self, seat: int):
         kind = self.meta["seats"][seat]
-        ai = self._ai_context() if kind.split(":")[0] == "ai" else None
+        ai = self._ai_context() if ai_seat(kind) else None
         player = make_player(kind, seat, self.meta["seed"], self.world, ai, self.settings, name=self.meta["players"][seat])
         if hasattr(player, "observe"):  # a scripted bot remembers what it has seen so far
             player.observe(visible_events(self.events, seat))
@@ -475,7 +475,7 @@ class GameSession:
 
     def _decision_view(self, state: GameState, seat: int) -> dict[str, Any]:
         view = player_view(state, seat)
-        view["recent_events"] = [e.text for e in visible_events(self.events, seat)[-RECENT_EVENTS:]]
+        view["game_log"] = game_log(self.events, seat)
         return view
 
     # Views ------------------------------------------------------------------------------------
@@ -595,7 +595,7 @@ class GameManager:
             check_seat_types([k for k in kinds if k != HUMAN])
         except ValueError as exc:
             raise GameError(str(exc)) from None
-        if any(k.split(":")[0] == "ai" for k in kinds):
+        if any(ai_seat(k) for k in kinds):
             if self.ai_context is None:
                 raise GameError("AI seats are not available on this server")
             try:

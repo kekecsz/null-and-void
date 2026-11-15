@@ -8,7 +8,7 @@ from pydantic import BaseModel, ValidationError
 
 from nv_ai.config import SoftwareSettings
 from nv_ai.costs import Ledger, Usage, cost
-from nv_ai.prompt import decision_message, instructions, tool_definitions
+from nv_ai.prompt import decision_message, fit_log, instructions, tool_definitions
 from nv_ai.provider import Provider, Reply
 from nv_core.actions import ACTION_ADAPTER
 from nv_core.engine import Option
@@ -38,12 +38,13 @@ class AIPlayer:
         game: str = "",
         name: str = "",
         fallback_seed: str = "fallback",
+        mode: str = "normal",
     ):
         self.provider = provider
         self.software = software
         self.ledger = ledger
         self.prices = software.prices(provider.model)
-        self.instructions = instructions(story, persona, software.ai_notes_max_chars)
+        self.instructions = instructions(story, persona, software.ai_notes_max_chars, mode)
         self.tools = tool_definitions(software.ai_notes_max_chars)
         self.persona = persona
         self.game = game
@@ -126,7 +127,12 @@ class AIPlayer:
 
     # ------------------------------------------------------------------------------------
     def _new_decision(self, view: dict[str, Any], options: list[Option]) -> None:
-        text = decision_message(view, options, view.get("recent_events", []), self.notes, self._step_choices)
+        # ai_max_input_tokens (specification 8.4): the oldest log lines are left out first
+        log = view.get("game_log", [])
+        rest = len(decision_message(view, options, [], self.notes, self._step_choices, len(log)))
+        room = int(self.software.ai_max_input_tokens * CHARS_PER_TOKEN) - self._fixed_chars - rest
+        log, left_out = fit_log(log, room)
+        text = decision_message(view, options, log, self.notes, self._step_choices, left_out)
         self._items = [self.provider.user_item(text)]
         self._last_call = None
         self._attempts = 0

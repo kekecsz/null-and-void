@@ -35,7 +35,7 @@ function seatRow(index, kind) {
   name.className = "seat-name";
   const select = document.createElement("select");
   select.className = "seat-kind";
-  for (const k of options.seat_kinds) select.add(new Option(t(k), k, false, k === kind));
+  for (const k of options.seat_kinds) select.add(new Option(kindName(k), k, false, k === kind));
   select.onchange = () => { name.placeholder = select.value === "human" ? t("filled in by the player") : t("Bot {n}", { n: index + 1 }); };
   row.append(label, select, name);
   return row;

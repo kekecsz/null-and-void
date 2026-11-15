@@ -189,7 +189,7 @@ function render() {
     setTaskHeading();
     refreshHighlights();
     $("actions").append(h("p", { class: "muted" }, msg.status === "lobby"
-      ? t("Waiting for the host to start the game. Seats: ") + msg.seats.map((s) => `${s.name} (${t(s.kind)}${s.taken ? t(", joined") : ""})`).join(", ")
+      ? t("Waiting for the host to start the game. Seats: ") + msg.seats.map((s) => `${s.name} (${kindName(s.kind)}${s.taken ? t(", joined") : ""})`).join(", ")
       : t("You have no seat in this game; you see the public event log.")));
     return;
   }
@@ -505,12 +505,12 @@ async function renderHost() {
   const rows = msg.seats.map((s) => {
     const controls = [];
     if (s.human_seat) {
-      const kinds = h("select", {}, lobbyOptions.seat_kinds.filter((k) => k !== "human").map((k) => h("option", { value: k }, t(k))));
+      const kinds = h("select", {}, lobbyOptions.seat_kinds.filter((k) => k !== "human").map((k) => h("option", { value: k }, kindName(k))));
       if (s.kind === "human") controls.push(kinds, h("button", { onclick: () => hostCommand("automate", { seat: s.seat, kind: kinds.value }) }, t("Hand to automated player")));
       else controls.push(h("button", { onclick: () => hostCommand("release", { seat: s.seat }) }, t("Give back to the person")));
       if (s.taken) controls.push(h("button", { onclick: () => hostCommand("remove", { seat: s.seat }) }, t("Free the seat")));
     }
-    return [chip(s.seat), t(s.kind), s.human_seat ? (s.taken ? (s.connected ? t("connected") : t("joined, not connected")) : t("free")) : t("automated"), h("span", {}, controls)];
+    return [chip(s.seat), kindName(s.kind), s.human_seat ? (s.taken ? (s.connected ? t("connected") : t("joined, not connected")) : t("free")) : t("automated"), h("span", {}, controls)];
   });
   box.append(table([t("Seat"), t("Played by"), t("Person"), ""], rows));
   if (msg.you === null && store.get("seat") === "") box.append(h("p", {}, h("button", { onclick: showJoin }, t("Take a seat yourself"))));
