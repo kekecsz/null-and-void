@@ -487,6 +487,8 @@ class StrategyBot:
         cost = s.cost_of_postdoc
         affordable = money // cost if cost else now + development
         postdocs = max(min(now, affordable), min(development, affordable))
+        if s.simplified:  # no students to fill the other needs, and money buys nothing but postdocs
+            postdocs = affordable
         postdocs = max(low, postdocs if high is None else min(high, postdocs))
         if postdocs < development:  # ideas it cannot afford to develop need no write-up either
             needs[Task.WRITE_UP] -= development - postdocs

@@ -138,6 +138,22 @@ def test_patient_bots_hire_nobody_while_they_wait(venus):
     assert first and all(act.hire_postdocs == 0 and act.hire_students == 0 and not act.allocation for act in first)
 
 
+def test_in_the_simplified_game_bots_hire_as_many_postdocs_as_they_can_pay(venus):
+    """The simplified game has no students and money buys nothing but postdocs, so the bots staff
+    their lab fully (otherwise the Game Period Deck lasts far longer than with human players)."""
+    world, settings = venus
+    simplified = settings.model_copy(update={"mode": "simplified"})
+    seen = []
+    report = play_game(world, simplified, 3, ["cooperative", "selfish", "cooperative"],
+                       on_action=lambda st, seat, act, ev: seen.append((st, seat, act)))
+    assert report.errors == [], report.errors
+    hires = [(st, seat, act) for st, seat, act in seen if isinstance(act, a.AllocateStaff)]
+    assert hires
+    for state, seat, act in hires:
+        staff = sum(c.postdocs for c in act.allocation.values())
+        assert staff == state.researcher(seat).money // settings.cost_of_postdoc
+
+
 def test_patient_bots_wake_up_at_the_latest_after_the_wait_limit(venus):
     world, settings = venus
     bot = StrategyBot(1, "patient-selfish", world, settings, BotSettings.load())
