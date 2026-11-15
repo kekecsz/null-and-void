@@ -7,9 +7,11 @@
   <link rel="stylesheet" href="/web/style.css">
   <link rel="stylesheet" href="/web/themes.css">
   <script src="/web/theme.js"></script>
+  <script src="/web/i18n.js"></script>
+  <script src="/web/i18n/hu.js"></script>
 </head>
 <body>
-  <header><h1>Null &amp; Void</h1><span class="muted" style="flex:1">a game about the replication crisis</span><a href="/credits" target="_blank">Credits</a></header>
+  <header><h1 data-subtitle="Proceedings of the Venus Expedition">Null &amp; Void</h1><span class="muted" style="flex:1">a game about the replication crisis</span><label class="small">Language <select id="lang-choice"></select></label> <a href="/credits" target="_blank">Credits</a></header>
   <div class="error-bar" id="error"></div>
   <div class="lobby">
     <section class="panel">
@@ -33,13 +35,12 @@
         <div id="seats"></div>
         <button type="button" id="add-seat">Add seat</button>
         <button type="button" id="remove-seat">Remove seat</button>
-        <p class="muted small">A <b>human</b> seat is filled by a person who opens the join link. Automated seats:
-          scripted bots (selfish, cooperative, patient-&hellip;), the random bot, or an AI model (ai, ai:cooperative, ai:selfish; uses the API budget).</p>
+        <p class="muted small"><span>A human seat is filled by a person who opens the join link. Automated seats: scripted bots (selfish, cooperative, patient-&hellip;), the random bot, or an AI model (ai, ai:cooperative, ai:selfish; uses the API budget).</span></p>
         <h3>More</h3>
         <div class="form-row">Game seed <input type="number" id="seed" placeholder="random"></div>
         <div class="form-row">Join password <input id="join-password" placeholder="none"> &nbsp;
           Spectator password <input id="spectator-password" placeholder="none"></div>
-        <div class="form-row">Settings overrides (one <code>setting: value</code> per line; see docs/parameter_defaults.yaml)
+        <div class="form-row"><span>Settings overrides (one line each, as <code>setting: value</code>; see docs/parameter_defaults.yaml)</span>
           <textarea id="overrides" rows="3" placeholder="nobel_condition: 5"></textarea></div>
         <button class="primary" type="submit">Create game</button>
       </form>

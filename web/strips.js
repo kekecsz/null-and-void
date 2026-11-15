@@ -48,12 +48,12 @@ function compareSlots(a, b) {
 function tile(state, emptyText, kind) {
   if (!state) {
     return h("div", { class: `t empty${kind ? ` ${kind}` : ""}` },
-      h("div", { class: "ph" }, emptyText === "hidden" ? "?" : ""), h("span", { class: "n" }, emptyText || "blank"));
+      h("div", { class: "ph" }, emptyText === "hidden" ? "?" : ""), h("span", { class: "n" }, t(emptyText || "blank")));
   }
   const colours = iconColours[state];
   return h("div", { class: "t", style: colours ? `--c:${colours.background};--ct:${colours.text}` : false },
     colours ? h("img", { src: iconUrl(state), alt: "" }) : h("div", { class: "ph" }, ""),
-    h("span", { class: "n" }, state));
+    h("span", { class: "n" }, tn(state)));
 }
 const cell = (...content) => h("div", { class: "cell" }, content);
 
@@ -89,14 +89,14 @@ function strip(o) {
 function boxView(o) {
   const isOpen = task.open.has(o.id);
   const toggle = o.records.length || o.foot
-    ? h("button", { class: "toggle", title: isOpen ? "Minimise to a strip" : "Show the supporting records",
+    ? h("button", { class: "toggle", title: isOpen ? t("Minimise to a strip") : t("Show the supporting records"),
       onclick: () => { if (isOpen) task.open.delete(o.id); else task.open.add(o.id); redraw(); } }, isOpen ? "\u25be" : "\u25b8")
     : null;
   return h("div", { class: `box${o.target ? " is-target" : ""}`, onclick: o.onclick },
     strip({ ...o.top, toggle }),
     isOpen && o.records.length ? h("div", { class: "box-rows" }, o.records.map((r) => strip(r))) : null,
     isOpen && o.foot ? h("div", { class: "box-foot" }, o.foot) : null,
-    !isOpen && o.records.length ? h("div", { class: "muted small box-count" }, `${o.records.length} supporting record(s)`) : null);
+    !isOpen && o.records.length ? h("div", { class: "muted small box-count" }, t("{n} supporting record(s)", { n: o.records.length })) : null);
 }
 
 // Selecting and highlighting ------------------------------------------------------------------------
@@ -120,13 +120,13 @@ function refreshHighlights() {
 function renderSelection() {
   const box = $("selection");
   if (!selected) {
-    fill(box, h("div", { class: "slot-hint" }, "Nothing selected. Click any Probe, record, theory or manuscript to compare the others with it."));
+    fill(box, h("div", { class: "slot-hint" }, t("Nothing selected. Click any Probe, record, theory or manuscript to compare the others with it.")));
     return;
   }
   const use = selectionUse();
   fill(box, strip({ head: selected.label, sub: selected.sub, slots: selected.slots, inert: true, tail: [
-    use ? h("button", { class: "primary", onclick: use }, "use") : null,
-    h("button", { onclick: () => { selected = null; refreshHighlights(); } }, "Clear"),
+    use ? h("button", { class: "primary", onclick: use }, t("use")) : null,
+    h("button", { onclick: () => { selected = null; refreshHighlights(); } }, t("Clear")),
   ] }));
 }
 
@@ -144,7 +144,7 @@ function initPanels() {
       const closed = Boolean(prefs.closed[id]);
       panel.classList.toggle("closed", closed);
       arrow.textContent = closed ? "\u25b8" : "\u25be";
-      arrow.title = closed ? "Show this panel" : "Minimise this panel";
+      arrow.title = closed ? t("Show this panel") : t("Minimise this panel");
     };
     title.onclick = (e) => {
       const control = e.target.closest(CONTROLS);
@@ -155,11 +155,13 @@ function initPanels() {
     };
     show();
   }
-  for (const [button, setting, name] of [[$("pin-task"), "pinTask", "the current task"], [$("pin-selection"), "pinSelection", "the selected strip"]]) {
+  const pins = [[$("pin-task"), "pinTask", t("Unpin the current task"), t("Pin the current task to the top")],
+    [$("pin-selection"), "pinSelection", t("Unpin the selected strip"), t("Pin the selected strip to the top")]];
+  for (const [button, setting, unpin, pin] of pins) {
     button.innerHTML = PIN_ICON;
     const show = () => {
       button.classList.toggle("on", prefs[setting]);
-      button.title = prefs[setting] ? `Unpin ${name}` : `Pin ${name} to the top`;
+      button.title = prefs[setting] ? unpin : pin;
       button.setAttribute("aria-pressed", String(prefs[setting]));
       $(setting === "pinTask" ? "actions-panel" : "selection-panel").classList.toggle("pinned", prefs[setting]);
       layoutPins();
@@ -198,13 +200,13 @@ function renderColumns() {
   const root = document.documentElement.style;
   root.setProperty("--ni", inputVars().length);
   root.setProperty("--no", outcomeVars().length);
-  const name = (x) => h("div", { class: "c" }, h("b", {}, x.id), x.name);
+  const name = (x) => h("div", { class: "c" }, h("b", {}, x.id), tn(x.name));
   fill(box, h("div", { class: "cols" }, h("div", {}), inputVars().map(name), h("div", {}), outcomeVars().map(name), h("div", {})));
 }
 
 const showPanel = (id, visible) => { $(id).style.display = visible ? "" : "none"; };
 const info = (text) => h("span", {}, text);
-const authorLabel = (p) => (p.author === msg.you ? "your own" : nameOf(p.author));
+const authorLabel = (p) => (p.author === msg.you ? t("your own") : nameOf(p.author));
 const groupLabel = (...content) => h("div", { class: "group-label" }, content);
 
 // World Grid --------------------------------------------------------------------------------------
@@ -218,7 +220,7 @@ function probeStrip(p) {
   return strip({
     key: `R${v.round}P${p.index}`,  // a new round's Probe is a different strip
     head: `P${p.index + 1}`, slots: seen,
-    icon: p.hot_topic ? h("img", { class: "hot-topic", src: "/web/icons/fire.png", alt: "Hot topic", title: "Hot topic" }) : null,
+    icon: p.hot_topic ? h("img", { class: "hot-topic", src: "/web/icons/fire.png", alt: t("Hot topic"), title: t("Hot topic") }) : null,
     cellFor: (variable) => {
       if (variable.kind !== "input") return cell(tile(seen[variable.id], "hidden"));
       const level = p.sensors[variable.id];
@@ -229,12 +231,13 @@ function probeStrip(p) {
       return cell(
         known ? tile(seen[variable.id], "blank")
           : tile(null, specialty ? "revealed" : level ? "sensor" : "no sensor", specialty ? "is-specialty" : level ? "is-sensor" : null),
-        level ? h("span", { class: "badge", title: `sensor level ${level}: may be noise` }, `L${level}`) : null,
-        wrong ? h("div", { class: "truth" }, `true: ${truth[variable.id]}`) : null,
-        choice ? h("button", { class: `plus${task.sensor === slot ? " on" : ""}`, title: `${level ? "Upgrade" : "Install"} this sensor: cite ${choice.methods_needed} method(s)`,
+        level ? h("span", { class: "badge", title: t("sensor level {level}: may be noise", { level }) }, `L${level}`) : null,
+        wrong ? h("div", { class: "truth" }, t("true: {state}", { state: tn(truth[variable.id]) })) : null,
+        choice ? h("button", { class: `plus${task.sensor === slot ? " on" : ""}`,
+          title: level ? t("Upgrade this sensor: cite {n} method(s)", { n: choice.methods_needed }) : t("Install this sensor: cite {n} method(s)", { n: choice.methods_needed }),
           onclick: () => { task.sensor = task.sensor === slot ? null : slot; task.sensorCited = new Set(); redraw(); } }, "+") : null);
     },
-    tail: p.probe_time !== null && p.probe_time !== undefined ? [info("Probe time"), chip(p.probe_time)] : null,
+    tail: p.probe_time !== null && p.probe_time !== undefined ? [info(t("Probe time")), chip(p.probe_time)] : null,
   });
 }
 function renderGrid() {
@@ -248,11 +251,11 @@ const shownLabs = () => (msg.spectator ? view().labs : [view().lab]);
 function labRecords(lab) {
   const specified = (id) => {
     const e = lab.experiments.find((x) => x.id === id);
-    return e && Object.keys(e.specified).length ? `, specified ${Object.keys(e.specified).join(" ")}` : "";
+    return e && Object.keys(e.specified).length ? `, ${t("specified {list}", { list: Object.keys(e.specified).join(" ") })}` : "";
   };
   const all = [
-    ...lab.records.observations.map((o) => ({ id: o.id, kind: "observation", head: `O${o.id}`, sub: `P${o.probe + 1}, round ${o.round}`, slots: o.cards, position: o.position })),
-    ...lab.records.experiments.map((e) => ({ id: e.id, kind: "experiment", head: `E${e.id}`, sub: `experiment${specified(e.id)}`, slots: e.cards, position: e.position })),
+    ...lab.records.observations.map((o) => ({ id: o.id, kind: "observation", head: `O${o.id}`, sub: t("P{probe}, round {round}", { probe: o.probe + 1, round: o.round }), slots: o.cards, position: o.position })),
+    ...lab.records.experiments.map((e) => ({ id: e.id, kind: "experiment", head: `E${e.id}`, sub: `${t("experiment")}${specified(e.id)}`, slots: e.cards, position: e.position })),
   ];
   const placed = all.filter((r) => r.position !== null).sort((a, b) => a.position - b.position);
   const archived = all.filter((r) => r.position === null).sort((a, b) => b.id - a.id);
@@ -262,9 +265,9 @@ const recordArea = (owner, title, strips) => h("div", { class: "record-area" }, 
 function recordTail(lab, r) {  // the position, a warning beyond the capacity, and this step's buttons
   const capacity = lab.records.capacity;
   const beyond = r.position !== null && capacity !== null && r.position > capacity;
-  const place = r.position === null ? info("archived")
-    : h("span", { class: beyond ? "bad" : "", title: beyond ? "Beyond the Records capacity: discarded at Clean-up unless used or archived" : "Record position" },
-      `#${r.position}${beyond ? " (discarded at Clean-up)" : ""}`);
+  const place = r.position === null ? info(t("archived"))
+    : h("span", { class: beyond ? "bad" : "", title: beyond ? t("Beyond the Records capacity: discarded at Clean-up unless used or archived") : t("Record position") },
+      `#${r.position}${beyond ? ` ${t("(discarded at Clean-up)")}` : ""}`);
   return [place, msg.spectator ? null : useRecordButton(r), msg.spectator ? null : archiveButton(r)];
 }
 function renderRecords() {
@@ -274,24 +277,24 @@ function renderRecords() {
     for (const [area, records] of labRecords(lab)) {
       if (!records.length) continue;
       const capacity = lab.records.capacity;
-      const title = area === "records" ? `Records area${capacity === null ? "" : ` (capacity ${capacity})`}` : "Archive";
+      const title = area === "records" ? `${t("Records area")}${capacity === null ? "" : ` ${t("(capacity {n})", { n: capacity })}`}` : t("Archive");
       rows.push(recordArea(owner(), title,
         records.map((r) => strip({ key: `${lab.seat}/${r.head}`, head: r.head, sub: r.sub, slots: r.slots, tail: recordTail(lab, r) }))));
     }
     if (msg.spectator && lab.experiments.length) {
-      rows.push(recordArea(owner(), "Experiments, every round", lab.experiments.map((e) =>
-        strip({ key: `${lab.seat}/run${e.id}`, head: `E${e.id}`, sub: `round ${e.round}`, slots: { ...e.inputs, ...e.outcomes },
-          tail: Object.keys(e.specified).length ? info(`specified ${Object.keys(e.specified).join(" ")}`) : null }))));
+      rows.push(recordArea(owner(), t("Experiments, every round"), lab.experiments.map((e) =>
+        strip({ key: `${lab.seat}/run${e.id}`, head: `E${e.id}`, sub: t("round {n}", { n: e.round }), slots: { ...e.inputs, ...e.outcomes },
+          tail: Object.keys(e.specified).length ? info(t("specified {list}", { list: Object.keys(e.specified).join(" ") })) : null }))));
     }
   }
-  $("records-title").textContent = msg.spectator ? "Records of every lab" : "Your records";
+  $("records-title").textContent = msg.spectator ? t("Records of every lab") : t("Your records");
   showPanel("records-panel", rows.length > 0);
   fill($("records"), rows);
 }
 
 function ideaStrip(i, o) {
-  return strip({ head: `D${i.id}`, sub: "unpublished", slots: i.kind === "theory" ? ideaSlots(i) : {},
-    text: i.kind === "method" ? `method for ${i.parameter}` : null, ...o });
+  return strip({ head: `D${i.id}`, sub: t("unpublished"), slots: i.kind === "theory" ? ideaSlots(i) : {},
+    text: i.kind === "method" ? t("method for {parameter}", { parameter: i.parameter }) : null, ...o });
 }
 function renderIdeas() {
   const rows = [];
@@ -299,7 +302,7 @@ function renderIdeas() {
     if (msg.spectator && lab.ideas.length) rows.push(groupLabel(chip(lab.seat)));
     for (const i of lab.ideas) rows.push(ideaStrip(i, { tail: msg.spectator ? null : useIdeaButton(i) }));
   }
-  $("ideas-title").textContent = msg.spectator ? "Unpublished work of every lab" : "Your unpublished work";
+  $("ideas-title").textContent = msg.spectator ? t("Unpublished work of every lab") : t("Your unpublished work");
   showPanel("ideas-panel", rows.length > 0);
   fill($("ideas"), rows);
 }
@@ -311,15 +314,15 @@ const closestToNobel = (a, b) => ownFirst(a, b) || b.nobel - a.nobel || a.id - b
 function theoryStrip(p, tail) {
   const v = view();
   return strip({ key: `T${p.id}`, head: `T${p.id}`, sub: authorLabel(p), slots: ideaSlots(p), tail: tail || [
-    chip(p.author), info(`tier ${p.tier}${p.open_access ? " (open access)" : ""}`),
-    info(`Nobel ${p.nobel}/${v.nobel_condition}`), info(`retraction ${p.retraction}/${v.retraction_threshold}`),
-    p.patents.length ? info(`patent: ${p.patents.map(nameOf).join(", ")}`) : null,
-    p.fresh ? info("fresh out of print") : null,
+    chip(p.author), info(`${t("tier {n}", { n: p.tier })}${p.open_access ? ` ${t("(open access)")}` : ""}`),
+    info(t("Nobel {n}/{max}", { n: p.nobel, max: v.nobel_condition })), info(t("retraction {n}/{max}", { n: p.retraction, max: v.retraction_threshold })),
+    p.patents.length ? info(t("patent: {names}", { names: p.patents.map(nameOf).join(", ") })) : null,
+    p.fresh ? info(t("fresh out of print")) : null,
   ] });
 }
 function renderLiterature() {
   const theories = view().published.filter((p) => p.kind === "theory").sort(closestToNobel);
-  fill($("literature"), theories.length ? theories.map((p) => theoryStrip(p)) : h("p", { class: "muted" }, "No theory published yet."));
+  fill($("literature"), theories.length ? theories.map((p) => theoryStrip(p)) : h("p", { class: "muted" }, t("No theory published yet.")));
 }
 
 // Submission Portal ------------------------------------------------------------------------------------
@@ -332,26 +335,26 @@ function manuscriptBox(m, o) {
   return boxView({
     id: o.id, onclick: o.onclick,
     top: { key: `D${m.id}`, head: `D${m.id}`, sub: o.sub, subStrong: o.subStrong, slots: content && content.kind === "theory" ? ideaSlots(content) : {},
-      text: !content ? "(face down)" : content.kind === "method" ? `method for ${content.parameter}` : null, tail: o.tail },
-    records: (m.record_cards || []).map((r, n) => ({ key: `D${m.id}/${n}`, head: r.kind === "observation" ? "Observation" : "Experiment", slots: r.cards })),
+      text: !content ? t("(face down)") : content.kind === "method" ? t("method for {parameter}", { parameter: content.parameter }) : null, tail: o.tail },
+    records: (m.record_cards || []).map((r, n) => ({ key: `D${m.id}/${n}`, head: r.kind === "observation" ? t("Observation") : t("Experiment"), slots: r.cards })),
   });
 }
 function renderPortal() {
   const reviewing = new Set(myReviewCards().filter(Boolean));
   const row = (m) => manuscriptBox(m, {
     id: `portal${m.id}`, sub: m.position ? `#${m.position}` : "", tail: [
-      chip(m.author), info(`tier ${m.tier}`), m.area === "accept" ? info(`${m.tokens} round(s) to go`) : null,
-      info(`${m.votes} vote(s)`), info(`${m.records} record(s)`),
-      m.area === "review" && reviewing.has(m.position) ? h("b", {}, "you review this") : null,
+      chip(m.author), info(t("tier {n}", { n: m.tier })), m.area === "accept" ? info(t("{n} round(s) to go", { n: m.tokens })) : null,
+      info(t("{n} vote(s)", { n: m.votes })), info(t("{n} record(s)", { n: m.records })),
+      m.area === "review" && reviewing.has(m.position) ? h("b", {}, t("you review this")) : null,
     ],
   });
   const inArea = (area) => view().manuscripts.filter((m) => m.area === area);
   const areas = [
-    ["Awaiting peer review", inArea("review").sort((a, b) => a.position - b.position)],
-    ["Revise", inArea("revise")],
-    ["Accept", inArea("accept").sort((a, b) => b.tokens - a.tokens)],  // the next to be published last
+    [t("Awaiting peer review"), inArea("review").sort((a, b) => a.position - b.position)],
+    [t("Revise"), inArea("revise")],
+    [t("Accept"), inArea("accept").sort((a, b) => b.tokens - a.tokens)],  // the next to be published last
   ].filter(([, manuscripts]) => manuscripts.length);
-  fill($("portal"), areas.length ? areas.map(([title, manuscripts]) => recordArea([], title, manuscripts.map(row))) : h("p", { class: "muted" }, "No manuscripts."));
+  fill($("portal"), areas.length ? areas.map(([title, manuscripts]) => recordArea([], title, manuscripts.map(row))) : h("p", { class: "muted" }, t("No manuscripts.")));
 }
 
 // World Table (spectators) ----------------------------------------------------------------------------
@@ -360,6 +363,6 @@ function renderWorld() {
   const inputs = inputVars();
   fill($("world"), v.world_table.map((row, n) => {
     const probes = (v.probe_truth || []).map((t, i) => (t && inputs.every((x) => t[x.id] === row.inputs[x.id]) ? `P${i + 1}` : null)).filter(Boolean);
-    return strip({ key: `world${n}`, head: `#${n + 1}`, slots: { ...row.inputs, ...row.outcomes }, tail: probes.length ? info(`on the grid: ${probes.join(", ")}`) : null });
+    return strip({ key: `world${n}`, head: `#${n + 1}`, slots: { ...row.inputs, ...row.outcomes }, tail: probes.length ? info(t("on the grid: {list}", { list: probes.join(", ") })) : null });
   }));
 }

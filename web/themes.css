@@ -21,7 +21,7 @@ html.theme-light {
 /* Masthead */
 .theme-light header { background: var(--bg); border-top: 4px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 7px 20px 6px; gap: 18px; }
 .theme-light header h1 { font: 600 28px/1 "NV Display", serif; letter-spacing: -.2px; white-space: nowrap; }
-.theme-light header h1::after { content: "Proceedings of the Venus Expedition"; font: italic 400 12.5px "NV Serif", serif; color: var(--muted); margin-left: 12px; letter-spacing: 0; }
+.theme-light header h1::after { content: attr(data-subtitle);  /* in the page, so it can be translated (web/i18n.js) */ font: italic 400 12.5px "NV Serif", serif; color: var(--muted); margin-left: 12px; letter-spacing: 0; }
 .theme-light header .status { font-size: 12.5px; }
 @media (max-width: 1650px) { .theme-light header:has(.status) h1::after { display: none; } }  /* the game's status line needs the room */
 .theme-light header .status > b:first-child { font: 700 14px "NV Serif", serif; }

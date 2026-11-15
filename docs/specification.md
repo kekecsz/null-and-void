@@ -313,6 +313,16 @@ The round overview page is drawn from this table. A heading that is not a main h
 | Talent development phase (normal game only) | Talent development | Automatic | Talent development |
 | Clean-up phase | Clean-up | Automatic | Grants |
 
+### 7.6 Translations
+
+The screens can be shown in other languages; English is the source and the default.
+
+- **Choosing.** Each viewer chooses a language in the page header (lobby and game page). It is a setting of that browser, like the theme, not of the game, so people in one game can see different languages. AI players and bots are not affected.
+- **Screen texts.** The client writes its texts in English and passes each through `t()` (`web/i18n.js`), with `{name}` placeholders for numbers and names. Each language is one file, `web/i18n/<code>.js`, mapping English texts to translations; the page's own HTML texts are translated from the same file when the page loads. A text without a translation shows in English, so new or changed texts never break a page; they wait to be translated.
+- **Scenario names.** The names of a scenario's parameters, outcomes and states, and its title, are translated in the scenario file's `translations` block (language code, then English name, then translation). They do not change the world, so they are left out of the hash that tells whether a world file is outdated. They reach the client with the game's view.
+- **Checks.** `tests/test_translations.py` guards only what could break a page: every language file is readable, and every translation keeps the placeholders of its English text. Running that file directly reports what each language lacks and which of its entries no longer match an English text.
+- **Not yet translated:** the event log, the refusal messages and the text view (all made by the server in English), the debrief and credits pages, and the rulebook.
+
 ## 8. AI opponents (`nv_ai`)
 
 An AI seat is a language model that reads the same text view a human could and answers each decision with a tool call naming one legal action. It never sees hidden information it isn't entitled to. The provider and model are settings (section 11): the first version uses OpenAI's GPT-6 Luna, which is cheap enough for testing; Claude models can be added through the same interface.

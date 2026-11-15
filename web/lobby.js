@@ -29,20 +29,20 @@ function seatRow(index, kind) {
   const row = document.createElement("div");
   row.className = "seat-row";
   const label = document.createElement("span");
-  label.textContent = `Seat ${index + 1}`;
+  label.textContent = t("Seat {n}", { n: index + 1 });
   const name = document.createElement("input");
-  name.placeholder = kind === "human" ? "filled in by the player" : `Bot ${index + 1}`;
+  name.placeholder = kind === "human" ? t("filled in by the player") : t("Bot {n}", { n: index + 1 });
   name.className = "seat-name";
   const select = document.createElement("select");
   select.className = "seat-kind";
-  for (const k of options.seat_kinds) select.add(new Option(k, k, false, k === kind));
-  select.onchange = () => { name.placeholder = select.value === "human" ? "filled in by the player" : `Bot ${index + 1}`; };
+  for (const k of options.seat_kinds) select.add(new Option(t(k), k, false, k === kind));
+  select.onchange = () => { name.placeholder = select.value === "human" ? t("filled in by the player") : t("Bot {n}", { n: index + 1 }); };
   row.append(label, select, name);
   return row;
 }
 
 function renumber() {
-  [...$("seats").children].forEach((row, i) => { row.firstChild.textContent = `Seat ${i + 1}`; });
+  [...$("seats").children].forEach((row, i) => { row.firstChild.textContent = t("Seat {n}", { n: i + 1 }); });
 }
 
 async function loadOptions() {
@@ -52,7 +52,7 @@ async function loadOptions() {
   const world = $("world");
   world.innerHTML = "";
   for (const w of options.worlds) world.add(new Option(`${w.scenario} / ${w.id}`, `file:${w.file}`));
-  for (const s of options.scenarios) world.add(new Option(`${s}: generate a new world`, `scenario:${s}`));
+  for (const s of options.scenarios) world.add(new Option(t("{scenario}: generate a new world", { scenario: s }), `scenario:${s}`));
   world.onchange = () => { $("world-seed-row").style.display = world.value.startsWith("scenario:") ? "inline" : "none"; };
   $("seats").innerHTML = "";
   $("seats").append(seatRow(0, "human"), seatRow(1, "cooperative"), seatRow(2, "selfish"));
@@ -61,28 +61,30 @@ async function loadOptions() {
 async function loadGames() {
   const box = $("games");
   if (options.organiser_required && !$("organiser").value) {
-    box.innerHTML = '<p class="muted">Enter the organiser password to see the games on this server.</p>';
+    box.innerHTML = "";
+    box.append(Object.assign(document.createElement("p"), { className: "muted", textContent: t("Enter the organiser password to see the games on this server.") }));
     return;
   }
   const games = await api("/api/games");
-  if (!games.length) { box.innerHTML = '<p class="muted">No games yet.</p>'; return; }
+  if (!games.length) { box.innerHTML = ""; box.append(Object.assign(document.createElement("p"), { className: "muted", textContent: t("No games yet.") })); return; }
   const table = document.createElement("table");
-  table.innerHTML = "<tr><th>Game</th><th>World</th><th>Status</th><th>Seats</th><th>Actions</th><th>Created</th><th></th></tr>";
+  const head = table.insertRow();
+  for (const title of [t("Game"), t("World"), t("Status"), t("Seats"), t("Actions"), t("Created"), ""]) head.append(Object.assign(document.createElement("th"), { textContent: title }));
   for (const g of games) {
     const tr = table.insertRow();
-    const seats = g.players.map((p, i) => `${p} (${g.seats[i]})`).join(", ");
-    [g.id, g.world, g.status, seats, g.actions, new Date(g.created * 1000).toLocaleString()].forEach((v) => {
+    const seats = g.players.map((p, i) => `${p} (${t(g.seats[i])})`).join(", ");
+    [g.id, g.world, t(g.status), seats, g.actions, new Date(g.created * 1000).toLocaleString(I18N.lang)].forEach((v) => {
       tr.insertCell().textContent = v;
     });
     const link = document.createElement("a");
     link.href = `/game/${g.id}`;
-    link.textContent = "open";
+    link.textContent = t("open");
     const cell = tr.insertCell();
     cell.append(link);
     if (["finished", "ended"].includes(g.status)) {  // the debrief can be reopened later (specification 10)
       const debrief = document.createElement("a");
       debrief.href = `/game/${g.id}/debrief`;
-      debrief.textContent = "debrief";
+      debrief.textContent = t("debrief");
       cell.append(" \u00b7 ", debrief);
     }
   }
@@ -114,7 +116,7 @@ $("create").onsubmit = async (event) => {
   else { body.scenario = choice.slice(9); body.world_seed = number("world-seed"); }
   const button = event.submitter;
   button.disabled = true;
-  button.textContent = "Creating...";
+  button.textContent = t("Creating...");
   try {
     const created = await api("/api/games", body);
     localStorage.setItem(`nv:${created.game}:host`, created.host_token);
@@ -128,8 +130,10 @@ $("create").onsubmit = async (event) => {
     showError(e.message);
   } finally {
     button.disabled = false;
-    button.textContent = "Create game";
+    button.textContent = t("Create game");
   }
 };
 
+I18N.translatePage();
+I18N.initChoice();
 loadOptions().then(loadGames).catch((e) => showError(e.message));

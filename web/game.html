@@ -7,13 +7,16 @@
   <link rel="stylesheet" href="/web/style.css">
   <link rel="stylesheet" href="/web/themes.css">
   <script src="/web/theme.js"></script>
+  <script src="/web/i18n.js"></script>
+  <script src="/web/i18n/hu.js"></script>
 </head>
 <body>
   <div class="top" id="top">
     <header>
-      <h1><a href="/" style="color:inherit;text-decoration:none">Null &amp; Void</a></h1>
+      <h1 data-subtitle="Proceedings of the Venus Expedition"><a href="/" style="color:inherit;text-decoration:none">Null &amp; Void</a></h1>
       <div class="status" id="status">Connecting...</div>
       <a href="/credits" target="_blank">Credits</a>
+      <label class="small">Language <select id="lang-choice"></select></label>
       <label class="small">Theme <select id="theme-choice"><option value="light">light</option><option value="dark">dark</option></select></label>
       <label class="small">Tiles <select id="tile-style"><option value="tall">tall</option><option value="compact">compact</option></select></label>
       <label class="small"><input type="checkbox" id="as-text"> show as text</label>
