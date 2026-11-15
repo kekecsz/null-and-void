@@ -172,8 +172,8 @@ def test_academic_credit_never_drops_below_zero():
 
 
 # Board resets -----------------------------------------------------------------------------
-def test_hot_topic_advances_and_wraps_to_the_leftmost_probe():
-    """Clean-up phase: the Hot topic marker moves one Probe right, from the rightmost to the leftmost."""
+def test_hot_topic_advances_and_wraps_to_the_first_probe():
+    """Clean-up phase: the Hot topic marker moves to the next Probe, from the last to the first."""
     state = _quiet(game())
     state.hot_topic = 0
     cleanup(Ctx(state))

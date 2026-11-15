@@ -22,6 +22,7 @@ unused_staff_penalty: -1                   # academic credit per staff member
 starting_academic_credit: 10
 talent_development_track_starting_position: 0
 grant_track_starting_position: 1           # position number in grant_track (1 = first entry)
+funding_simplified: 5
 talent_track_max: 6
 
 # Game Period Deck (Calm period cards per player in each part of the deck)
@@ -43,7 +44,8 @@ max_archive_per_staff_member: 2
 # Experiments and methods
 experiment_free_input_parameters: 2
 experiment_method_citation_AC_reward: 1    # academic credit
-starting_lab_capacity_advanced: 2
+starting_lab_capacity: 2
+starting_lab_capacity_simplified: 3
 bonus_lab_capacity_1: 1
 bonus_lab_capacity_2: 2
 bonus_lab_capacity_3: 4

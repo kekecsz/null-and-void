@@ -646,7 +646,7 @@ class StrategyBot:
             p = probes[x.probe]
             if target:  # rows the theory needs that will be blank: a record is unlikely to mismatch
                 return (sum(1 for v in target[0] if v not in p["specialty"] and v not in p["sensors"]), p["hot_topic"])
-            return (len(p["specialty"]) + len(p["sensors"]), p["hot_topic"])  # the most visible rows
+            return (len(p["specialty"]) + len(p["sensors"]), p["hot_topic"])  # the most visible slots
 
         best = max(score(x) for x in actions)
         return self.rng.choice([x for x in actions if score(x) == best])

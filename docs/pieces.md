@@ -4,17 +4,21 @@ The game uses the pieces below. The computer version uses the same pieces in vir
 
 ## World Grid and Probes
 
-- World Grid board: room for up to 6 Probe columns (the number of players \+ 1 are used), with one row for each input parameter and each world outcome. Each Probe column has:  
+- World Grid board: room for up to 6 Probes (the number of players \+ 1 are used), with one column for each input parameter and each world outcome. Each Probe has:  
   - its two Specialty Input Parameters marked;  
-  - a Sensor slot on each non-Specialty input parameter row;  
-  - a Probe time slot above the column;  
+  - a Sensor slot on each non-Specialty input parameter;  
+  - a Probe time slot;  
   - a space for the Hot topic counter.  
 - Probe deck: \[probe\_deck\_copies\] copies of every Probe stack of the scenario. A Probe stack holds one card for each input parameter and each world outcome, showing the true states of one Probe. The cards of a Probe stack are always kept together, face down.  
 - Probe discard pile: an area next to the Probe deck for used Probe stacks.  
 - Input Parameter Decks: one deck per input parameter, \[input\_parameter\_deck\_size\] cards each, with states in the same proportions as in the Probe deck (with equal proportions). They supply the unspecified input parameters of experiments and the Noise Cards of sensors. The size of the Input Parameter Deck must be divisible by every parameter’s state count.  
 - State Cards: a general supply of cards for every state of every input parameter and world outcome, plus blank cards for every input parameter and world outcome (e.g. “IP3 blank”, “WO2 blank”). They are used to build theories, methods, predictions and the specified parts of experiments, and to form the base decks of sensor readings.  
-- Sensor markers: 12 each of level 1, level 2 and level 3 Sensor markers (2 non-Specialty rows × 6 Probes).  
+- Sensor markers: 12 each of level 1, level 2 and level 3 Sensor markers (2 non-Specialty columns × 6 Probes).  
 - Hot topic counter.
+
+## Decks and discard piles
+
+- If the Probe deck runs out, rebuild it from the discarded Probe stacks, matching the cards of each stack again, and shuffle. Input Parameter Deck cards go to that deck's discard pile when they are thrown away: the Noise cards not shown, at the end of the Observation and prediction phase; Probe readings that nobody records; and records discarded from the Records area or after publication. Cards held in records or manuscripts stay there. When an Input Parameter Deck runs out, shuffle its discard pile to make a new deck.
 
 ## Game timing and the Crisis
 
@@ -53,10 +57,10 @@ The game uses the pieces below. The computer version uses the same pieces in vir
   - the Talent development track (positions 0–\[talent\_track\_max\]).  
   - Lab capacity track and marker  
 - Research staff: 10 postdoc figures and 7 student figures.  
-- Markers: an academic credit marker and a \+100 marker (for going over 100 academic credit), a Grant funding marker, a Talent development marker, and 6 Probe time markers (one per Probe column, since a researcher can hold Probe time on several Probes).  
+- Markers: an academic credit marker and a \+100 marker (for going over 100 academic credit), a Grant funding marker, a Talent development marker, and 6 Probe time markers (one per Probe, since a researcher can hold Probe time on several Probes).  
 - Author indicator cards: 20\.  
 - Patent tokens: 15\.  
 - Probe link cards: 4 of each Probe number (P1–P6), placed with a prediction stack to show which Probe the prediction is made for.  
 - Alliance tokens: 4, one per possible ally, shown when a formal alliance is formed.
 
-(Designer’s note: a physical copy built exactly to these rules would be bulky. A tabletop version will need cheaper equivalents, e.g. one Probe card per stack with a flap over each row, or a Game Period track with the Crisis card hidden at a secret position.)
+(Designer’s note: a physical copy built exactly to these rules would be bulky. A tabletop version will need cheaper equivalents, e.g. one Probe card per stack with a flap over each parameter, or a Game Period track with the Crisis card hidden at a secret position.)

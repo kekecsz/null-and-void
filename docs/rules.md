@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.13. 23:06
+Last updated: 2026.11.15. 00:43
 
 # Summary
 
@@ -32,13 +32,15 @@ Amazing scientific breakthrough\! Astrobiologists reveal that they have found un
 
 Because the race between countries, research institutions, and companies is so fierce, safety regulations are lax. Every shipment going from Venus to Earth, be it carrying biosamples or research staff, increases the risk of contamination. It is only a matter of time until Venus fauna finds a foothold on our planet. As long as research is ongoing on Venus, a crisis seems to be inevitable.
 
-# Basic mechanisms
+# Basic mechanics
 
 \[min\_players\]-\[max\_players\] players can play the game. Each of them takes the role of a Principal Investigator in charge of a research station. They will be referred to as Researchers.
 
 The game is divided into two periods: the Calm period, when researchers try to understand and exploit the world; and the Crisis period, when researchers try to handle the crisis. The game starts in the Calm period. By default, all rules apply to both periods, unless stated otherwise.
 
-Turn order goes counterclockwise, starting with the player with the first researcher token. 
+Turn order goes counterclockwise, starting with the player with the first researcher token.
+
+There are two gameplay modes: simplified and normal. Normal mode gives the most insight about research life. The simplified game is intended to help to learn the game in stages instead of learning it all at once, but it can be skipped entirely.
 
 # Game setup
 
@@ -48,17 +50,17 @@ The Game Period Deck is prepared by completing the following steps:
 - One Warning shot card is shuffled into a another deck of (\[calm\_cards\_per\_player\_warning\] \* player number) “Calm period” cards, and this deck is placed face down on top of the previously prepared deck.  
 - (\[calm\_cards\_per\_player\_top\] \* player number) “Calm period” cards are put face down on top of the previously prepared decks.
 
-The Hot topic counter starts at the leftmost Probe.
+Normal game only: The Hot topic counter starts at the first Probe.
 
-Each researcher starts on position \[talent\_development\_track\_starting\_position\] on the Talent development track.
+Normal game only: Each researcher starts on position \[talent\_development\_track\_starting\_position\] on the Talent development track.
 
-Each researcher starts on position \[grant\_track\_starting\_position\] on the Grant funding track.
+Normal game only: Each researcher starts on position \[grant\_track\_starting\_position\] on the Grant funding track.
 
-Each researcher starts with a lab capacity of \[starting\_lab\_capacity\_advanced\].
+Each researcher starts with a lab capacity of \[starting\_lab\_capacity\] in the normal mode, and \[starting\_lab\_capacity\_simplified\] in simplified mode.
 
 By default, the first researcher token goes to one of the players randomly determined. (Alternatively, the players can agree that it goes to the player who has most recently submitted an academic work in real life (hand-in assignment, paper, grant, thesis, etc.)).
 
-Each researcher starts with the funding of their Grant track starting position.
+In the normal game Each researcher starts with the funding of their Grant track starting position. In the simplified game, each player starts with \[funding\_simplified\] in funds instead.
 
 Each researcher places their academic credit marker on \[starting\_academic\_credit\].
 
@@ -77,9 +79,7 @@ There are two types of research staff:
 
 # World grid
 
-The main world grid shows the results of observations in the game world.The scenario defines the input parameters and world outcomes; their names depend on the scenario.
-
-For example: 
+The World grid shows what the researchers can observe of the world. Each row is a Probe: a probe sent out to gather data. There are as many Probes as players \+ 1\. Each column is one input parameter or one world outcome. The scenario names them and their possible states, for example:
 
 - input parameter 1 \- parent microbe type: possible states: fat blue, green ameba  
 - input parameter 2 \- parent microbe surface: possible states: smooth, cratered, spiky  
@@ -88,23 +88,41 @@ For example:
 - world outcome 1 \- child microbe type: possible states: fat blue, green ameba  
 - world outcome 2 \- child microbe surface: possible states: smooth, cratered, spiky
 
-The combination of input parameters influence the world outcomes deterministically. So the same input parameter combination will always result in the exact same world outcomes.
+Behind the grid is a world that is fixed for the whole game. It is generated from the scenario before play starts (see Scenario setup rules). In it, the input parameters decide the world outcomes: the same input states always produce the same world outcomes. The researchers' task is to find out how.
 
-The main world grid holds as many of these input parameters \- world outcome combinations as the number of players \+ 1, which are called Probes, because they resemble probes sent out to the world to gather data. These allow the players to make observations and formulate theories.
+Each round, every Probe gets a Probe stack from the Probe deck. A Probe stack holds the true states of one situation in that world: a state for every input parameter, and the world outcomes these inputs produce. Which stack a Probe gets is down to the shuffle of the deck. (For example, a Probe might have been exposed to the following true world state: input parameters: green ameba with smooth surface eating sugar in scorching hot condition will eventually turn into output parameters: green ameba with cratered surface) 
 
-The world grid is arranged in a grid pattern, each Probe is represented by a column on the grid, while each input parameter and world outcome are represented by a row.
+However, the true states of the world cannot be seen exactly by the researchers. A Probe shows only some of its input parameters, and some of its measurements can be inaccurate. There are two types of input parameters on the Probes: Specialty input parameters, and Other input parameters. 
+
+Every Probe has two Specialty input parameters that are always shown, and always correct: input parameter 1, and one more that differs from Probe to Probe. The first Probe's second Specialty is input parameter 2, the second Probe's is input parameter 3, and so on. After the last input parameter, it starts again at input parameter 2 (with 4 input parameters, Probe 4's second Specialty is input parameter 2). (This resembles that each Probe has very accurate equipment for two input parameters.) Other input parameters show a blank card until a sensor is installed on that slot (see Sensor installation and upgrade). A sensor shows a reading, but sensors are noisy, so a reading can be wrong (see Revealing input parameters).
+
+World outcomes are hidden until they are revealed later in the round (see Revealing world outcomes).
 
 # Hiring and task allocation phase
 
-At the beginning of the Hiring phase, researchers can hire as many students as they want up to \[student\_base\_hire\_cap\] plus the bonus student cap value associated with the Talent development track position.
+Simplified game:
 
 At the beginning of the Hiring phase, researchers can hire or fire as many postdocs as they want, but the total amount of money it would take to pay all postdocs (\[cost\_of\_postdoc\] per postdoc) cannot exceed the total amount of money the researcher has at the moment. 
 
+In the simplified game, researchers cannot hire students. 
+
 Each research staff member is allocated to one of the following tasks during the task allocation phase:
 
-- Development (postdoc only): developing theories and methods  
-- Data collection: collecting data and making predictions about the world  
 - Experimentation: running experiments and developing new equipment  
+- Data collection: collecting data and making predictions about the world  
+- Development: developing theories and methods
+
+Normal game:
+
+At the beginning of the Hiring phase, researchers can hire or fire as many postdocs as they want, but the total amount of money it would take to pay all postdocs (\[cost\_of\_postdoc\] per postdoc) cannot exceed the total amount of money the researcher has at the moment. 
+
+At the beginning of the Hiring phase, researchers can also hire as many students as they want up to \[student\_base\_hire\_cap\] plus the bonus student cap value associated with the Talent development track position.
+
+Each research staff member is allocated to one of the following tasks during the task allocation phase:
+
+- Experimentation: running experiments and developing new equipment  
+- Data collection: collecting data and making predictions about the world  
+- Development (postdoc only): developing theories and methods  
 - Write-up: writing up research papers  
 - Peer-review: reviewing manuscripts submitted by others.  
 - Talent development (postdoc only, one staff member only): training research staff and scouting talents  
@@ -112,17 +130,19 @@ Each research staff member is allocated to one of the following tasks during the
 
 (Designer’s note: Students can and do develop new theories and methods, and they can train and scout staff. Restricting their allocation to these tasks was strictly a game mechanical choice, to limit too fast engine development.)
 
-The number of staff members that can be allocated to the tasks is unlimited, except for Experimentation, where the allocation is capped at the Researcher’s lab capacity, and Talent development where only a single staff member can be allocated.
+Both game modes:
+
+The number of staff members that can be allocated to the tasks is unlimited, except for Experimentation, where the allocation is capped at the Researcher’s lab capacity, and Talent development (normal game only), where only a single staff member can be allocated to.
 
 Hiring and task allocation is resolved parallel across researchers in secret.
 
-Once all staff has been allocated by all researchers, the staff allocation mat is revealed. \[The staff allocation mat has an area for fired postdocs.\]
+Once all staff has been allocated by all researchers, the staff allocation mat is revealed. 
 
-For each postdoc they fired, the researcher suffers a penalty of \[fired\_postdoc\_penalty\] academic credits. Then, the fired postdocs are removed from the task allocation mat of each researcher.
+The staff allocation mat has an area for fired postdocs. For each postdoc they fired, the researcher suffers a penalty of \[fired\_postdoc\_penalty\] academic credits. Then, the fired postdocs are removed from the task allocation mat of each researcher.
 
 At the end of the Hiring and task allocation phase, the research staff of each researcher are counted, a researcher with fewer than \[min\_cards\_burn\_each\_round\_per\_player\] counting as that many, and the sum of these numbers of cards is revealed from the top of the Game Period Deck. (If the Crisis card is revealed, see Crisis.)
 
-## Student task check phase
+## Student task check phase (normal game only)
 
 During the Student task check phase, each researcher throws as many six sided dice as many students they allocated to any task. For each die result lower than \[student\_unassigned\_base\_threshold\] minus the student reliability value associated with the researcher’s marker position on the Talent development track, one student is unassigned from their task and leaves the lab. The researcher can choose which of their students are unassigned, as long as the total number of students they choose matches the number of die results below the threshold.
 
@@ -130,7 +150,7 @@ During the Student task check phase, each researcher throws as many six sided di
 
 ## Task resolution
 
-In general, whenever a task is resolved by a staff member, it is removed from the task allocation mat. Unless it is explicitly specified otherwise, it is possible to not use a staff member to resolve the action they were allocated to. However, this indicates bad planning on the part of the researcher, and can hurt their reputation (an academic credit penalty is incurred in the Clean-up phase for each staff member left on the task allocation mat).
+In general, whenever a task is resolved by a staff member, it is removed from the task allocation mat. Unless it is explicitly specified otherwise, it is possible to not use a staff member to resolve the action they were allocated to. However, this indicates bad planning on the part of the researcher, and can hurt their reputation (In the normal game mode an academic credit penalty is incurred in the Clean-up phase for each staff member left on the task allocation mat).
 
 # Experimentation and equipment phase
 
@@ -143,13 +163,17 @@ Experimentation and equipment phase is completed sequentially. Each researcher, 
 
 Experimentation and equipment development actions often require citation of Methods.
 
-Lab capacity determines how many staff members can be allocated to Experimentation. Although space is limited on the research station, given enough funds and time, it can be expanded. A player who has at least one staff member allocated to experimentation may any time during the Experimentation and equipment phase choose to spend money to increase their Lab capacity by 1 (and only 1 per round), up to a maximum of \[starting\_lab\_capacity\_advanced\]+3. The cost increases with the lab size:
+Lab capacity determines how many staff members can be allocated to Experimentation. 
 
-lab capacity \[starting\_lab\_capacity\_advanced\]+1: \[bonus\_lab\_capacity\_1\]
+Normal game: 
 
-lab capacity \[starting\_lab\_capacity\_advanced\]+2: \[bonus\_lab\_capacity\_2\]
+Although space is limited on the research station, given enough funds and time, Lab capacity can be expanded. A player who has at least one staff member allocated to experimentation may any time during the Experimentation and equipment phase choose to spend money to increase their Lab capacity by 1 (and only 1 per round), up to a maximum of \[starting\_lab\_capacity\]+3. The cost increases with the lab size:
 
-lab capacity \[starting\_lab\_capacity\_advanced\]+3: \[bonus\_lab\_capacity\_3\]
+lab capacity \[starting\_lab\_capacity\]+1: \[bonus\_lab\_capacity\_1\]
+
+lab capacity \[starting\_lab\_capacity\]+2: \[bonus\_lab\_capacity\_2\]
+
+lab capacity \[starting\_lab\_capacity\]+3: \[bonus\_lab\_capacity\_3\]
 
 Increasing lab capacity does not use any staff members.   
 
@@ -179,69 +203,67 @@ New records always enter at the first record position, and push older records on
 
 ## Sensor installation and upgrade
 
-Researchers can install a sensor on a Probe to make it more versatile. 
+Researchers can install or upgrade a sensor on a Probe to make it more versatile and reliable. A researcher can install a sensor on any Input Parameter slot of a Probe, except Specialty slots, or upgrade a sensor that is already there by one level. Each time, published Methods for that slot's Input Parameter need to be cited, equal to the new sensor level (e.g. 1 method has to be cited to install a new level 1 sensor, while 3 methods have to be cited to upgrade a level 2 sensor to level 3). Note that Sensor level can only be increased by one level at a time, but the same Sensor can be upgraded multiple times in the same round.
 
-For sensor installation, the researcher needs to select one of the non-Specialty Input Parameter slots of a Probe that does not have a sensor installed yet, and cite one published Method specific to that Input Parameter. Once this is done, a level 1 Sensor is installed on that Input Parameter slots of a Probe, indicated by a level 1 Sensor marker.
-
-For sensor upgrade, the researcher needs to select one of the non-Specialty Input Parameter slots of a Probe that already has a level 1 or level 2 Sensor marker, and cite one more Method specific to that Input Parameter than the current level of the Sensor. When they do, the level of that Sensor is increased by 1 (exchange the marker to indicate the change).
-
-Methods with the Fresh out of print marker can only be used by their authors for sensor installation or upgrade.
-
-Note that Sensor level can only be increased by one level at a time, but the same Sensor can be upgraded multiple times in the same round.
-
-The author of the Method cited for the Sensor installation or upgrade immediately gets \[experiment\_method\_citation\_AC\_reward\]. Self-citation is possible, and it yields the same reward.
+Rewards for sensor installation or upgrade:
 
 The Researcher’s marker is placed on the Probe time slot of the Probe they installed or upgraded the sensor on, if the slot is not occupied yet.
 
-The researcher that installed or upgraded a sensor is immediately rewarded \[sensor\_install\_and\_upgrade\_AC\_reward\] x the Sensor level reached by the action academic credits. (E.g. Upgrading a level 2 Sensor to level 3 grants \[sensor\_install\_and\_upgrade\_AC\_reward\] \* 3 academic credits.  
+The author of the Method cited for the Sensor installation or upgrade immediately gets \[experiment\_method\_citation\_AC\_reward\]. Self-citation is possible, and it yields the same reward. (Methods with the Fresh out of print marker can only be cited by their authors.)
+
+The Researcher that installed or upgraded a sensor is immediately rewarded \[sensor\_install\_and\_upgrade\_AC\_reward\] x the Sensor level reached by the action academic credits. (E.g. Upgrading a level 2 Sensor to level 3 grants \[sensor\_install\_and\_upgrade\_AC\_reward\] \* 3 academic credits).
+
+During the Crisis period, sensor installation and upgrades are no longer allowed.
 
 # Probe time
 
-Researchers can get privileged access to data from a Probe. This is referred to a researcher having “Probe time” on a given Probe for that round. Probe time on a Probe allows the researcher to record that observation (see predictions) and later to support their scientific theories during the publication process (see journal tiers). Probe time is marked by putting a marker of the Researcher’s color above the Probe’s column on the World Grid. Only one Researcher’s marker can claim Probe time for each Probe. If the Probe time marker slot is already occupied (for example due to a Researcher installing a Sensor), it cannot be claimed by others.
+Researchers can get privileged access to data from a Probe. This is referred to a researcher having “Probe time” on a given Probe for that round. Probe time on a Probe allows the researcher to record that observation (see predictions) and later to support their scientific theories during the publication process (see journal tiers). Probe time is marked by putting a marker of the Researcher’s color next to the Probe on the World Grid. Only one Researcher’s marker can claim Probe time for each Probe. If the Probe time marker slot is already occupied (for example due to a Researcher installing a Sensor), it cannot be claimed by others.
 
-Those researchers who do not have Probe time yet on any of the Probes place their marker on one of the Probes in order of current academic credit (the researcher with the highest academic credit chooses first, with turn order as tiebreaker). Note that leftover probes cannot be occupied by players who got Probe time by installing or upgrading sensors, but a researcher can have Probe time on several Probes at the same time if they install or upgrade sensors on multiple Probes. 
+Those researchers who do not have Probe time yet on any of the Probes place their marker on one of the Probes in order of current academic credit. The researcher with the highest academic credit chooses first, with turn order as tiebreaker. (Note that leftover probes cannot be occupied by players who got Probe time by installing or upgrading sensors, but a researcher can have Probe time on several Probes at the same time if they install or upgrade sensors on multiple Probes.) 
 
 # Observation and prediction phase
 
 ## Revealing input parameters
 
-Probe stacks are dealt at the start of the Observation and prediction phase (so sensors installed in the Experimentation phase apply in the same round). If the Probe deck is exhausted, re-match discarded probe-stacks from the discard pile, and reshuffle. Cards are tracked by origin. Input Parameter Deck cards go to that deck's discard pile when they are thrown away: unrevealed noise cards at the end of the Observation and prediction phase, Probe readings that nobody records, and records discarded from the Records area or after publication. Cards held in records or manuscripts are not reshuffled.
+At the start of the Observation and prediction phase, deal one Probe stack to each Probe. Then fill in each Probe's input parameter slots (sensors installed in this round's Experimentation phase already count):
 
-For each round, the true Probe states (both inputs and outputs) are already pre-determined by the scenario that the players are playing (see scenario setup rules). However, during the Calm period, researchers have restricted resources, and the world they study is noisy, so they get restricted information about the world state.
+Specialty slot: show the true state.
 
-For each Probe (each column in the world grid) the top row (input parameter 1\) is always revealed. Aside from this, 1 additional input parameter is revealed from each Probe in the following order: input parameter 2 is revealed for the leftmost Probe, input parameter 3 is revealed for the second Probe from the left, etc. When reaching the end of the parameters to reveal, the parameter to be revealed for the next Probe returns to the beginning, so if there are 4 input parameters, for Probe 4 input parameter 2 is revealed. These two naturally revealed input parameters for a Probe are called the Prob’s Specialty Input Parameters. This resembles that each probe is specialized, and has very accurate equipment to detect two input parameters.
+Slot without a sensor: show a blank card.
 
-The non-Specialty Input Parameters for each probe are not revealed by default, and instead are represented by a blank card (only showing the input parameter’s number). However, additional sensors can be installed on each Probe, to improve its sensing capabilities (see Sensor installation rules). 
+Slot with a sensor: make a small sensor deck. Take \[probe\_true\_input\_deck\_size\] cards showing the true state. Add Noise cards drawn from that input parameter's Input Parameter Deck; the better the sensor, the fewer:
 
-Once a sensor is installed for a particular non-Specialty Input parameter, that input parameter is revealed for the Probe. However, the sensors are not perfect, they operate with some noise, so sometimes they don’t show the true state of the world. To determine the state that is revealed for each Probe’s each input parameter, a deck is formulated, called the Probe X Parameter Y Deck (e.g. Probe 1 Parameter 3 Deck). \[probe\_true\_input\_deck\_size\] identical cards of the true input parameter for that Probe's input parameter constitute the base deck. \[probe\_fake\_input\_deck\_size\] Noise Cards, drawn randomly from the Input Parameter Deck, are added to the Probe X Parameter Y Deck. Each Sensor Level over 1 halves the number of Noise Cards added to the base deck (Sensor level 1: \[probe\_fake\_input\_deck\_size\] Noise cards; Sensor level 2: \[probe\_fake\_input\_deck\_size\] / 2, rounded down Noise cards; Sensor level 3: \[probe\_fake\_input\_deck\_size\] / 4, rounded down, Noise cards). Then, Probe X Parameter Y Deck is shuffled and one card randomly drawn from it is revealed in the slot for the input parameter.
+Sensor level 1: \[probe\_fake\_input\_deck\_size\]
 
-(Note that this means that states shown on Probes’ non-Specialty Input Parameters on the world grid are not fully trustworthy. Experiments can help to ascertain true relationships. As technical and methodological developments become more prevalent and input sensors are installed and upgraded over the course of the game, players will be able to trust Probe readings more and more.)
+Sensor level 2: \[probe\_fake\_input\_deck\_size\]/2 (rounded down)
 
-When an Input Parameter Deck is exhausted, reshuffle the discarded input parameter deck cards, creating a new Input Parameter Deck.
+Sensor level 3: \[probe\_fake\_input\_deck\_size\]/4 (rounded down)
+
+Shuffle the sensor deck and show its top card in the slot. (It may be a Noise card, showing a wrong state.) (If the Input Parameter Deck is depleted, refer to the Decks and discard piles in the Pieces section.)
+
+During the Crisis period, Probes show the true states (see probes in crisis).
 
 ## Revealing world outcomes
 
 World outcomes remain hidden until predictions are finalized (see below).
 
-## Hot topic
+## Hot topic (normal game only)
 
 Each round, one of the Probes is designated as a Hot topic, marked by the hot topic counter. This resembles the constantly shifting interest and hype in the scientific community.
 
 ## Probes in Crisis
 
-During the Crisis period, all Probes have all of their input parameters revealed and all of them are the true input parameter (the top card of the base deck is revealed without shuffling in any Noise cards being shuffled in). This resembles that during a Crisis, researchers get extra resources and the best equipment. 
+During the Crisis period, all Probes have all of their input parameters revealed and all of them are the true input parameter (every input parameter slot shows its true state; no Noise cards are used). This resembles that during a Crisis, researchers get extra resources and the best equipment.
 
 ## Formulating predictions and preregistration
 
-Formulating predictions and preregistration is done in parallel across researchers and in secret, behind their lab shield. 
+Formulating predictions is done in parallel across researchers and in secret, behind their lab shield. To formulate a prediction, the researcher must have at least one research staff member assigned to data collection.
 
-To formulate a prediction, the researcher must have at least one research staff member assigned to data collection.
+Predictions mimic the structure of Probes and Theories. They specify input parameter states and world outcome states. Each prediction cites a published theory, it must be an exact copy of that theory, and it needs to be linked to a Probe. There can be no mismatching input parameter states between the prediction and the Probe. (This means that a theory including only one input parameter state can be used for prediction on a Probe that has multiple input parameters revealed. Also, a theory that includes four input parameter states can be used for prediction on a Probe that has only two input parameters revealed). The no mismatching input parameter state between theory and Probe reading is checked against the visible Probe readings (which can differ from the true world state due to sensor noise). One theory can only be cited once by the same Researcher on the same Probe within the same round. Also, no identical prediction can be made by the same Researcher on the same Probe within the same round through using another identical theory. 
 
-Predictions mimic the structure of Probes and Theories. They specify input parameter states and world outcome states. Each prediction must be an exact copy of a published theory, and it needs to be linked to a Probe. There can be no mismatching input parameter states between the prediction and the Probe. (This means that a theory including only one input parameter state can be used for prediction on a Probe that has multiple input parameters revealed. Also, a theory that includes four input parameter states can be used for prediction on a Probe that has only two input parameters revealed). The no mismatching input parameter state between theory and Probe reading is checked against the visible Probe readings (which can differ from the true world state due to sensor noise). One theory can only be used once by the same Researcher on the same Probe within the same round. Also, no identical prediction can be made by the same Researcher on the same Probe within the same round though using another identical theory. 
+Theories with the Fresh out of print marker can only be used by their authors.
 
-Theories with the Fresh out of print marker can only be cited by their authors.
-
-When there are multiple identical theories matching the prediction, the cited theory is determined based on this preference order: 1\. the researcher’s own theory, 2\. the theory with the lowest value on its Nobel Prize counter (to prevent another researcher from getting the Nobel Prize), 3\. the theory of the researcher with the lowest academic credit (to reduce the lead of the leading player), 4\. the earlier published theory gets the citation.
+When there are multiple identical theories matching the prediction, the cited theory is determined based on this preference order: 1\. the researcher’s own theory, 2\. the theory with the lowest value on its Nobel Prize counter (to prevent another researcher from getting the Nobel Prize), 3\. the theory of the researcher with the lowest academic credit (to reduce the lead of the leading player), 4\. the earlier published theory is cited.
 
 The specified Input Parameter states of the predictions are taken from the State Cards directly (not the Input Parameter Deck or the Probes).
 
@@ -249,7 +271,7 @@ The specified Input Parameter states of the predictions are taken from the State
 
 Once a prediction is formulated, it is turned face down (the researcher can check their own predictions at any time).
 
-During the Calm period, Researchers can choose to make some of their predictions public before world outcomes are revealed. This is called a Preregistered prediction. At most as many predictions can be Preregistered by the researcher as many research staff they allocated to data collection. Researchers who have the research staff capacity to Preregister can secretly choose whether and which of their predictions they would like to Preregister, by turning these predictions face up (but for now still behind the lab shield).
+During the Calm period, Researchers can choose to make some of their predictions public before world outcomes are revealed. This is called Preregistration. At most as many predictions can be Preregistered by the researcher as many research staff they allocated to data collection. Researchers who have the research staff capacity to Preregister can secretly choose whether and which of their predictions they would like to Preregister, by turning these predictions face up (but for now still in secret behind the lab shield).
 
 During the Crisis period all Predictions must be preregistered. Hidden predictions are no longer allowed. So during the Crisis period a researcher can make at most as many predictions as research staff they allocated to data collection.
 
@@ -289,7 +311,7 @@ Patent
 Counters
 
 - Sets the Nobel Prize counter of the cited theory to 0;   
-- Increases the retraction counter of the cited theory by 1\. The retraction counter is only adjusted once for each theory per probe per round, so if the same theory was used for prediction in the same round on the same Probe by multiple researchers, the retraction counter is only increased once.
+- Increases the retraction counter of the cited theory by 1\. The retraction counter is only adjusted once for each theory per probe per round, so if the same theory was used for prediction in the same round on the same Probe by multiple researchers, the retraction counter is only increased once. (A theory retracted during scoring still scores the later predictions for the researchers who made them, but its author does not get academic credit for citation and counters no longer move on that theory.)
 
 *Successful predictions:* 
 
@@ -302,7 +324,7 @@ Academic credits
 - \[citation\_reward\] academic credits are awarded for the author of the cited theory in the Calm period  
 - an additional \[crisis\_pred\_citation\_reward\_bonus\] academic credits are awarded for the author of the cited theory in the Crisis period
 
-Patent
+Patent (Normal game only)
 
 - A patent linked to the cited theory is created if that theory did not already have a linked patent, and is allocated to the researcher who made the prediction (not the author of the cited theory).
 
@@ -369,7 +391,7 @@ Researchers can archive their records, preserving them for the long term. At mos
 
 Archived records no longer have a record position, thus, they are not discarded at Clean-up, nor do they count toward Records capacity. Nevertheless, archived records count as being in the Records area for all other purposes, so they can be used for theory formation, or as supporting records during submission.
 
-# Publication
+# Publication (normal game only)
 
 ## Submission
 
@@ -450,7 +472,15 @@ Manuscripts get published during the Clean-up phase (see Clean-up phase rules).
 
 The researcher who published the paper scores academic credit indicated in the journal tier table. Open Access publications score an additional \[OA\_publication\_AC\_reward\] academic credits.
 
-# Funding
+# Publication in the simplified game
+
+Simplified game:
+
+After the Development phase, theories and methods formulated during the Development phase are put directly in the Accept area of the Submission Portal with a tier 0 journal indicator, no supporting records, and 0 Rounds in processing tokens. No submission fee is paid, and publication is not scored. 
+
+# Funding (normal game only)
+
+Normal game:
 
 Funding is used to pay research staff and article processing charges, and to build up lab capacity.
 
@@ -488,6 +518,10 @@ During the Clean-up phase, each patent grants \[patent\_funding\] money to the o
 
 (Designer’s note: patents represent funding from the industry, actual patent payments, and spinoff companies)
 
+# Funding in the simplified game
+
+In the simplified game, researchers get a flat rate of \[funding\_simplified\] each round, and grants and patents are ignored. 
+
 # Nobel Prize
 
 Once the Nobel Prize counter reaches \[nobel\_condition\], the author of that theory immediately wins the game. 
@@ -496,7 +530,7 @@ The Nobel Prize is only awarded during the Calm period. The Nobel Prize counter 
 
 # Retraction
 
-Once the Retraction counter reaches \[retraction\_threshold\], the theory becomes unpublished (the theory itself returned to its author, all other cards attached to the theory, like patents, journal tier indicator, etc. are discarded). Furthermore, when a theory is retracted, its author suffers a penalty of \[retraction\_ac\_penalty\] academic credits.
+Once the Retraction counter reaches \[retraction\_threshold\], the theory becomes unpublished. In the normal game the theory itself is returned to its author, all other cards attached to the theory, like patents, journal tier indicator, etc. are discarded. In the simplified game, the theory is simply discarded. Furthermore, when a theory is retracted, its author suffers a penalty of \[retraction\_ac\_penalty\] academic credits.
 
 Retractions are only made during the Calm period. The Retraction counters are not tracked during the Crisis period.
 
@@ -512,7 +546,7 @@ During the Crisis period, making successful predictions become a matter of life 
 
 When the total number of unsuccessful predictions during the Crisis period reaches \[crisis\_condition\], it is called a Crisis Crash. A Crisis Crash ends the game immediately and all researchers lose collectively.
 
-# Talent development phase
+# Talent development phase (normal game only)
 
 If a researcher has allocated staff to Talent development, they can advance their marker on the Talent development track by one position. The Talent development marker can be advanced at most by one position each round.
 
@@ -526,31 +560,31 @@ The values for each position are in parameter\_defaults.yaml in the \[talent\_de
 
 Each researcher pays \[cost\_of\_postdoc\] after each of their postdocs to the bank.
 
-Advance the Hot topic marker one space to the right. (When it is at the rightmost Probe at the beginning of the Clean-up phase, advance it to the leftmost Probe.) 
+Normal game: Advance the Hot topic marker one space to the next Probe. (When it is at the last Probe at the beginning of the Clean-up phase, advance it to the first Probe.) 
 
 Return the Researcher's markers from the Probe time slots.
 
 Any Fresh out of print markers are removed.
 
-Those manuscripts in the Accept area of the Submission Portal that have 0 Rounds in processing tokens during the publication step of the Clean-up phase are revealed (if not open already) and published. When published, theories and methods are moved to the Published Papers area and they each get a Fresh out of print marker (meaning that they can only be used by the researcher who published them until the marker is present).
+Those manuscripts in the Accept area of the Submission Portal that have 0 Rounds in processing tokens during the publication step of the Clean-up phase are revealed (if not open already), published, and when in the normal game, scored. When published, theories and methods are moved to the Published Papers area and they each get a Fresh out of print marker (meaning that they can only be used by the researcher who published them until the marker is present).
 
-1 Rounds in processing token is removed from each manuscript in the accept area of the Submission Portal.
+Normal game: 1 Rounds in processing token is removed from each manuscript in the accept area of the Submission Portal.
 
-Grant funding track requirements are checked and positions are adjusted.
+Normal game: Grant funding track requirements are checked and positions are adjusted.
 
-The researcher suffers \[unused\_staff\_penalty\] academic credit penalty for each staff member left on the task allocation mat.
+Normal game: The researcher suffers \[unused\_staff\_penalty\] academic credit penalty for each staff member left on the task allocation mat.
 
-Unpaid postdocs leave. For each unpaid postdoc, suffer a penalty of \[unpaid\_postdoc\_penalty\] academic credits. Additionally, if there were any unpaid postdocs in the lab this round, the researcher has to move their marker backwards by 1 position on the Talent development track.
+Normal game: Unpaid postdocs leave. For each unpaid postdoc, suffer a penalty of \[unpaid\_postdoc\_penalty\] academic credits. Additionally, if there were any unpaid postdocs in the lab this round, the researcher has to move their marker backwards by 1 position on the Talent development track.
 
-All students leave the lab.
+Normal game: All students leave the lab.
 
 Unspent money is returned to the bank.
 
 Return all staff members to their researchers.
 
-Each researcher gets as much money as the level of funding indicated for their current position on the Grant funding track.
+Each researcher gets as much money as the level of funding indicated for their current position on the Grant funding track. In the simplified game, the researchers get the flat rate instead.
 
-Each researcher gets \[patent\_funding\] for each patent they own.
+Normal game: Each researcher gets \[patent\_funding\] for each patent they own.
 
 During the Crisis period, advance the rounds in crisis track by one. When the crisis track cannot be advanced any further, the game ends.
 
@@ -558,7 +592,7 @@ Records in the Records area that are in positions beyond their \[records\_capaci
 
 The First researcher token moves to the next player counterclockwise. 
 
-# Alliance
+# Alliance (normal game only)
 
 A formal alliance can be formed at any time before the Crisis card is revealed. A formal alliance between two researchers means that if one of the researchers would win the game due to any game rule, the other player would also win. The formal alliance needs to be publicly announced and accepted by all players in the alliance. Alliances can be broken at any time unilaterally until the Warning shot card is revealed. At the time the Warning shot card is revealed, a “last chance to leave” stage is triggered, where players get a last chance to leave a formal alliance. This is decided secretly (behind the lab shields) in parallel by researchers by setting aside the alliance tokens that the player wants to leave. Once everyone is done, decisions are revealed at the same time for every player. Once this stage is over (everyone who wants leaves or passes), alliances are unbreakable.
 
