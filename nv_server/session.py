@@ -475,7 +475,7 @@ class GameSession:
 
     def _decision_view(self, state: GameState, seat: int) -> dict[str, Any]:
         view = player_view(state, seat)
-        view["game_log"] = game_log(self.events, seat)
+        view["game_log"] = game_log(self.events, seat, state)
         return view
 
     # Views ------------------------------------------------------------------------------------

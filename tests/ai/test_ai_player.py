@@ -4,6 +4,7 @@ tests never call a real API."""
 import csv
 import json
 import re
+from collections import Counter
 
 import pytest
 
@@ -15,8 +16,8 @@ from nv_ai.provider import Reply, ToolCall
 from nv_core import actions as a
 from nv_core.engine import legal_actions, new_game
 from nv_core.text import render_text
-from nv_core.views import player_view
-from nv_sim.game import AIContext, ai_models, ai_seat, check_seat_types, make_player, play_game
+from nv_core.views import player_view, visible_events
+from nv_sim.game import AIContext, ai_models, ai_seat, check_seat_types, game_log, make_player, play_game
 from nv_world.game import load_game_world
 
 WORLD_FILE = "scenarios/venus_expedition/worlds/world_seed1.json"
@@ -423,6 +424,46 @@ def test_each_decision_starts_with_the_whole_game_log(venus, software):
     log = late.split("\n\n", 1)[0]
     assert "Round 2 begins" in log and "left out" not in log  # the whole game, from its start
     assert " is ready" not in log
+
+
+def test_the_game_log_keeps_world_states_only_while_their_records_are_held(venus):
+    """Specification 8.2: experiment results and earlier rounds' Probe rows leave the log with their records."""
+    world, settings = venus
+    seen = {}
+
+    def watch(state, seat, action, events):
+        seen.setdefault("events", []).extend(events)
+        seen["state"] = state
+
+    play_game(world, settings, 4, ["selfish", "cooperative"], on_action=watch)
+    events, state = seen["events"], seen["state"]
+    left_out = kept_earlier = 0
+    for seat in range(state.n_players):
+        log = Counter(game_log(events, seat, state))
+        records = state.researcher(seat).records
+        held_experiments = {c.experiment for c in records.cards}
+        held_rows = {(o.round, o.probe) for o in records.observations}
+        expected = Counter()
+        for e in visible_events(events, seat):
+            if e.kind == "experiment_result":
+                kept = e.data["experiment"] in held_experiments
+            elif e.kind in ("probe", "outcomes"):
+                kept = e.round == state.round or (e.round, e.data["probe"]) in held_rows
+            else:
+                continue
+            expected[e.text] += kept
+            left_out += not kept
+            kept_earlier += kept and e.kind == "probe" and e.round < state.round
+        assert {t: log[t] for t in expected} == dict(expected)
+        assert "Round 2 begins" in log and not any(" is ready" in t for t in log)  # everything else stays
+    assert left_out > 0 and kept_earlier > 0  # both cases happen in this game
+
+
+def test_the_model_is_told_to_keep_world_states_out_of_its_notes(venus, software):
+    world, settings = venus
+    player = make_player("ai", 0, 1, world, _context(software), settings)
+    assert "Your notes must not hold exact world states" in player.instructions
+    assert "archive the records you want" in player.instructions
 
 
 def test_the_oldest_log_lines_are_left_out_to_keep_within_the_input_limit(venus, software):

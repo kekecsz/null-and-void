@@ -4,7 +4,8 @@ decision's message.
 
 Order matters for caching: tools and instructions are identical for every decision and every
 seat up to the persona, which comes last. A decision's message starts with the game log, which
-only grows at its end, so the log seen at the previous decision is cached too.
+grows at its end (lines leave it only when records do, mostly at a round's end), so the log seen
+at the previous decision is mostly cached too.
 """
 
 import json
@@ -66,9 +67,9 @@ INTERFACE = """\
 # How you play
 
 You are one of the researchers in a game of Null & Void, played by software. The rules above are
-the full rulebook. Each message shows the game log (everything that happened that you were allowed
-to see, oldest first), your current view of the game, your private notes, and the actions you can
-take now.
+the full rulebook. Each message shows the game log (what happened that you were allowed to see,
+oldest first; see "Memory" below), your current view of the game, your private notes, and the
+actions you can take now.
 
 - Act by calling exactly one tool per message. The engine checks every action against the rules;
   if it refuses one, you get the reason and can try again.
@@ -78,9 +79,21 @@ take now.
 - In steps where everyone decides in secret (hiring, predictions, reveals, development, submission,
   peer review), make your choices one call at a time and call `commit` when you are done.
 - Every tool takes `reason`: one short sentence on why. It may also take `notes`: your private notes,
-  replacing the old ones. You see them in every message, so keep plans and what you learned there
-  (e.g. experiment results). Notes are cut to {notes_max} characters.
+  replacing the old ones. You see them in every message, so keep your plans there. Notes are cut
+  to {notes_max} characters.
 - Hidden information stays hidden: other researchers cannot see your lab, and you cannot see theirs.
+
+## Memory
+
+At the table, researchers remember world states through their records, not by heart, and this
+game keeps that fair. The game log leaves out the Probe readings and outcomes of earlier rounds,
+unless you hold that observation record, and the results of your experiments once their records
+have left your Records area. Your notes must not hold exact world states either: no Probe readings
+or outcomes, no experiment inputs or results, no lists of which input states gave which outcomes.
+To remember a world state, keep its record in your Records area, and archive the records you want
+to keep beyond its capacity (Development phase: Archive a record). Your notes may hold plans,
+judgments about theories (e.g. which published theories you trust and why) and what the other
+researchers seem to be doing.
 """
 
 # The rulebook has rules for two games (Basic mechanics); the game being played is a setting.
@@ -206,7 +219,7 @@ def options_text(options: list[Option]) -> str:
 
 def log_text(log: list[str], left_out: int = 0) -> str:
     lines = ([f"  ({left_out} earlier lines left out: the request would be too long)"] if left_out else [])
-    return "GAME LOG (everything you were allowed to see, oldest first)\n" + ("\n".join(lines + [f"  {e}" for e in log]) or "  (none)")
+    return "GAME LOG (what you were allowed to see, oldest first; earlier world states only through your records)\n" + ("\n".join(lines + [f"  {e}" for e in log]) or "  (none)")
 
 
 def fit_log(log: list[str], room: int) -> tuple[list[str], int]:
