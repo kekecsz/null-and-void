@@ -482,7 +482,7 @@ The software's own settings live in `settings/software.yaml`:
 | `ai_default_model` | `gpt-6-luna`; any model in `ai_price_table` can be chosen per seat in the lobby |
 | `ai_reasoning_effort` | the model's default (`medium` for GPT-6 Luna) |
 | `ai_max_cost_per_decision` | 0.50 USD, reasoning included |
-| `ai_total_budget` | 10.00 USD for all AI calls, across runs (testing in milestones 4 and 5) |
+| `ai_total_budget` | 50.00 USD for all AI calls, across runs (testing in milestones 4 and 5) |
 | `ai_max_input_tokens` | 80,000 per decision (the rulebook and tools take about 22,000; the rest holds the game log) |
 | `ai_retry_limit` | 2 |
 | `ai_notes_max_chars` | 2,000 |
