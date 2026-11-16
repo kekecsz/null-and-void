@@ -79,3 +79,17 @@ selfish bots pull out only when they lead, or when `public_support` beats their 
 simulator can show how often a pullout happens and whom it favours.
 
 **Waiting for:** Zoltan's decisions on points 1 to 5, then the rulebook text and the parameter.
+
+## Rulebook PDF: a new picture for "Probes with different sensor levels" (to do)
+
+**Document:** `nv_rulebook/illustrations.py` (the scene `world_grid_exp_with_different_sensor_levels`); the
+picture `web/images/world_grid_exp_with_different_sensor_levels.png`.
+
+**Request (Zoltan, 2026-11-16):** the Figure captioned "Probes with different sensor levels" (Sensor installation
+and upgrade) should show the World grid during the Experimentation and equipment phase, as seen by a researcher
+who has at least one sensor install option and at least one sensor upgrade option, so the plus signs on the
+sensors are visible. The caption is already in the PDF; the picture is not yet retaken.
+
+**Waiting for:** running `nv-rulebook-illustrations` on a computer with the `illustrations` extra installed
+(Playwright and Edge or Chrome), after the scene is changed to find (or make) that situation. Remove this entry
+once the new picture is committed.
