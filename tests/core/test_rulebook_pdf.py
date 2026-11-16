@@ -237,7 +237,9 @@ def test_only_figures_are_referred_to_and_each_kind_is_numbered_on_its_own():
     text = read_markdown(RULEBOOK)
     story = _story(text)
     figures = sum(1 for k, _ in blocks(text) if k == "figure")
-    assert [t for t in _texts(story) if t.startswith("See ")] == [f"See Figure {n}." for n in range(2, figures + 2)]  # 1: overview page
+    see = [t for t in _texts(story) if t.startswith("See ")]
+    assert [t.split()[2].rstrip(".") for t in see] == [str(n) for n in range(2, figures + 2)]  # 1: overview page
+    assert all(t.startswith("See Figure ") for t in see)
     labels = [f.figure.label for f in story if type(f) is FigureAnchor]
     assert labels[0] == "Illustration 1" and f"Figure {figures + 1}" in labels
 
@@ -267,13 +269,15 @@ def test_every_figure_is_printed_on_a_page_with_the_paragraph_that_refers_to_it(
     import io
 
     from nv_rulebook.fill import fill_rulebook
-    from nv_rulebook.pdf import MIN_FIGURE_SCALE, lay_out, place_figures, read_content
+    from nv_rulebook.pdf import MIN_FIGURE_SCALE, lay_out, misplaced, place_figures, read_content
 
     settings = load_settings().model_dump()
     content = read_content(fill_rulebook(read_markdown(RULEBOOK), settings), settings)
-    plan, breaks, scales, pages = place_figures(content)
-    doc = lay_out(content, pages, plan, breaks, io.BytesIO(), scales)
+    placement, pages = place_figures(content)
+    doc = lay_out(content, pages, placement, io.BytesIO())
     assert doc.anchor_pages and sorted(doc.printed) == sorted(doc.anchor_pages)  # each printed once
-    for n, end in doc.anchor_pages.items():
-        assert doc.start_pages[n] <= plan[n] <= end, f"Figure {n}"
-    assert all(scale >= MIN_FIGURE_SCALE for scale in scales.values())
+    assert misplaced(doc, placement) == set()
+    for n, end in doc.anchor_pages.items():  # on the page of its paragraph, or next to it when the text says so
+        assert doc.start_pages[n] - 1 <= placement.plan[n] <= end + 1, f"Figure {n}"
+        assert (placement.plan[n] in (doc.start_pages[n] - 1, end + 1)) == (n in placement.shift), f"Figure {n}"
+    assert all(scale >= MIN_FIGURE_SCALE for scale in placement.scales.values())

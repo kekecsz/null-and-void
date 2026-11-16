@@ -11,7 +11,7 @@ import io
 import math
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator
 from xml.sax.saxutils import escape
@@ -54,6 +54,8 @@ FIGURE_AREA = BODY_HEIGHT * 0.5
 MAX_LAYOUTS = 30  # attempts to put every figure on the page that refers to it
 MIN_FIGURE_SCALE = 0.6  # a figure shrunk to keep its reference on its page; below this, the reference moves
 FIGURE_GAP = 5 * mm  # between a figure's caption and what follows
+FIRST_BODY_PAGE = 3  # after the cover and the round overview
+NEXT_PAGE_COST =BODY_HEIGHT / 2  # a figure on the page after or before its paragraph is as bad as a quarter page left empty
 
 INK, PAPER, RUST, GREY, BOX = [colors.HexColor(x) for x in ("#1C1A17", "#FAF6EC", "#A8481F", "#6B655B", "#F1E9D8")]
 RUST_HEX = "#A8481F"
@@ -410,6 +412,17 @@ class FigureStart(FigureAnchor):
     """Where the paragraph that refers to a figure starts."""
 
 
+class BreakMark(FigureAnchor):
+    """Just before the page break of a figure's paragraph; the layout notes how much room it leaves."""
+
+
+def _room_left(doc) -> float:
+    """The column space left on the page, from where the layout is now."""
+    frames = doc.pageTemplate.frames
+    later = frames[frames.index(doc.frame) + 1:] if doc.frame in frames else []
+    return (doc.frame._y - doc.frame._y1) + sum(f._height for f in later)
+
+
 # Pages -------------------------------------------------------------------------------------------
 def _paper(canvas, doc) -> None:
     canvas.setFillColor(PAPER)
@@ -524,6 +537,7 @@ class _Issue(BaseDocTemplate):
         self.plan = plan or {}  # figure number -> the page it is printed on
         self.anchor_pages: dict[int, int] = {}  # figure number -> the page whose text refers to it
         self.anchor_room: dict[int, float] = {}  # figure number -> column space left on that page after the reference
+        self.break_room: dict[int, float] = {}  # figure number -> column space its page break leaves empty
         self.start_pages: dict[int, int] = {}  # figure number -> the page where its referring paragraph starts
         self.page_figures: list[PageFigure] = []  # those at the top of this page
         self.shrink = 1.0
@@ -550,11 +564,12 @@ class _Issue(BaseDocTemplate):
         if isinstance(flowable, FigureStart):
             self.start_pages[flowable.figure.number] = self.page
             return
+        if isinstance(flowable, BreakMark):
+            self.break_room[flowable.figure.number] = _room_left(self)
+            return
         if isinstance(flowable, FigureAnchor):
-            frames = self.pageTemplate.frames
-            later = frames[frames.index(self.frame) + 1:] if self.frame in frames else []
             self.anchor_pages[flowable.figure.number] = self.page
-            self.anchor_room[flowable.figure.number] = (self.frame._y - self.frame._y1) + sum(f._height for f in later)
+            self.anchor_room[flowable.figure.number] = _room_left(self)
             return
         heading = getattr(flowable, "heading", None)
         if heading is None:
@@ -611,8 +626,24 @@ def _overview(content: Content, pages: dict[str, int]) -> list:
             figure, caption, KeepTogether([Paragraph("Contents", _STYLES["h2"]), contents])]
 
 
-def build_story(content: Content, pages: dict[str, int], breaks: set[int] = frozenset()) -> list:
-    """``breaks``: figures whose referring paragraph starts a new page (see place_figures)."""
+@dataclass
+class Placement:
+    """Where the pictures printed across the top of a page go (place_figures), by their number."""
+
+    plan: dict[int, int] = field(default_factory=dict)  # the page each is printed on
+    breaks: set[int] = field(default_factory=set)  # those whose referring paragraph starts a new page
+    shift: dict[int, int] = field(default_factory=dict)  # those on the page after (1) or before (-1) their paragraph
+    scales: dict[int, float] = field(default_factory=dict)  # those shrunk to stay with their paragraph
+
+    def copy(self) -> "Placement":
+        return Placement(dict(self.plan), set(self.breaks), dict(self.shift), dict(self.scales))
+
+    def key(self) -> tuple:
+        return frozenset(self.breaks), frozenset(self.shift.items())
+
+
+def build_story(content: Content, pages: dict[str, int], placement: Placement | None = None) -> list:
+    placement = placement or Placement()
     story: list = [Spacer(1, 1), NextPageTemplate("overview"), PageBreak(), *_overview(content, pages), NextPageTemplate("body"), PageBreak()]
     section = sub = 0
     tables = 1
@@ -636,9 +667,15 @@ def build_story(content: Content, pages: dict[str, int], breaks: set[int] = froz
                 continue
             placed += 1
             figure = PageFigure(path, placed, label)
-            story[-1:-1] = [PageBreak()] * (placed in breaks) + [FigureStart(figure)]  # before the referring paragraph
+            story.insert(len(story) - 1, FigureStart(figure))  # before the referring paragraph
+            if placed in placement.breaks:  # the new page starts with the headings above the paragraph, if any
+                at = len(story) - 2
+                while at > 0 and (getattr(story[at - 1], "heading", None) or isinstance(story[at - 1], NeedRoom)):
+                    at -= 1
+                story[at:at] = [BreakMark(figure), PageBreak()]
             if kind == "figure":  # an illustration is only placed, not referred to
-                story.append(Paragraph(f"See {label}.", _STYLES["see_figure"]))
+                where = {1: " on the next page", -1: " on the previous page"}.get(placement.shift.get(placed), "")
+                story.append(Paragraph(f"See {label}{where}.", _STYLES["see_figure"]))
             story.append(FigureAnchor(figure))
         elif kind == "h2":
             sub += 1
@@ -671,38 +708,94 @@ def build_story(content: Content, pages: dict[str, int], breaks: set[int] = froz
     return story
 
 
-def lay_out(content: Content, known_pages: dict[str, int], plan: dict[int, int], breaks: set[int], target,
-            scales: dict[int, float] | None = None) -> _Issue:
-    story = build_story(content, known_pages, breaks)
+def lay_out(content: Content, known_pages: dict[str, int], placement: Placement, target) -> _Issue:
+    story = build_story(content, known_pages, placement)
     figures = {f.figure.number: f.figure for f in story if type(f) is FigureAnchor}
-    for n, scale in (scales or {}).items():
+    for n, scale in placement.scales.items():
         figures[n].scale = scale
-    doc = _Issue(target, content, known_pages, figures, plan)
+    doc = _Issue(target, content, known_pages, figures, placement.plan)
     doc.build(story)
     return doc
 
 
-def place_figures(content: Content) -> tuple[dict[int, int], set[int], dict[int, float], dict[str, int]]:
+def wanted_page(doc: _Issue, placement: Placement, n: int) -> tuple[int, int]:
+    """The pages figure ``n`` may go on in this layout: its paragraph's, or the one after or before."""
+    start, end = doc.start_pages[n], doc.anchor_pages[n]
+    shift = placement.shift.get(n)
+    if shift == -1 and start - 1 < FIRST_BODY_PAGE:  # no figures on the cover or the overview page
+        return 0, -1
+    return (end + 1, end + 1) if shift == 1 else (start - 1, start - 1) if shift == -1 else (start, end)
+
+
+def misplaced(doc: _Issue, placement: Placement) -> set[int]:
+    """The figures not on a page they may go on (wanted_page)."""
+    return {n for n in doc.anchor_pages if not wanted_page(doc, placement, n)[0] <= placement.plan.get(n, 0) <= wanted_page(doc, placement, n)[1]}
+
+
+def place_figures(content: Content) -> tuple[Placement, dict[str, int]]:
     """Each figure (and illustration) goes on a page with the paragraph that refers to it: the
-    paragraph before its marker in the rulebook. Placing figures moves the text, so the layout is repeated, each figure
-    moved to the nearest such page of the last layout, until nothing has to move. A figure that
-    pushes its whole paragraph to the next page (and without which the paragraph moves back) is
-    shrunk until the paragraph stays (two columns lose its height each); when that would leave
-    less than MIN_FIGURE_SCALE, the paragraph starts the next page and the figure goes there too.
-    Returns (figure number -> page, the figures with such a page break, figure number -> scale,
-    the page of each section)."""
-    plan: dict[int, int] = {}
-    breaks: set[int] = set()
-    scales: dict[int, float] = {}
+    paragraph before its marker in the rulebook. Placing figures moves the text, so the layout is
+    repeated, each figure moved to the nearest such page of the last layout, until nothing has to
+    move. A figure that pushes its whole paragraph to the next page (and without which the
+    paragraph moves back) is shrunk until the paragraph stays (two columns lose its height each).
+    When that would leave less than MIN_FIGURE_SCALE, the paragraph starts the next page and the
+    figure goes there too. Such a page break can leave much of a page empty, and it is decided
+    while the other figures are still moving. So afterwards, again and again, each break is tried
+    without it, or with the figure at the top of the page after or before its paragraph instead
+    ("See Figure N on the next page."), and the best of these is kept while it lowers _cost.
+    Returns the placement and the page of each section."""
+    placement, doc, wrong = _settle(content, Placement())
+    seen = {placement.key()}
+    while True:
+        tries = []
+        for n in sorted(placement.breaks | set(placement.shift)):
+            without = placement.copy()
+            without.breaks.discard(n)
+            without.shift.pop(n, None)
+            tries.append(without)
+            for shift in (1, -1):
+                if placement.shift.get(n) != shift:
+                    instead = without.copy()
+                    instead.shift[n] = shift
+                    tries.append(instead)
+        best, lowest = None, _cost(doc, placement)
+        for trial in tries:
+            if trial.key() in seen:
+                continue
+            seen.add(trial.key())
+            tried, tried_doc, tried_wrong = _settle(content, trial)
+            if not tried_wrong and _cost(tried_doc, tried) < lowest:
+                best, lowest = (tried, tried_doc, tried_wrong), _cost(tried_doc, tried)
+        if best is None:
+            break
+        placement, doc, wrong = best
+    if wrong:
+        labels = ", ".join(doc.figures[n].label for n in sorted(wrong))
+        print(f"warning: {labels}: not on a page with the text that refers to them", file=sys.stderr)
+    return placement, doc.found_pages
+
+
+def _cost(doc: _Issue, placement: Placement) -> tuple[int, float]:
+    """What place_figures keeps down: the pages, then the column space the page breaks leave empty,
+    with a figure on the page after or before its paragraph counted as a quarter of a page."""
+    return doc.page, sum(doc.break_room.get(n, 0) for n in placement.breaks) + NEXT_PAGE_COST * len(placement.shift)
+
+
+def _settle(content: Content, placement: Placement) -> tuple[Placement, _Issue, set[int]]:
+    """The repeated layout of place_figures, from a first placement (which it changes).
+    Returns the placement, the last layout and the figures not where they belong."""
+    plan, scales = placement.plan, placement.scales
     moves: set[tuple[int, int, int]] = set()  # (figure, planned page, page it had to move to)
-    doc = None
     for _ in range(MAX_LAYOUTS):
-        doc = lay_out(content, {}, plan, breaks, io.BytesIO(), scales)
-        wrong = {n for n, end in doc.anchor_pages.items() if not doc.start_pages[n] <= plan.get(n, 0) <= end}
+        doc = lay_out(content, {}, placement, io.BytesIO())
+        wrong = misplaced(doc, placement)
         if not wrong:
             break
         for n in sorted(wrong):
             start, end, planned = doc.start_pages[n], doc.anchor_pages[n], plan.get(n)
+            if n in placement.shift:
+                plan[n] = wanted_page(doc, placement, n)[0]
+                continue
             page = end if planned is None or planned > end else start
             plan[n] = page
             if planned is None:
@@ -713,15 +806,12 @@ def place_figures(content: Content) -> tuple[dict[int, int], set[int], dict[int,
                 scale = min(fits / (figure.size()[1] / figure.scale), scales.get(n, 1.0) * 0.85)
                 if scale >= MIN_FIGURE_SCALE:
                     scales[n] = scale
-                else:
-                    breaks.add(n)
-                    scales.pop(n, None)
-                    plan[n] = planned
+                    continue
+                scales.pop(n, None)
+                placement.breaks.add(n)
+                plan[n] = planned
             moves.add((n, planned, page))
-    else:
-        labels = ", ".join(doc.figures[n].label for n in sorted(wrong))
-        print(f"warning: {labels}: not on a page with the text that refers to them", file=sys.stderr)
-    return plan, breaks, scales, doc.found_pages
+    return placement, doc, wrong
 
 
 def make_pdf(out: Path = DEFAULT_OUT, rulebook: Path = RULEBOOK) -> Path:
@@ -731,10 +821,10 @@ def make_pdf(out: Path = DEFAULT_OUT, rulebook: Path = RULEBOOK) -> Path:
     filled = fill_rulebook(read_markdown(rulebook), settings)
     check_printable(filled)
     content = read_content(filled, settings)
-    plan, breaks, scales, pages = place_figures(content)  # the passes also find the page of each section
+    placement, pages = place_figures(content)  # the passes also find the page of each section
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    lay_out(content, pages, plan, breaks, str(out), scales)
+    lay_out(content, pages, placement, str(out))
     return out
 
 
