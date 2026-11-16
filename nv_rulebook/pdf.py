@@ -17,7 +17,7 @@ from typing import Any, Iterator
 from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
@@ -91,9 +91,15 @@ _ITALICS = re.compile(r"(?<![\w*])\*(\S(?:[^*\n]*\S)?)\*(?![\w*])")
 _LINK = re.compile(r"\[([^\]]+)\]\((https?:[^)\s]+)\)")
 _NOTE_AT_END = re.compile(r"\s*[\[(]((?:Designer|Developer))(?:[’']s)? notes?:\s*(.*?)[\])]\.?\s*$", re.DOTALL)
 _HEADING = re.compile(r"^(#{1,2})\s+(.*)$")
-# "[Illustration: <file in web/images>]" places a picture; "[... goes here]" marks what this
-# script draws itself (the cover, the overview page).
-_ILLUSTRATION = re.compile(r"^\[Illustration:\s*(.+?)\s*\]$")
+# "[Figure: <file in web/images>]" places a picture the text refers to ("See Figure N."), and
+# "[Illustration: <file>]" one it does not (a photo); "[... goes here]" marks what this script
+# draws itself (the cover, the overview page).
+_PICTURE = re.compile(r"^\[(Figure|Illustration):\s*(.+?)\s*\]$")
+# Captions other than the file name in words.
+_CAPTIONS = {
+    "2438_pioneer_venus_map_of_venus.jpg": "A map of Venus compiled from data from the Pioneer Venus Orbiter",
+    "world_grid_exp_with_different_sensor_levels.png": "Probes with different sensor levels",
+}
 _PLACEHOLDER = re.compile(r"^\[[^\]]* goes here\]$")
 
 
@@ -131,11 +137,11 @@ def blocks(text: str) -> Iterator[tuple[str, Any]]:
             continue
         table = TABLE_LINE.match(stripped)
         heading = _HEADING.match(stripped)
-        illustration = _ILLUSTRATION.match(stripped)
+        picture = _PICTURE.match(stripped)
         if _PLACEHOLDER.match(stripped):
             continue
-        if illustration:
-            yield "illustration", illustration.group(1)
+        if picture:
+            yield picture.group(1).lower(), picture.group(2)
         elif table:
             yield "table", table.group(1)
         elif heading:
@@ -332,7 +338,7 @@ def note_box(label: str, text: str) -> Table:
     return box
 
 
-def crisis_figure(content: Content, number: int) -> list:
+def crisis_figure(content: Content, label: str) -> list:
     stat = ParagraphStyle("Stat", fontName=_DISPLAY, fontSize=22, leading=24, textColor=RUST)
     words = ParagraphStyle("StatWords", fontName=_SANS, fontSize=7.8, leading=9.8, textColor=INK)
     settings = content.settings
@@ -341,7 +347,7 @@ def crisis_figure(content: Content, number: int) -> list:
     stats.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, 0), 0.9, RUST), ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0),
                                ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
     return [Image(str(CRISIS_IMAGE), width=COLUMN, height=COLUMN * 0.75),
-            Paragraph(f"<b>Figure {number}.</b> A mountain on Venus.", _STYLES["figure_caption"]), stats]
+            Paragraph(f"<b>{label}.</b> A mountain on Venus.", _STYLES["figure_caption"]), stats]
 
 
 @dataclass
@@ -349,13 +355,14 @@ class PageFigure:
     """A picture printed across the top of the page whose text refers to it (make_pdf)."""
 
     path: Path
-    number: int
+    number: int  # the order of the pictures placed this way, which the layout goes by
+    label: str = ""  # "Figure 3" or "Illustration 1", as captioned
     scale: float = 1.0  # shrunk to keep the text that refers to it on its page (place_figures)
 
     @property
-    def caption(self) -> Paragraph:  # the file name in words
-        words = re.sub(r"^\d+\s*", "", self.path.stem.replace("_", " ")).strip()
-        return Paragraph(f"<b>Figure {self.number}.</b> {escape(words[:1].upper() + words[1:])}.", _STYLES["figure_caption"])
+    def caption(self) -> Paragraph:  # the file name in words, unless _CAPTIONS has one
+        words = _CAPTIONS.get(self.path.name) or re.sub(r"^\d+\s*", "", self.path.stem.replace("_", " ")).strip()
+        return Paragraph(f"<b>{self.label}.</b> {escape(words[:1].upper() + words[1:])}.", _STYLES["figure_caption"])
 
     def caption_height(self) -> float:
         return self.caption.wrap(WIDTH, BODY_HEIGHT)[1] + 3
@@ -483,6 +490,7 @@ def _cover(canvas, doc) -> None:
         canvas.setFillColor(GREY)
         canvas.setFont(_SANS, 9)
         canvas.drawRightString(x + COLUMN - 2 * mm, row_y, str(pages.get(phase.heading, "")))
+        canvas.linkRect("", destination(phase.heading), (x, row_y - 2.5 * mm, x + COLUMN, row_y + 5 * mm), thickness=0)
     canvas.setFillColor(INK)
     canvas.setFont(_ITALIC, 10.5)
     canvas.drawCentredString(W / 2, 19 * mm, "Zoltan Kekecs, Editor")
@@ -490,6 +498,15 @@ def _cover(canvas, doc) -> None:
     canvas.setFillColor(GREY)
     settings = content.settings
     canvas.drawCentredString(W / 2, 13 * mm, f"For {settings['min_players']}–{settings['max_players']} researchers. Peer review not guaranteed.")
+
+
+def destination(title: str) -> str:
+    """The name of a main section's place in the PDF, which the contents link to."""
+    return "section-" + re.sub(r"\W+", "-", title).strip("-").lower()
+
+
+def _linked(text: str, title: str) -> str:
+    return f'<a href="#{destination(title)}">{text}</a>'
 
 
 class _Issue(BaseDocTemplate):
@@ -544,7 +561,7 @@ class _Issue(BaseDocTemplate):
             return
         title, level, numbered = heading
         self._bookmarks += 1
-        key = f"s{self._bookmarks}"
+        key = destination(title) if level == 0 else f"s{self._bookmarks}"
         self.canv.bookmarkPage(key)
         self.canv.addOutlineEntry(numbered, key, level=level, closed=level == 0)
         if level == 0:
@@ -567,26 +584,31 @@ def _overview(content: Content, pages: dict[str, int]) -> list:
                              ("RIGHTPADDING", (0, 0), (-1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]))
     left = _STYLES["cell_left"]
     head = ParagraphStyle("HeadLeft", parent=_STYLES["head"], alignment=TA_LEFT)
-    data = [[Paragraph(x, head) for x in ("Section", "Phase", "Who decides", "Staff at work", "Page")]]
+    data = [[Paragraph(x, head) for x in ("Phase", "Who decides", "Staff at work", "Page")]]
     for phase in content.phases:
-        row = [str(content.number_of(phase.heading)), phase.short, phase.who, phase.staff, str(pages.get(phase.heading, ""))]
-        data.append([Paragraph(escape(x), left) for x in row])
-    table = _rules(Table(data, colWidths=[14 * mm, 56 * mm, 48 * mm, 40 * mm, 12 * mm], spaceAfter=7))
+        row = [phase.short, phase.who, phase.staff, str(pages.get(phase.heading, ""))]
+        data.append([Paragraph(_linked(escape(x), phase.heading) if i in (0, 3) else escape(x), left) for i, x in enumerate(row)])
+    table = _rules(Table(data, colWidths=[62 * mm, 54 * mm, 42 * mm, 12 * mm], spaceAfter=7))
     figure = TheoryFigure(content.example, width)
     caption = Paragraph(f"<b>Figure 1.</b> How to read a theory: {escape(content.example['Plain word description'])}", _STYLES["figure_caption"])
 
-    entries = [(str(n), title, str(pages.get(title, ""))) for n, title in content.sections] + [("", "Credits", str(pages.get("Credits", "")))]
+    entries = [(f"{n}. {title}", title) for n, title in content.sections] + [("Credits", "Credits")]
     half = math.ceil(len(entries) / 2)
+    page_style = ParagraphStyle("ContentsPage", parent=left, alignment=TA_RIGHT)
     rows = []
     for i in range(half):
-        right = entries[i + half] if i + half < len(entries) else ("", "", "")
-        rows.append([Paragraph(escape(x), left) for x in (*entries[i], "", *right)])
-    contents = Table(rows, colWidths=[8 * mm, 66 * mm, 8 * mm, 6 * mm, 8 * mm, 66 * mm, 8 * mm])
+        row = []
+        for j in (i, i + half):
+            if j < len(entries):
+                text, title = entries[j]
+                row += [Paragraph(_linked(escape(text), title), left), Paragraph(_linked(str(pages.get(title, "")), title), page_style), ""]
+        rows.append(row[:5] + [""] * (5 - len(row[:5])))
+    contents = Table(rows, colWidths=[70 * mm, 10 * mm, 10 * mm, 70 * mm, 10 * mm])
     contents.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, 0), 1.1, INK), ("LINEBELOW", (0, -1), (-1, -1), 1.1, INK), ("TOPPADDING", (0, 0), (-1, -1), 1.2),
                                   ("BOTTOMPADDING", (0, 0), (-1, -1), 1.6), ("LEFTPADDING", (0, 0), (-1, -1), 2), ("RIGHTPADDING", (0, 0), (-1, -1), 2)]))
     return [Paragraph("A round at a glance", _STYLES["title"]), box,
             Paragraph("<b>Table 1.</b> The phases of a round, in order.", _STYLES["caption"]), table,
-            figure, caption, Paragraph("<b>Contents</b>", _STYLES["caption"]), contents]
+            figure, caption, KeepTogether([Paragraph("Contents", _STYLES["h2"]), contents])]
 
 
 def build_story(content: Content, pages: dict[str, int], breaks: set[int] = frozenset()) -> list:
@@ -594,25 +616,30 @@ def build_story(content: Content, pages: dict[str, int], breaks: set[int] = froz
     story: list = [Spacer(1, 1), NextPageTemplate("overview"), PageBreak(), *_overview(content, pages), NextPageTemplate("body"), PageBreak()]
     section = sub = 0
     tables = 1
-    figures = 1
+    numbers = {"figure": 1, "illustration": 0}  # Figure 1 is on the overview page
+    placed = 0
     for kind, item in content.body:
         if kind == "h1":
             section, sub = section + 1, 0
             story += [NeedRoom(COLUMN + 90 if item == "Crisis" else 95), _heading("h1", item, str(section), 0)]
-        elif kind == "illustration":
+        elif kind in numbers:
             path = IMAGES / item
             if path == COVER_IMAGE:  # already on the cover
                 continue
             if not path.is_file():
-                raise ValueError(f"the rulebook's illustration {item!r} is not in web/images "
+                raise ValueError(f"the rulebook's {kind} {item!r} is not in web/images "
                                  "(nv-rulebook-illustrations makes the pictures of the game's screens)")
-            figures += 1
+            numbers[kind] += 1
+            label = f"{kind.capitalize()} {numbers[kind]}"
             if path == CRISIS_IMAGE:  # a photo with the Crisis numbers, in the column
-                story += crisis_figure(content, figures)
-            else:
-                figure = PageFigure(path, figures)
-                story[-1:-1] = [PageBreak()] * (figures in breaks) + [FigureStart(figure)]  # before the referring paragraph
-                story += [Paragraph(f"See Figure {figures}.", _STYLES["see_figure"]), FigureAnchor(figure)]
+                story += crisis_figure(content, label)
+                continue
+            placed += 1
+            figure = PageFigure(path, placed, label)
+            story[-1:-1] = [PageBreak()] * (placed in breaks) + [FigureStart(figure)]  # before the referring paragraph
+            if kind == "figure":  # an illustration is only placed, not referred to
+                story.append(Paragraph(f"See {label}.", _STYLES["see_figure"]))
+            story.append(FigureAnchor(figure))
         elif kind == "h2":
             sub += 1
             icon = f' <img src="{ICONS / "fire.png"}" width="13" height="13" valign="-2"/>' if item == "Hot topic" else ""
@@ -656,8 +683,8 @@ def lay_out(content: Content, known_pages: dict[str, int], plan: dict[int, int],
 
 
 def place_figures(content: Content) -> tuple[dict[int, int], set[int], dict[int, float], dict[str, int]]:
-    """Each figure goes on a page with the paragraph that refers to it (from its first line to
-    its "See Figure" line). Placing figures moves the text, so the layout is repeated, each figure
+    """Each figure (and illustration) goes on a page with the paragraph that refers to it: the
+    paragraph before its marker in the rulebook. Placing figures moves the text, so the layout is repeated, each figure
     moved to the nearest such page of the last layout, until nothing has to move. A figure that
     pushes its whole paragraph to the next page (and without which the paragraph moves back) is
     shrunk until the paragraph stays (two columns lose its height each); when that would leave
@@ -692,7 +719,8 @@ def place_figures(content: Content) -> tuple[dict[int, int], set[int], dict[int,
                     plan[n] = planned
             moves.add((n, planned, page))
     else:
-        print(f"warning: figure(s) {sorted(wrong)} are not on a page with the text that refers to them", file=sys.stderr)
+        labels = ", ".join(doc.figures[n].label for n in sorted(wrong))
+        print(f"warning: {labels}: not on a page with the text that refers to them", file=sys.stderr)
     return plan, breaks, scales, doc.found_pages
 
 

@@ -1,4 +1,4 @@
-"""The rulebook's pictures of the web client (the "[Illustration: <name>.png]" markers in
+"""The rulebook's pictures of the web client (the "[Figure: <name>.png]" markers in
 docs/rules.md): screenshots of game situations, taken in a browser.
 
 Each scene finds its situation in a game played by the scripted bots (nv_sim), adjusts it where
@@ -7,7 +7,7 @@ theme, tall tiles) and saves one panel as web/images/<name>.png. Run it again wh
 change, and every picture follows:
 
     .venv/Scripts/nv-rulebook-illustrations                      # every scene
-    .venv/Scripts/nv-rulebook-illustrations --only example_slip  # some of them
+    .venv/Scripts/nv-rulebook-illustrations --only example_theory_formation  # some of them
 
 Needs Playwright (pip install -e ".[illustrations]") and Microsoft Edge or Google Chrome, which
 Playwright drives, so no browser download is needed.
@@ -74,10 +74,6 @@ def _waiting(state: GameState, phase: Phase, test) -> int | None:
 
 def _all(state: GameState) -> range:
     return range(len(state.researchers))
-
-
-def find_slip(state):
-    return 0 if state.phase == Phase.PREDICTION and state.round >= 2 else None
 
 
 def find_experiment(state):
@@ -236,11 +232,6 @@ class Scene:
 
 TASK = "#actions-panel"
 SCENES = [
-    Scene("example_slip", find_slip, "section[data-panel=grid]", keep_rows=1, prepare="""() => {
-      const header = document.getElementById('columns').cloneNode(true);
-      header.id = 'columns-copy'; header.style.display = '';
-      const grid = document.getElementById('grid'); grid.prepend(header);
-    }"""),
     Scene("example_experiment_specification", find_experiment, TASK, prepare="""() => {
       const tpl = optionOf('run_experiment').template;
       const withMethod = [...new Set(tpl.methods.map((m) => m.parameter))];

@@ -7,7 +7,7 @@ from nv_core.paths import RULEBOOK
 from nv_rulebook.illustrations import SCENES, add_sensors, fill_portal, find_situations, near_nobel_and_retraction
 from nv_rulebook.pdf import IMAGES, blocks
 
-RULEBOOK_PICTURES = [item for kind, item in blocks(read_markdown(RULEBOOK)) if kind == "illustration"]
+RULEBOOK_PICTURES = [item for kind, item in blocks(read_markdown(RULEBOOK)) if kind == "figure"]
 
 
 def test_every_scene_is_a_picture_of_the_rulebook():

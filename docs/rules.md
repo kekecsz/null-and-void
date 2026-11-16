@@ -8,8 +8,6 @@ Last updated: 2026.11.15. 21:43
 
 \[A round at a glance goes here\]
 
-\[Illustration: example\_slip.png\]
-
 # Summary
 
 Null and Void, is a game to demonstrate the hurdles of an academic researcher in the social, behavioral, and life sciences. The core idea of the game is that there is a simulation of a world that at the beginning of the game has unknown rules to the players (the researchers), but if they understand the rules governing the world, they can predict and exploit it.
@@ -201,7 +199,7 @@ Methods with the Fresh out of print marker can only be used by their authors.
 
 The authors of the methods cited immediately get \[experiment\_method\_citation\_AC\_reward\] academic credit each.
 
-\[Illustration: example\_experiment\_specification.png\]
+\[Figure: example\_experiment\_specification.png\]
 
 The specified Input Parameter states are taken from the State Cards directly (not the Input Parameter Deck or the Probes).
 
@@ -215,13 +213,13 @@ Following the experiments, researchers place the cards from the experiments in t
 
 New records always enter at the first record position, and push older records one position higher. (Older records in positions beyond the Records capacity of \[records\_capacity\] will be discarded during Clean-up).
 
-\[Illustration: records\_are\_with\_example\_experiment\_slips.png\]
+\[Figure: records\_are\_with\_example\_experiment\_slips.png\]
 
 ## Sensor installation and upgrade
 
 Researchers can install or upgrade a sensor on a Probe to make it more versatile and reliable. A researcher can install a sensor on any Input Parameter slot of a Probe, except Specialty slots, or upgrade a sensor that is already there by one level. Each time, published Methods for that slot's Input Parameter need to be cited, equal to the new sensor level (e.g. 1 method has to be cited to install a new level 1 sensor, while 3 methods have to be cited to upgrade a level 2 sensor to level 3). Note that Sensor level can only be increased by one level at a time, but the same Sensor can be upgraded multiple times in the same round.
 
-\[Illustration: world\_grid\_exp\_with\_different\_sensor\_levels.png\]
+\[Figure: world\_grid\_exp\_with\_different\_sensor\_levels.png\]
 
 Rewards for sensor installation or upgrade:
 
@@ -259,7 +257,7 @@ Sensor level 3: \[probe\_fake\_input\_deck\_size\]/4 (rounded down)
 
 Shuffle the sensor deck and show its top card in the slot. (It may be a Noise card, showing a wrong state.) (If the Input Parameter Deck is depleted, refer to the Decks and discard piles in the Pieces section.)
 
-\[Illustration: world\_grid\_obs\_before\_prediction\_reveal.png\]
+\[Figure: world\_grid\_obs\_before\_prediction\_reveal.png\]
 
 During the Crisis period, Probes show the true states (see probes in crisis).
 
@@ -281,7 +279,7 @@ Formulating predictions is done in parallel across researchers and in secret, be
 
 Predictions mimic the structure of Probes and Theories. They specify input parameter states and world outcome states. Each prediction cites a published theory, it must be an exact copy of that theory, and it needs to be linked to a Probe. There can be no mismatching input parameter states between the prediction and the Probe. (This means that a theory including only one input parameter state can be used for prediction on a Probe that has multiple input parameters revealed. Also, a theory that includes four input parameter states can be used for prediction on a Probe that has only two input parameters revealed). The no mismatching input parameter state between theory and Probe reading is checked against the visible Probe readings (which can differ from the true world state due to sensor noise). One theory can only be cited once by the same Researcher on the same Probe within the same round. Also, no identical prediction can be made by the same Researcher on the same Probe within the same round through using another identical theory. 
 
-\[Illustration: prediction\_formulation\_task\_panel.png\]
+\[Figure: prediction\_formulation\_task\_panel.png\]
 
 Theories with the Fresh out of print marker can only be used by their authors.
 
@@ -357,7 +355,7 @@ Counters
 
 Self-citation is possible, and it yields the same reward (or penalty) as being cited by another researcher.
 
-\[Illustration: example\_predictions\_report\_page.png\]
+\[Figure: example\_predictions\_report\_page.png\]
 
 ## Recording observations
 
@@ -399,7 +397,7 @@ A researcher cannot formulate a theory that is already published.
 
 (Theories need to be published before anyone can use them for prediction.)
 
-\[Illustration: example\_theory\_formation.png\]
+\[Figure: example\_theory\_formation.png\]
 
 ## Developing methods
 
@@ -417,7 +415,7 @@ Researchers can archive their records, preserving them for the long term. At mos
 
 Archived records no longer have a record position, thus, they are not discarded at Clean-up, nor do they count toward Records capacity. Nevertheless, archived records count as being in the Records area for all other purposes, so they can be used for theory formation, or as supporting records during submission.
 
-\[Illustration: overflowing\_records\_area\_with\_archive\_buttons.png\]
+\[Figure: overflowing\_records\_area\_with\_archive\_buttons.png\]
 
 # Publication (normal game only)
 
@@ -450,7 +448,7 @@ Note, that at no time do other researchers see the cards involved in experiments
 
 Supporting observation records are taken as is, containing exactly what was visible on the Probe, including blanks and noisy sensor readings.
 
-\[Illustration: example\_tier2\_submission\_with\_supporting\_records.png\]
+\[Figure: example\_tier2\_submission\_with\_supporting\_records.png\]
 
 ## Revisions
 
@@ -494,7 +492,7 @@ A method publication can only benefit from the APC and the Crisis fast-track tim
 
 Rounds in processing tokens according to the journal tier and any of the above modifiers are placed next to the Manuscript when it advances to the Accept area of the Submission Portal, to indicate how many rounds the Manuscript will spend in processing before it is published. (These are gradually removed during the clean-up phase.)
 
-\[Illustration: submission\_portal\_all\_three\_areas\_containing\_submissions.png\]
+\[Figure: submission\_portal\_all\_three\_areas\_containing\_submissions.png\]
 
 ## Publication
 
@@ -566,7 +564,7 @@ Once the Retraction counter reaches \[retraction\_threshold\], the theory become
 
 Retractions are only made during the Calm period. The Retraction counters are not tracked during the Crisis period.
 
-\[Illustration: literature\_theory\_close\_to\_nobel\_another\_close\_to\_retraction.png\]
+\[Figure: literature\_theory\_close\_to\_nobel\_another\_close\_to\_retraction.png\]
 
 # Crisis
 
@@ -628,7 +626,7 @@ Records in the Records area that are in positions beyond their \[records\_capaci
 
 The First researcher token moves to the next player counterclockwise.
 
-\[Illustration: example\_cleanup\_report.png\]
+\[Figure: example\_cleanup\_report.png\]
 
 # Alliance (normal game only)
 

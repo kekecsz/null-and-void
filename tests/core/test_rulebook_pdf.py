@@ -202,14 +202,55 @@ def test_every_parameter_table_fits_a_column():
 
 
 # Illustrations ---------------------------------------------------------------------------------------
-def test_an_illustration_marker_names_a_picture_and_placeholders_are_skipped():
-    text = "[Front page goes here]\n\n[Illustration: example_slip.png]\n\nText."
-    assert list(blocks(text)) == [("illustration", "example_slip.png"), ("p", "Text.")]
+def test_figure_and_illustration_markers_name_a_picture_and_placeholders_are_skipped():
+    text = "[Front page goes here]\n\n[Figure: example_slip.png]\n\n[Illustration: photo.jpg]\n\nText."
+    assert list(blocks(text)) == [("figure", "example_slip.png"), ("illustration", "photo.jpg"), ("p", "Text.")]
 
 
-def test_every_illustration_of_the_rulebook_is_in_web_images():
+def _story(text: str) -> list:
+    from nv_rulebook.pdf import build_story, read_content
+
+    settings = load_settings().model_dump()
+    return build_story(read_content(fill_rulebook(text, settings), settings), {})
+
+
+def _texts(story: list) -> list[str]:
+    from reportlab.platypus import Paragraph, Table
+
+    found = []
+    for flowable in story:
+        if isinstance(flowable, Paragraph):
+            found.append(flowable.text)
+        for part in getattr(flowable, "_content", []):  # KeepTogether
+            if isinstance(part, Table):
+                found += [cell.text for row in part._cellvalues for cell in row if isinstance(cell, Paragraph)]
+            elif isinstance(part, Paragraph):
+                found.append(part.text)
+        if isinstance(flowable, Table):
+            found += [cell.text for row in flowable._cellvalues for cell in row if isinstance(cell, Paragraph)]
+    return found
+
+
+def test_only_figures_are_referred_to_and_each_kind_is_numbered_on_its_own():
+    from nv_rulebook.pdf import FigureAnchor
+
+    text = read_markdown(RULEBOOK)
+    story = _story(text)
+    figures = sum(1 for k, _ in blocks(text) if k == "figure")
+    assert [t for t in _texts(story) if t.startswith("See ")] == [f"See Figure {n}." for n in range(2, figures + 2)]  # 1: overview page
+    labels = [f.figure.label for f in story if type(f) is FigureAnchor]
+    assert labels[0] == "Illustration 1" and f"Figure {figures + 1}" in labels
+
+
+def test_contents_and_round_overview_link_to_the_sections():
+    texts = _texts(_story(read_markdown(RULEBOOK)))
+    assert any(t.startswith('<a href="#section-victory">1. Victory</a>') for t in texts)
+    assert not any(t == "Section" for t in texts)
+
+
+def test_every_picture_of_the_rulebook_is_in_web_images():
     """A missing picture would stop the PDF build; nv-rulebook-illustrations makes the screenshots."""
-    names = [item for kind, item in blocks(read_markdown(RULEBOOK)) if kind == "illustration"]
+    names = [item for kind, item in blocks(read_markdown(RULEBOOK)) if kind in ("figure", "illustration")]
     assert names
     assert [n for n in names if not (IMAGES / n).is_file()] == []
 
