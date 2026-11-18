@@ -113,7 +113,7 @@ class TextClient:
                 view = player_view(self.state, seat)
                 from nv_sim.game import game_log
 
-                view["game_log"] = game_log(self.events, seat, self.state)
+                view["game_log"] = game_log(self.events, seat)
             else:
                 view = {"round": self.state.round, "phase": self.state.phase.value, "seat": seat}
             result = None

@@ -43,26 +43,19 @@ def ai_models() -> list[str]:
     return sorted(software.ai_price_table, key=lambda m: m != software.ai_default_model)
 
 
-def game_log(events: list, seat: int, state: GameState) -> list[str]:
-    """The game's events a seat may see, oldest first, for an AI player (specification 8.1);
-    without the "is ready" lines, which the view's waiting list already shows. World states are
-    remembered only through the Records area, as at the table: an experiment's result is left out
-    once its record has left the seat's Records area (archived records stay), and a Probe's
-    readings and outcomes once its round is over, unless the seat holds that observation."""
-    records = state.researcher(seat).records
-    experiments = {c.experiment for c in records.cards}
-    observations = {(o.round, o.probe) for o in records.observations}
+# World states: Probe readings and outcomes, experiment results. An AI seat sees them only in its
+# view (the World Grid of this round, its Records area), so it remembers them only through its
+# records, as at the table (specification 8.2). Leaving them out of the log also keeps the log
+# append-only, so it can be cached (8.1).
+WORLD_STATE_EVENTS = {"probe", "outcomes", "experiment_result"}
 
-    def kept(e) -> bool:
-        if e.kind == "commit":
-            return False
-        if e.kind == "experiment_result":
-            return e.data.get("experiment") in experiments
-        if e.kind in ("probe", "outcomes"):
-            return e.round == state.round or (e.round, e.data.get("probe")) in observations
-        return True
 
-    return [e.text for e in visible_events(events, seat) if kept(e)]
+def game_log(events: list, seat: int) -> list[tuple[int, str]]:
+    """(round, line) for the game's events a seat may see, oldest first, for an AI player
+    (specification 8.1): without world states and without the "is ready" lines, which the
+    view's waiting list already shows."""
+    return [(e.round, e.text) for e in visible_events(events, seat)
+            if e.kind != "commit" and e.kind not in WORLD_STATE_EVENTS]
 
 
 def check_seat_types(seat_types: list[str]) -> None:
@@ -288,7 +281,7 @@ def play_game(
             options = legal_actions(state, seat)
             if player.needs_view:
                 view = player_view(state, seat)
-                view["game_log"] = game_log(all_events, seat, state)
+                view["game_log"] = game_log(all_events, seat)
             else:
                 view = {"round": state.round, "phase": state.phase.value, "seat": seat}
             result = None

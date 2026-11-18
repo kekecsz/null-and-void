@@ -8,7 +8,7 @@ from pydantic import BaseModel, ValidationError
 
 from nv_ai.config import SoftwareSettings
 from nv_ai.costs import Ledger, Usage, cost
-from nv_ai.prompt import decision_message, fit_log, instructions, tool_definitions
+from nv_ai.prompt import decision_message, fit_log, instructions, message_text, tool_definitions
 from nv_ai.provider import Provider, Reply
 from nv_core.actions import ACTION_ADAPTER
 from nv_core.engine import Option
@@ -69,20 +69,34 @@ class AIPlayer:
         self._fixed_chars = len(self.instructions) + len(json.dumps(self.tools))
         self._api_errors = 0
         self._disabled = ""
+        self._commit_next = False  # the model's last choice asked to commit right after it
+        self._automatic = False  # the last action was taken without a model call
+        self._automatic_refused = ""  # why it was refused, told to the model at its next decision
 
     # ------------------------------------------------------------------------------------
     def refused(self, action: BaseModel, reason: str) -> None:
-        self._refusal = reason
         if self._step_choices:
             self._step_choices.pop()  # the engine did not accept it
         if self.decisions:
             self.decisions[-1]["refusals"].append(reason)
+        self._commit_next = False
+        if self._automatic:  # the model decides instead, told why
+            self._automatic = False
+            self._automatic_refused = f"Your automatic {action.type} was refused: {reason}."
+            return
+        self._refusal = reason
 
     def choose(self, view: dict[str, Any], options: list[Option]) -> BaseModel:
         step = (view["round"], view["phase"])
         if step != self._step:
             self._step, self._step_actions, self._step_choices = step, 0, []
+            self._commit_next = False
         self._step_actions += 1
+        self._automatic = False
+        if self._refusal is None and not self._automatic_refused:
+            action = self._without_a_call(view, options)
+            if action is not None:
+                return action
         if self._refusal is None:
             self._new_decision(view, options)
         elif self._last_call is not None:
@@ -126,14 +140,35 @@ class AIPlayer:
                 self._items.append(self.provider.user_item(f"{problem} Call exactly one tool."))
 
     # ------------------------------------------------------------------------------------
+    def _without_a_call(self, view: dict[str, Any], options: list[Option]) -> BaseModel | None:
+        """Actions that need no model call (specification 8.1): the only legal action is commit or
+        pass, or the model's last choice asked to commit right after it."""
+        by_type = {o.type: o for o in options}
+        action, why = None, ""
+        if len(options) == 1 and options[0].type in ("commit", "pass") and len(options[0].actions) == 1:
+            action, why = options[0].actions[0], "the only legal action"
+        elif self._commit_next and "commit" in by_type:
+            action, why = by_type["commit"].actions[0], "asked for with its last choice"
+        self._commit_next = False
+        if action is None:
+            return None
+        self._automatic = True
+        self._current = {"round": view["round"], "phase": view["phase"]}
+        self._reason = f"automatic: {why}"
+        self._record(action=action, reply=None)
+        return action
+
     def _new_decision(self, view: dict[str, Any], options: list[Option]) -> None:
-        # ai_max_input_tokens (specification 8.4): the oldest log lines are left out first
+        # ai_max_input_tokens (specification 8.4): the oldest rounds of the log are left out first
         log = view.get("game_log", [])
-        rest = len(decision_message(view, options, [], self.notes, self._step_choices, len(log)))
+        rest = len(message_text(decision_message(view, options, [], self.notes, self._step_choices, len(log))))
         room = int(self.software.ai_max_input_tokens * CHARS_PER_TOKEN) - self._fixed_chars - rest
         log, left_out = fit_log(log, room)
-        text = decision_message(view, options, log, self.notes, self._step_choices, left_out)
-        self._items = [self.provider.user_item(text)]
+        blocks = decision_message(view, options, log, self.notes, self._step_choices, left_out)
+        self._items = [self.provider.user_item(blocks)]
+        if self._automatic_refused:
+            self._items.append(self.provider.user_item(self._automatic_refused))
+            self._automatic_refused = ""
         self._last_call = None
         self._attempts = 0
         self._spent = 0.0
@@ -163,6 +198,7 @@ class AIPlayer:
         data = dict(reply.call.arguments)
         self._reason = str(data.pop("reason", ""))[:300]
         notes = data.pop("notes", None)
+        commit_next = data.pop("commit", None) is True
         data.update(type=reply.call.name, seat=seat)
         try:
             action = ACTION_ADAPTER.validate_python(data)
@@ -171,6 +207,7 @@ class AIPlayer:
             return None, f"The tool arguments do not fit {reply.call.name}: {problems}"
         if isinstance(notes, str):
             self.notes = notes[: self.software.ai_notes_max_chars]
+        self._commit_next = commit_next
         return action, ""
 
     def _fall_back(self, view: dict[str, Any], options: list[Option], why: str) -> BaseModel:

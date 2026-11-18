@@ -4,17 +4,18 @@ tests never call a real API."""
 import csv
 import json
 import re
-from collections import Counter
 
 import pytest
 
 from nv_ai.config import Prices, load_api_keys, load_software_settings, require_api_key
 from nv_ai.costs import Ledger, Usage, cost
 from nv_ai.player import MAX_ACTIONS_PER_STEP, AIPlayer
-from nv_ai.prompt import LEFT_OUT_SECTIONS, PERSONAS, instructions, rules_text, tool_definitions
-from nv_ai.provider import Reply, ToolCall
+from nv_ai.prompt import (
+    CACHED_ROUNDS, LEFT_OUT_SECTIONS, PERSONAS, instructions, log_blocks, options_text, rules_text, tool_definitions,
+)
+from nv_ai.provider import OpenAIProvider, Reply, ToolCall
 from nv_core import actions as a
-from nv_core.engine import legal_actions, new_game
+from nv_core.engine import Option, apply, legal_actions, new_game
 from nv_core.text import render_text
 from nv_core.views import player_view, visible_events
 from nv_sim.game import AIContext, ai_models, ai_seat, check_seat_types, game_log, make_player, play_game
@@ -52,6 +53,8 @@ class FakeProvider:
     @staticmethod
     def _first_listed(items):
         text = next(i["content"] for i in items if isinstance(i, dict) and i.get("role") == "user")
+        if "WHAT YOU CAN DO NOW" not in text:
+            return {"name": "commit", "arguments": {"reason": "nothing listed"}}
         listed = text.split("WHAT YOU CAN DO NOW", 1)[1]
         for line in listed.splitlines():
             line = line.strip()
@@ -64,8 +67,11 @@ class FakeProvider:
         return {"name": "commit", "arguments": {"reason": "nothing else listed"}}
 
     @staticmethod
-    def user_item(text):
-        return {"role": "user", "content": text}
+    def user_item(content):
+        """Blocks are joined into one text, so the tests can read the message as the model does."""
+        if not isinstance(content, str):
+            content = "".join(text for text, _ in content)
+        return {"role": "user", "content": content}
 
     @staticmethod
     def tool_result_item(call, text):
@@ -426,8 +432,9 @@ def test_each_decision_starts_with_the_whole_game_log(venus, software):
     assert " is ready" not in log
 
 
-def test_the_game_log_keeps_world_states_only_while_their_records_are_held(venus):
-    """Specification 8.2: experiment results and earlier rounds' Probe rows leave the log with their records."""
+def test_world_states_are_only_in_the_view_never_in_the_game_log(venus):
+    """Specification 8.2: Probe rows and experiment results are seen in the view (World Grid,
+    Records area), so they are remembered only through records; the log keeps everything else."""
     world, settings = venus
     seen = {}
 
@@ -437,26 +444,19 @@ def test_the_game_log_keeps_world_states_only_while_their_records_are_held(venus
 
     play_game(world, settings, 4, ["selfish", "cooperative"], on_action=watch)
     events, state = seen["events"], seen["state"]
-    left_out = kept_earlier = 0
     for seat in range(state.n_players):
-        log = Counter(game_log(events, seat, state))
-        records = state.researcher(seat).records
-        held_experiments = {c.experiment for c in records.cards}
-        held_rows = {(o.round, o.probe) for o in records.observations}
-        expected = Counter()
-        for e in visible_events(events, seat):
-            if e.kind == "experiment_result":
-                kept = e.data["experiment"] in held_experiments
-            elif e.kind in ("probe", "outcomes"):
-                kept = e.round == state.round or (e.round, e.data["probe"]) in held_rows
-            else:
-                continue
-            expected[e.text] += kept
-            left_out += not kept
-            kept_earlier += kept and e.kind == "probe" and e.round < state.round
-        assert {t: log[t] for t in expected} == dict(expected)
-        assert "Round 2 begins" in log and not any(" is ready" in t for t in log)  # everything else stays
-    assert left_out > 0 and kept_earlier > 0  # both cases happen in this game
+        log = game_log(events, seat)
+        lines = {line for _, line in log}
+        visible = visible_events(events, seat)
+        world_states = [e for e in visible if e.kind in ("probe", "outcomes", "experiment_result")]
+        assert world_states and not lines & {e.text for e in world_states}
+        assert {e.text for e in visible if e.kind not in ("probe", "outcomes", "experiment_result", "commit")} <= lines
+        assert [r for r, _ in log] == sorted(r for r, _ in log)  # rounds in order, for the log's blocks
+        view = render_text(player_view(state, seat))
+        for o in state.researcher(seat).records.observations:  # held records are in the view
+            assert f"O{o.id} (P{o.probe + 1}, round {o.round})" in view
+        for experiment in {c.experiment for c in state.researcher(seat).records.cards}:
+            assert f"E{experiment}:" in view
 
 
 def test_the_model_is_told_to_keep_world_states_out_of_its_notes(venus, software):
@@ -471,8 +471,86 @@ def test_the_oldest_log_lines_are_left_out_to_keep_within_the_input_limit(venus,
     small = software.model_copy(update={"ai_max_input_tokens": 40_000})
     player = _player(provider, small)
     state, view, options = _first_decision(venus, player)
-    view["game_log"] = [f"event number {i}" for i in range(20_000)]
+    view["game_log"] = [(i // 100, f"event number {i}") for i in range(20_000)]
     player.choose(view, options)
     message = provider.calls[0]["items"][0]["content"]
     assert "earlier lines left out" in message and "event number 19999" in message and "event number 0\n" not in message
     assert len(message) + player._fixed_chars <= small.ai_max_input_tokens * 3
+    kept = re.findall(r"event number (\d+)\n", message)
+    assert int(kept[0]) % 100 == 0  # whole rounds are left out, so the rounds kept stay cached
+
+
+def test_the_game_log_is_sent_in_round_blocks_and_the_latest_finished_rounds_are_cached():
+    log = [(r, f"line {r}.{i}") for r in range(1, 7) for i in range(3)]
+    blocks = log_blocks(log, current_round=6)
+    assert blocks[0][0].startswith("GAME LOG") and not blocks[0][1]
+    assert [b[0] for b in blocks[1:]] == ["".join(f"  line {r}.{i}\n" for i in range(3)) for r in range(1, 7)]
+    assert [b[1] for b in blocks[1:]] == [False, False, True, True, True, False]  # rounds 3-5; 6 is still going
+    assert sum(b for _, b in blocks) == CACHED_ROUNDS  # with the instructions' one: OpenAI's limit of 4 writes
+
+
+def test_the_openai_request_marks_cache_breakpoints_after_the_instructions_and_finished_rounds(monkeypatch):
+    """The real request (the HTTP body the SDK sends), without a network call."""
+    httpx = pytest.importorskip("httpx")
+    pytest.importorskip("openai")
+    sent = []
+
+    def handler(request):
+        sent.append(json.loads(request.content))
+        return httpx.Response(200, json={
+            "id": "r1", "object": "response", "created_at": 0, "model": "m", "status": "completed", "output": [],
+            "tool_choice": "required", "tools": [], "parallel_tool_calls": False,
+            "usage": {"input_tokens": 10, "output_tokens": 1, "total_tokens": 11,
+                      "input_tokens_details": {"cached_tokens": 0}, "output_tokens_details": {"reasoning_tokens": 0}},
+        })
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    provider = OpenAIProvider("gpt-6.1-terra")
+    from openai import OpenAI
+    provider.client = OpenAI(http_client=httpx.Client(transport=httpx.MockTransport(handler)), max_retries=0)
+    blocks = log_blocks([(1, "a"), (2, "b")], current_round=2) + [("view", False)]
+    provider.respond("THE RULES", [], [provider.user_item(blocks)], 100)
+    body = sent[0]
+    assert body["prompt_cache_options"] == {"mode": "explicit"} and "instructions" not in body
+    developer, user = body["input"]
+    assert developer["role"] == "developer" and developer["content"][0]["text"] == "THE RULES"
+    assert developer["content"][0]["prompt_cache_breakpoint"] == {"mode": "explicit"}
+    marked = [c["text"] for c in user["content"] if "prompt_cache_breakpoint" in c]
+    assert marked == ["  a\n"]  # round 1 is finished; round 2 and the view are not cached
+
+
+def test_no_model_call_when_commit_or_pass_is_the_only_legal_action(venus, software):
+    provider = FakeProvider()
+    player = _player(provider, software)
+    state, view, _ = _first_decision(venus, player)
+    only = [Option(type="commit", actions=[a.CommitPhase(seat=0)])]
+    assert player.choose(view, only) == a.CommitPhase(seat=0)
+    assert provider.calls == [] and player.decisions[-1]["reason"].startswith("automatic")
+
+
+def test_a_choice_with_commit_true_is_followed_by_a_commit_without_a_model_call(venus, software):
+    world, settings = venus
+    state = new_game(world, settings, 1, ["a", "b"])
+    view, options = player_view(state, 0), legal_actions(state, 0)  # Hiring: secret choices, then commit
+    provider = FakeProvider([{"name": "propose_alliance", "arguments": {"partner": 1, "reason": "x", "commit": True}}])
+    player = _player(provider, software)
+    action = player.choose(view, options)
+    assert action.type == "propose_alliance"
+    state, _ = apply(state, action)
+    assert player.choose(player_view(state, 0), legal_actions(state, 0)) == a.CommitPhase(seat=0)
+    assert len(provider.calls) == 1
+    tools = {t["name"]: t["parameters"]["properties"] for t in provider.calls[0]["tools"]}
+    assert "commit" in tools["propose_alliance"] and "commit" not in tools["commit"]
+
+
+def test_a_refused_automatic_commit_goes_back_to_the_model_with_the_reason(venus, software):
+    provider = FakeProvider()
+    player = _player(provider, software)
+    state, view, options = _first_decision(venus, player)
+    player._step, player._commit_next = (view["round"], view["phase"]), True  # as after a choice with commit: true
+    action = player.choose(view, options)
+    assert action == a.CommitPhase(seat=0) and provider.calls == []
+    player.refused(action, "staff must be allocated first")
+    player.choose(view, options)
+    items = provider.calls[0]["items"]
+    assert items[-1]["content"] == "Your automatic commit was refused: staff must be allocated first."

@@ -35,14 +35,28 @@ class Provider(Protocol):
     def respond(self, instructions: str, tools: list[dict], items: list[Any], max_output_tokens: int) -> Reply: ...
 
     @staticmethod
-    def user_item(text: str) -> Any: ...
+    def user_item(content: str | list[tuple[str, bool]]) -> Any:
+        """A user message: text, or blocks of (text, cache breakpoint after it)."""
+        ...
 
     @staticmethod
     def tool_result_item(call: ToolCall, text: str) -> Any: ...
 
 
+BREAKPOINT = {"mode": "explicit"}
+
+
 class OpenAIProvider:
-    """OpenAI Responses API with function tools (one call per reply)."""
+    """OpenAI Responses API with function tools (one call per reply).
+
+    Prompt caching is explicit (platform.openai.com: Prompt caching). The cache is read and
+    written only at breakpoints, and a later request reads it only up to a breakpoint whose whole
+    start matches. In the default (implicit) mode the only breakpoints are message ends, and the
+    game log and the view travel in one message, so each decision wrote the whole log to the cache
+    again and never read it back. Now the instructions end in a breakpoint (they go in a developer
+    message: the top-level instructions cannot hold one), and so do the latest finished rounds of
+    the game log (prompt.log_blocks). Text after the last breakpoint is billed as ordinary input,
+    without a cache write."""
 
     MAX_OUTPUT_TOKENS = 128_000  # the model's limit (GPT-6 Luna)
 
@@ -57,15 +71,17 @@ class OpenAIProvider:
         kwargs: dict[str, Any] = {}
         if self.reasoning_effort:
             kwargs["reasoning"] = {"effort": self.reasoning_effort}
+        developer = {"role": "developer",
+                     "content": [{"type": "input_text", "text": instructions, "prompt_cache_breakpoint": BREAKPOINT}]}
         response = self.client.responses.create(
             model=self.model,
-            instructions=instructions,
             tools=tools,
             tool_choice="required",
             parallel_tool_calls=False,
-            input=items,
+            input=[developer, *items],
             max_output_tokens=min(max_output_tokens, self.MAX_OUTPUT_TOKENS),
             prompt_cache_key="null-and-void-ai",  # routes every seat's requests to the same cache
+            extra_body={"prompt_cache_options": {"mode": "explicit"}},
             **kwargs,
         )
         call = None
@@ -96,8 +112,13 @@ class OpenAIProvider:
         return Reply(call, "\n".join(texts), list(response.output), usage, incomplete)
 
     @staticmethod
-    def user_item(text: str) -> Any:
-        return {"role": "user", "content": text}
+    def user_item(content: str | list[tuple[str, bool]]) -> Any:
+        if isinstance(content, str):
+            return {"role": "user", "content": content}
+        return {"role": "user", "content": [
+            {"type": "input_text", "text": text, **({"prompt_cache_breakpoint": BREAKPOINT} if breakpoint else {})}
+            for text, breakpoint in content if text
+        ]}
 
     @staticmethod
     def tool_result_item(call: ToolCall, text: str) -> Any:

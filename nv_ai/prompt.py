@@ -3,9 +3,8 @@
 decision's message.
 
 Order matters for caching: tools and instructions are identical for every decision and every
-seat up to the persona, which comes last. A decision's message starts with the game log, which
-grows at its end (lines leave it only when records do, mostly at a round's end), so the log seen
-at the previous decision is mostly cached too.
+seat up to the persona, which comes last. A decision's message starts with the game log, one
+block per round; finished rounds never change, so they are cached too (log_blocks).
 """
 
 import json
@@ -77,7 +76,8 @@ actions you can take now.
   outcomes, T7 published theory 7 (tools take 7), M3 published method, D5 your development stack or
   manuscript, O12 observation record, E9 experiment, Q4 prediction. Seats are numbered from 0.
 - In steps where everyone decides in secret (hiring, predictions, reveals, development, submission,
-  peer review), make your choices one call at a time and call `commit` when you are done.
+  peer review), make your choices one call at a time. Set `commit` to true on your last choice
+  (you are then committed right after it), or call the `commit` tool when you are done.
 - Every tool takes `reason`: one short sentence on why. It may also take `notes`: your private notes,
   replacing the old ones. You see them in every message, so keep your plans there. Notes are cut
   to {notes_max} characters.
@@ -86,9 +86,9 @@ actions you can take now.
 ## Memory
 
 At the table, researchers remember world states through their records, not by heart, and this
-game keeps that fair. The game log leaves out the Probe readings and outcomes of earlier rounds,
-unless you hold that observation record, and the results of your experiments once their records
-have left your Records area. Your notes must not hold exact world states either: no Probe readings
+game keeps that fair. The game log never shows world states (Probe readings and outcomes,
+experiment results): you see them in your view, in the World Grid of the current round and in
+your Records area for the records you hold. Your notes must not hold exact world states either: no Probe readings
 or outcomes, no experiment inputs or results, no lists of which input states gave which outcomes.
 To remember a world state, keep its record in your Records area, and archive the records you want
 to keep beyond its capacity (Development phase: Archive a record). Your notes may hold plans,
@@ -160,6 +160,12 @@ def tool_definitions(notes_max: int) -> list[dict[str, Any]]:
             "type": "string",
             "description": f"Optional: your new private notes (replace the old ones; at most {notes_max} characters).",
         }
+        if name != "commit":
+            properties["commit"] = {
+                "type": "boolean",
+                "description": "Optional, in steps where everyone decides in secret: true if this is your last "
+                "choice in this step; you are then committed right after it.",
+            }
         tools.append(
             {
                 "type": "function",
@@ -217,33 +223,58 @@ def options_text(options: list[Option]) -> str:
     return "\n".join(lines) or "(nothing)"
 
 
-def log_text(log: list[str], left_out: int = 0) -> str:
-    lines = ([f"  ({left_out} earlier lines left out: the request would be too long)"] if left_out else [])
-    return "GAME LOG (what you were allowed to see, oldest first; earlier world states only through your records)\n" + ("\n".join(lines + [f"  {e}" for e in log]) or "  (none)")
+# A message is a list of blocks: (text, cache breakpoint after it). The provider caches a request's
+# start only up to a breakpoint, and writes at most four of them per request; the instructions take
+# one (provider.py), the latest finished rounds of the game log the others.
+Blocks = list[tuple[str, bool]]
+CACHED_ROUNDS = 3
 
 
-def fit_log(log: list[str], room: int) -> tuple[list[str], int]:
-    """The newest log lines that fit in ``room`` characters, and how many older ones are left out."""
-    kept, used = 0, 0
-    for line in reversed(log):
-        used += len(line) + 3
-        if used > room:
-            break
-        kept += 1
-    return log[len(log) - kept:], len(log) - kept
+def log_blocks(log: list[tuple[int, str]], current_round: int, left_out: int = 0) -> Blocks:
+    """The game log, one block per round. A finished round never changes, so the latest
+    CACHED_ROUNDS of them end in a breakpoint: each is written to the cache once and read by every
+    later decision. The current round comes last, without one (it grows within the round)."""
+    head = "GAME LOG (what you were allowed to see, oldest first; world states are in your view)\n"
+    if left_out:
+        head += f"  ({left_out} earlier lines left out: the request would be too long)\n"
+    rounds: dict[int, list[str]] = {}
+    for r, line in log:
+        rounds.setdefault(r, []).append(f"  {line}\n")
+    if not rounds:
+        return [(head + "  (none)\n", False)]
+    finished = [r for r in rounds if r < current_round][-CACHED_ROUNDS:]
+    blocks = [(head, False)] + [("".join(lines), r in finished) for r, lines in rounds.items()]
+    return blocks
+
+
+def fit_log(log: list[tuple[int, str]], room: int) -> tuple[list[tuple[int, str]], int]:
+    """The newest whole rounds of the log that fit in ``room`` characters, and how many older lines
+    are left out (whole rounds, so the blocks that stay are unchanged and still cached)."""
+    used = sum(len(line) + 3 for _, line in log)
+    start = 0
+    while used > room and start < len(log):
+        first = log[start][0]
+        while start < len(log) and log[start][0] == first:
+            used -= len(log[start][1]) + 3
+            start += 1
+    return log[start:], start
+
+
+def message_text(blocks: Blocks) -> str:
+    return "".join(text for text, _ in blocks)
 
 
 def decision_message(
-    view: dict[str, Any], options: list[Option], log: list[str], notes: str, step_choices: list[str] = (),
-    left_out: int = 0,
-) -> str:
-    """``log``: the game log (``left_out``: older lines not sent). ``step_choices``: the actions of
+    view: dict[str, Any], options: list[Option], log: list[tuple[int, str]], notes: str,
+    step_choices: list[str] = (), left_out: int = 0,
+) -> Blocks:
+    """The game log's blocks, then everything else in one block that changes every time.
+    ``log``: (round, line) (``left_out``: older lines not sent). ``step_choices``: the actions of
     this seat the engine accepted earlier in the same step. Each decision is a fresh conversation,
     so without them a model cannot tell that it has already chosen and repeats the same choice
     instead of committing."""
     seat = view["seat"]
     parts = [
-        log_text(log, left_out),
         f"You are seat {seat}, {view['players'][seat]}.",
         render_text(view),
         "YOUR NOTES\n" + (notes or "(empty)"),
@@ -257,4 +288,4 @@ def decision_message(
         )
         parts.append(f"YOUR CHOICES SO FAR IN THIS STEP (accepted by the engine)\n{listed}\n{hint.strip()}".rstrip())
     parts.append("WHAT YOU CAN DO NOW (call one tool)\n" + options_text(options))
-    return "\n\n".join(parts)
+    return log_blocks(log, view["round"], left_out) + [("\n" + "\n\n".join(parts), False)]
