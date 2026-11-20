@@ -25,6 +25,31 @@ def _table(rows: list[list[str]]) -> list[str]:
     return ["  " + "  ".join(cell.ljust(w) for cell, w in zip(row, widths)).rstrip() for row in rows]
 
 
+def _grid(view: dict[str, Any], probes: list[dict[str, Any]], name) -> list[str]:
+    """The World Grid table: a column per Probe, a row per variable."""
+    header = ["", *[f"P{p['index'] + 1}{' (hot)' if p['hot_topic'] else ''}" for p in probes]]
+    rows = [header]
+    rows.append(
+        [
+            "Probe time",
+            *[f"{name(p['probe_time'])}{' (sensor)' if p['probe_time_from_sensor'] else ''}" for p in probes],
+        ]
+    )
+    for var in view["variables"]:
+        label = f"{var['id']} {var['name']}"
+        cells = []
+        for p in probes:
+            if var["kind"] == "input":
+                tag = "*" if var["id"] in p["specialty"] else (f"L{p['sensors'][var['id']]}" if var["id"] in p["sensors"] else "")
+                value = "" if p["readings"] is None else (p["readings"].get(var["id"]) or BLANK)
+                cells.append(f"{value} {tag}".strip())
+            else:
+                value = "?" if p["outcomes"] is None else p["outcomes"].get(var["id"], "?")
+                cells.append(value)
+        rows.append([label, *cells])
+    return [*_table(rows), "  (* Specialty Input Parameter, L1-L3 sensor level, . blank, ? not revealed)"]
+
+
 def render_text(view: dict[str, Any]) -> str:
     names = view["players"]
     lines: list[str] = []
@@ -64,31 +89,15 @@ def render_text(view: dict[str, Any]) -> str:
     # World Grid ----------------------------------------------------------------------------
     out("")
     out("WORLD GRID")
-    probes = view["probes"]
-    header = ["", *[f"P{p['index'] + 1}{' (hot)' if p['hot_topic'] else ''}" for p in probes]]
-    rows = [header]
-    rows.append(
-        [
-            "Probe time",
-            *[f"{name(p['probe_time'])}{' (sensor)' if p['probe_time_from_sensor'] else ''}" for p in probes],
-        ]
-    )
-    for var in view["variables"]:
-        label = f"{var['id']} {var['name']}"
-        cells = []
-        for p in probes:
-            if var["kind"] == "input":
-                tag = "*" if var["id"] in p["specialty"] else (f"L{p['sensors'][var['id']]}" if var["id"] in p["sensors"] else "")
-                value = "" if p["readings"] is None else (p["readings"].get(var["id"]) or BLANK)
-                cells.append(f"{value} {tag}".strip())
-            else:
-                value = "?" if p["outcomes"] is None else p["outcomes"].get(var["id"], "?")
-                cells.append(value)
-        rows.append([label, *cells])
-    lines += _table(rows)
-    out("  (* Specialty Input Parameter, L1-L3 sensor level, . blank, ? not revealed)")
+    lines += _grid(view, view["probes"], name)
     if view.get("probe_truth") and any(view["probe_truth"]):
         out("  True states: " + " | ".join(f"P{i + 1} {_values(t)}" for i, t in enumerate(view["probe_truth"]) if t))
+    # Until new Probes are dealt, the last prediction report's World Grid (specification 8.2).
+    report = view.get("prediction_report") or {}
+    if report.get("grid") and all(p["readings"] is None for p in view["probes"]):
+        out("")
+        out(f"WORLD GRID OF ROUND {report['round']} (as revealed; the Probes are cleared since)")
+        lines += _grid(view, report["grid"], name)
 
     # Researchers ---------------------------------------------------------------------------
     out("")

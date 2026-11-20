@@ -156,12 +156,30 @@ def test_report_leaves_out_predictions_that_stayed_hidden():
     assert shown in ids and hidden not in ids
 
 
-def test_no_report_when_nothing_was_revealed():
+def test_a_report_with_the_round_grid_even_when_nothing_was_revealed():
+    """Specification 7.4: the prediction report carries the round's World Grid as revealed, so it is
+    made every round; the Probes are cleared after scoring, the copy stays."""
     state = _at_prediction()
     t = _theory(state, 1, *RIGHT)
     state, _ = _predict(state, 0, t.id, 0)
+    before = [({v: c.state for v, c in p.readings.items()}, p.probe_time) for p in state.probes]
     state = _finish(state)
-    assert state.prediction_report is None
+    report = state.prediction_report
+    assert report["predictions"] == []
+    assert [(g["readings"], g["probe_time"]) for g in report["grid"]] == before
+    assert all(g["outcomes"] for g in report["grid"])
+
+
+def test_the_text_view_shows_the_last_round_grid_until_new_probes_are_dealt():
+    """Specification 8.2: AI seats see the last round's World Grid until new Probes are dealt."""
+    from nv_core.text import render_text
+
+    state = _at_prediction()
+    state = _finish(state)
+    while state.phase != Phase.HIRING:  # play on to the next round's Hiring phase
+        state = do(state, a.CommitPhase(seat=state.waiting[0]))
+    text = render_text(player_view(state, 0))
+    assert f"WORLD GRID OF ROUND {state.round - 1}" in text
 
 
 def test_report_marks_the_prediction_that_won_the_nobel_prize():

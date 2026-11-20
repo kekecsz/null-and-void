@@ -212,15 +212,17 @@ const authorLabel = (p) => (p.author === msg.you ? t("your own") : nameOf(p.auth
 const groupLabel = (...content) => h("div", { class: "group-label" }, content);
 
 // World Grid --------------------------------------------------------------------------------------
-function probeStrip(p) {
+// A Probe's row. ``pastRound``: a copy of an earlier round's row (the prediction report), without
+// the true states or the sensor buttons of the current round.
+function probeStrip(p, pastRound) {
   const v = view();
   const known = Boolean(p.readings);
   const seen = { ...(p.readings || {}), ...(p.outcomes || {}) };
-  const truth = v.probe_truth && v.probe_truth[p.index];
-  const sensorOption = msg.options.find((o) => o.type === "install_sensor");
+  const truth = pastRound ? null : v.probe_truth && v.probe_truth[p.index];
+  const sensorOption = pastRound ? null : msg.options.find((o) => o.type === "install_sensor");
   const choices = sensorOption ? sensorOption.template.choices.filter((c) => c.probe === p.index) : [];
   return strip({
-    key: `R${v.round}P${p.index}`,  // a new round's Probe is a different strip
+    key: pastRound ? `report-R${pastRound}P${p.index}` : `R${v.round}P${p.index}`,  // a new round's Probe is a different strip
     head: `P${p.index + 1}`, slots: seen,
     icon: p.hot_topic ? h("img", { class: "hot-topic", src: "/web/icons/fire.png", alt: t("Hot topic"), title: t("Hot topic") }) : null,
     cellFor: (variable) => {

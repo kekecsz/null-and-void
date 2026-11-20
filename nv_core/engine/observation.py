@@ -303,18 +303,36 @@ def start_scoring(ctx: Ctx) -> None:
 
 def finish_scoring(ctx: Ctx) -> None:
     missed: list[int] = []
+    grid = round_grid(ctx)  # before scoring: recording the observations clears the Probes
     _score_round(ctx, missed)
-    ctx.state.prediction_report = _prediction_report(ctx, missed)
+    ctx.state.prediction_report = _prediction_report(ctx, missed, grid)
 
 
-def _prediction_report(ctx: Ctx, missed: list[int]) -> dict | None:
-    """What the round's predictions did, for the web client's report (specification 7.4). Only
-    revealed predictions, so all of it is public. None when there is nothing to report."""
+def round_grid(ctx: Ctx) -> list[dict]:
+    """The round's World Grid as everyone saw it once the outcomes were revealed (public), kept in
+    the prediction report so players and AI seats can study it until the next one (specification 7.4, 8.2)."""
+    state = ctx.state
+    return [
+        {
+            "index": p.index,
+            "specialty": list(p.specialty),
+            "sensors": dict(p.sensors),
+            "probe_time": p.probe_time,
+            "probe_time_from_sensor": p.probe_time_from_sensor,
+            "hot_topic": p.index == state.hot_topic,
+            "readings": {v: c.state for v, c in p.readings.items()},
+            "outcomes": {v: c.state for v, c in p.outcomes.items()},
+        }
+        for p in state.probes
+    ]
+
+
+def _prediction_report(ctx: Ctx, missed: list[int], grid: list[dict]) -> dict:
+    """What the round's predictions did, for the web client's report (specification 7.4), with the
+    round's World Grid. Only revealed predictions, so all of it is public."""
     state = ctx.state
     shown = [p for p in state.prediction_log + state.predictions
              if p.round == state.round and p.status in ("scored", "pruned", "revealed")]  # "pruned": older games
-    if not shown and not missed:
-        return None
     shown.sort(key=lambda p: (p.seat, p.probe, p.id))
     outcome = {"pruned": lambda p: "pruned", "revealed": lambda p: "unscored",
                "scored": lambda p: "success" if p.success else "failed"}
@@ -331,6 +349,7 @@ def _prediction_report(ctx: Ctx, missed: list[int]) -> dict | None:
              "patent_holder": p.patent_holder, "nobel": p.won_nobel}
             for p in shown
         ],
+        "grid": grid,
     }
 
 

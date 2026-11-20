@@ -104,6 +104,9 @@ function predictionReportBody(report) {
       missed ? ` ${t("No prediction on {list}: each counts as unsuccessful.", { list: missed })}` : "") : null,
     seats.length ? h("div", { class: "report" }, seats.map((seat) => recordArea(chip(seat), "", report.predictions.filter((p) => p.seat === seat).map(reportEntry))))
       : h("p", { class: "muted" }, t("Nobody revealed a prediction.")),
+    // The round's World Grid, to study as long as the player likes (the Probes are cleared after scoring).
+    report.grid ? h("div", { class: "report-grid" }, h("h3", {}, t("World Grid of round {n}", { n: report.round })),
+      report.grid.map((p) => probeStrip(p, report.round))) : null,
   ];
 }
 
