@@ -205,3 +205,5 @@ html.theme-dark {
 .theme-dark .swatch { border-color: var(--blank); }
 
 @media (min-width: 1500px) { .theme-dark #board { grid-template-columns: minmax(0, 1fr) 400px; } }
+.theme-light .credit-table tr.credit-now { background: #F1E3C2; }
+.theme-dark .credit-table tr.credit-now { background: #3A3024; }

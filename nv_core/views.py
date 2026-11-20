@@ -63,6 +63,28 @@ def _paper(state: GameState, paper: Paper) -> dict[str, Any]:
     }
 
 
+# Settings the Reference panel's academic credit table shows (specification 7.4).
+CREDIT_SETTINGS = (
+    "fired_postdoc_penalty", "sensor_install_and_upgrade_AC_reward", "experiment_method_citation_AC_reward",
+    "citation_reward", "crisis_pred_citation_reward_bonus", "crisis_pred_base_bonus", "failed_non_prereg_pred_ac",
+    "failed_prereg_pred_ac", "failed_prereg_pred_ac_crisis", "crisis_failed_pred_citation_penalty",
+    "retraction_ac_penalty", "OA_publication_AC_reward", "unused_staff_penalty", "unpaid_postdoc_penalty",
+)
+
+
+def _reference(state: GameState) -> dict[str, Any]:
+    """The game's own tables and credit values, for the Reference panel (specification 7.4)."""
+    s = state.settings
+    return {
+        "grant_track": [p.model_dump() for p in s.grant_track],
+        "talent": [{"hire_cap": s.student_hire_cap(n), "leave_below": s.student_leave_threshold(n)}
+                   for n in range(s.talent_track_max + 1)],
+        "journal_tiers": [t.model_dump() for t in s.journal_tiers],
+        "publication_rewards": [s.publication_reward(tier, False) for tier in range(len(s.journal_tiers))],
+        "credit": {name: getattr(s, name) for name in CREDIT_SETTINGS},
+    }
+
+
 def _lab_capacity_cost(state: GameState, r: Researcher) -> int | None:
     """The cost of the next step of lab capacity, None at the maximum (Experimentation and equipment phase)."""
     s = state.settings
@@ -231,6 +253,7 @@ def _view(state: GameState, seat: int | None) -> dict[str, Any]:
         "result": state.result.model_dump() if state.result else None,
         "prediction_report": state.prediction_report,
         "reports": player_reports(state, seat),
+        "reference": _reference(state),
     }
     if seat is not None:
         view["lab"] = _lab(state, seat)

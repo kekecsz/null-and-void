@@ -206,6 +206,7 @@ function render() {
   renderPredictions();
   renderTracks();
   renderAlliances();
+  renderReference();
   refreshHighlights();
   layoutPins();
 }
@@ -366,8 +367,11 @@ function renderTracks() {
       v.researchers.map((r) => [who(r), r.credit, r.money, r.lab_capacity ?? "\u2013", r.postdocs])));
     return;
   }
+  // Hovering the Grant and Talent positions tells what they mean (as in the Reference panel).
+  const hover = (value, text) => h("span", { class: "hover-info", title: text }, String(value));
   const rows = v.researchers.map((r) => [
-    who(r), r.credit, r.money, r.grant_position, r.talent_position, r.lab_capacity ?? "\u2013", t("{p}p {s}s", { p: r.postdocs, s: r.students }), r.patents,
+    who(r), r.credit, r.money, hover(r.grant_position, grantPositionText(r.grant_position)), hover(r.talent_position, talentPositionText(r.talent_position)),
+    r.lab_capacity ?? "\u2013", t("{p}p {s}s", { p: r.postdocs, s: r.students }), r.patents,
   ]);
   fill($("tracks"), table(["", t("Credit"), t("Money"), t("Grant"), t("Talent"), t("Lab"), t("Staff"), t("Pat.")], rows));
 }

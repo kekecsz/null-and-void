@@ -236,7 +236,8 @@ Plain and functional, desktop-first, English only. Section 7.4 replaces how the 
 | Lab (behind the shield) | staff and tasks, money, hand of theories and methods, experiment pool, records, predictions | allocate staff, run experiments, build records, formulate, predict, preregister |
 | Literature | published theories and methods with counters, authors, tiers, patents | cite, inspect |
 | Submission Portal | manuscripts by position, tier and author; Revise and Accept areas | submit, revise, vote in peer review |
-| Tracks | academic credit, Grant funding, Talent development, lab capacity, Game Period Deck count, crisis tracker | increase the lab capacity (Experimentation phase) |
+| Tracks | academic credit, Grant funding, Talent development (hovering a position tells what it means), lab capacity, Game Period Deck count, crisis tracker | increase the lab capacity (Experimentation phase) |
+| Reference | the game's own values: an academic credit table by phase (gains and losses; the current phase's section highlighted; hovering a line names its rulebook section), the Grant funding and Talent development tracks (one column per position, the researchers' round tokens under their position) and the journal tiers; low in the right column | — |
 | Status bar | round, phase, who is still deciding, AI cost so far | commit the phase |
 | Event log | public events in order, filterable | — |
 

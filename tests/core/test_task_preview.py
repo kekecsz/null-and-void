@@ -305,3 +305,13 @@ def test_hiring_preview_counts_the_publications_due_this_round():
 def test_the_simplified_game_has_no_grant_publications():
     state = game(mode="simplified")
     assert task_preview(state, 0).get("grant_publications") is None
+
+
+def test_the_view_carries_the_games_own_reference_values():
+    """Specification 7.4, Reference panel: the tables and credit values come from the game's settings."""
+    state = game(citation_reward=3)
+    ref = player_view(state, 0)["reference"]
+    assert ref["credit"]["citation_reward"] == 3
+    assert len(ref["grant_track"]) == len(S.grant_track) and len(ref["journal_tiers"]) == len(S.journal_tiers)
+    assert ref["talent"][0] == {"hire_cap": S.student_hire_cap(0), "leave_below": S.student_leave_threshold(0)}
+    assert ref["publication_rewards"] == [S.publication_reward(t, False) for t in range(len(S.journal_tiers))]

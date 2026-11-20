@@ -110,6 +110,20 @@ body.tiles-compact { --head: 92px; --cell: 122px; --tile: 21px; }
 .report-credit { font-size: 12.5px; padding: 3px 6px 1px; border-top: 1px dashed var(--line); margin-top: 2px; }
 .report-general { font-size: 12.5px; margin-bottom: 6px; }
 .hire-report { margin-bottom: 8px; }
+#reference h3 { margin: 10px 0 4px; font-size: 13px; }
+#reference table { font-size: 12px; }
+#reference table.track td:not(:first-child), #reference table.track th:not(:first-child), #reference table.tiers td, #reference table.tiers th { text-align: center; }
+.chip-stack { display: inline-flex; }
+.token { display: inline-block; width: 18px; height: 18px; border-radius: 50%; color: #fff; font-size: 10.5px; font-weight: 700; line-height: 18px;
+  text-align: center; box-shadow: 0 0 0 1.5px var(--panel), inset 0 0 0 2px rgba(255, 255, 255, .45); cursor: default; }
+.chip-stack .token { margin-left: -7px; }
+.chip-stack .token:first-child { margin-left: 0; }
+#reference table.track { table-layout: fixed; width: 100%; }
+#reference table.track td:first-child, #reference table.track th:first-child { width: 42%; }
+.track-chips td { height: 22px; }
+.credit-table .credit-head th { text-align: left; padding-top: 6px; }
+.credit-table tr.credit-now { background: #f3e2b8; }
+.hover-info { text-decoration: underline dotted; cursor: help; }
 .hire-report td:not(:first-child), .hire-report th:not(:first-child) { text-align: center; min-width: 5em; }
 .report-switches td { border: 0; padding: 0 6px 0 0; }
 .report-switches button { margin: 1px 0; padding: 0 7px; font-size: 11.5px; }

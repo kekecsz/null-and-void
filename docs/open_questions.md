@@ -18,6 +18,14 @@ Each entry gives the document and section, the exact text, the possible readings
 - **When an invalid slip is discarded (confirmed by Zoltan, 2026-11-13):** at Clean-up, before the Records capacity is applied, so it never pushes a valid record out. Until then its remaining cards can still go into a mixed experiment record. The engine does this.
 - **For the rulebook, also:** this timing, in the Clean-up phase.
 
+## Unpaid postdocs in the simplified game
+
+- **Where:** Clean-up phase.
+- **Text:** "Normal game: Unpaid postdocs leave. For each unpaid postdoc, suffer a penalty of [unpaid\_postdoc\_penalty] academic credits. Additionally, if there were any unpaid postdocs in the lab this round, the researcher has to move their marker backwards by 1 position on the Talent development track."
+- **The question:** the rule is marked "Normal game", but the simplified game has postdocs and money too (a researcher can spend money in the round and then be short at Clean-up). What happens to an unpaid postdoc there? The engine currently applies the normal rule (they leave, with the penalty) in both games; the Reference panel's credit table follows the rulebook and lists the penalty for the normal game only.
+- **Possible readings:** (a) the same as in the normal game, without the Talent track step (the simplified game has no Talent track); (b) they leave without a penalty; (c) unpaid postdocs cannot happen in the simplified game, because spending is limited.
+- **Suggested answer:** (a); the "Normal game:" mark would then cover only the Talent track sentence.
+
 ## Easier difficulty levels, to allow true racing (design idea)
 
 **Document:** `parameter_defaults.yaml`; specification 6.3 (the lobby's "settings preset").
