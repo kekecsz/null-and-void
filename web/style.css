@@ -109,6 +109,8 @@ body.tiles-compact { --head: 92px; --cell: 122px; --tile: 21px; }
 .h-task { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .report-credit { font-size: 12.5px; padding: 3px 6px 1px; border-top: 1px dashed var(--line); margin-top: 2px; }
 .report-general { font-size: 12.5px; margin-bottom: 6px; }
+.hire-report { margin-bottom: 8px; }
+.hire-report td:not(:first-child), .hire-report th:not(:first-child) { text-align: center; min-width: 5em; }
 .report-switches td { border: 0; padding: 0 6px 0 0; }
 .report-switches button { margin: 1px 0; padding: 0 7px; font-size: 11.5px; }
 .record-area { border: 1px solid var(--blank); border-radius: 5px; margin-inline: -1px; padding-bottom: 2px; }
@@ -195,6 +197,9 @@ input.plain::-webkit-inner-spin-button, input.plain::-webkit-outer-spin-button {
 .alloc.postdocs-short tr > :nth-child(3), .alloc.students-short tr > :nth-child(4) { background: #e4e4de; }
 .alloc.postdocs-over tr > :nth-child(3), .alloc.students-over tr > :nth-child(4) { background: #f6c9c5; }
 .alloc input.over { outline: 2px solid var(--bad); }
+.alloc tr.grant-short > td { background: #e4e4de; }
+.publications-due { margin: 6px 0; font-size: 13px; }
+.publications-due.short { font-weight: 600; }
 
 .payoff { font-size: 11.5px; padding: 0 4px 3px calc(var(--head) + 3px); }
 .processing { flex-basis: 100%; }

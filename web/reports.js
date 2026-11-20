@@ -79,7 +79,7 @@ function showReport(box, x) {
     h("button", { title: t("Turn off the reports of this part of the round (the Reports panel turns them on again)"), onclick: () => stopReports(x, false) }, t("Stop reports on this phase")),
     h("button", { title: t("Turn off every report (the Reports panel turns them on again)"), onclick: () => stopReports(x, true) }, t("Stop all reports")),
     h("button", { class: "primary", title: t("Go on with the game"), onclick: () => closeReport(x) }, t("Next")));
-  fill(box, x.kind === "prediction" ? predictionReportBody(x.report) : phaseReportBody(x.report));
+  fill(box, x.kind === "prediction" ? predictionReportBody(x.report) : phaseReportBody(x.report, x.kind));
 }
 
 // The prediction report ------------------------------------------------------------------------------
@@ -175,12 +175,55 @@ function creditLine(report, seat) {
     ` (${own.map((c) => `${c.reason}: ${signed(c.amount)}`).join("; ")})`);
 }
 
-function phaseReportBody(report) {
+// The hiring report's staff table: the allocation form's rows, one column per researcher, counting
+// the staff who stayed after the Student task check; the students who left are a row of their own.
+const IN_THE_HIRING_TABLE = new Set(["allocation", "student_check", "student_leaves"]);
+function hiringTable(report) {
+  const seats = seatsFromMe();
+  const staff = {};  // seat -> task -> [postdocs, students]
+  const hired = {};
+  const left = {};
+  for (const item of report.items) {
+    const d = item.data || {};
+    if (item.kind === "allocation" && d.staff) {
+      staff[item.seat] = Object.fromEntries(Object.entries(d.staff).map(([task, [p, s]]) => [task, [p, s]]));
+      hired[item.seat] = d;
+    } else if (item.kind === "student_leaves" && d.count !== undefined) {
+      left[item.seat] = (left[item.seat] || 0) + d.count;
+      const cell = (staff[item.seat] || {})[d.task];
+      if (cell) cell[1] = Math.max(0, cell[1] - d.count);
+    }
+  }
+  if (!Object.keys(staff).length) return null;
+  const noStudents = simplified();
+  const count = (p, s) => [p ? t("{n}p", { n: p }) : null, s && !noStudents ? t("{n}s", { n: s }) : null].filter(Boolean).join(" ");
+  const tasks = [...new Set(Object.values(staff).flatMap((x) => Object.keys(x)))]
+    .filter((task) => seats.some((seat) => staff[seat] && staff[seat][task] && (staff[seat][task][0] || staff[seat][task][1])))
+    .sort((a, b) => taskOrder(a) - taskOrder(b));
+  const rows = tasks.map((task) => [tTask(task), ...seats.map((seat) => count(...((staff[seat] || {})[task] || [0, 0])))]);
+  const total = (seat) => Object.values(staff[seat] || {}).reduce(([p, s], [a, b]) => [p + a, s + b], [0, 0]);
+  rows.push([h("b", {}, t("Staff")), ...seats.map((seat) => h("b", {}, count(...total(seat)) || "0"))]);
+  rows.push([t("Hired"), ...seats.map((seat) => {
+    const d = hired[seat];
+    if (!d) return "";
+    const parts = [count(d.hired_postdocs, d.hired_students), d.fired_postdocs ? t("fired {n}p", { n: d.fired_postdocs }) : null];
+    return parts.filter(Boolean).join(", ");
+  })]);
+  if (!noStudents) rows.push([t("Students who left"), ...seats.map((seat) => (left[seat] ? h("b", { class: "bad" }, String(left[seat])) : ""))]);
+  const tableBox = table(["", ...seats.map((seat) => chip(seat))], rows);
+  tableBox.classList.add("hire-report");
+  return tableBox;
+}
+
+function phaseReportBody(report, kind) {
   const general = report.items.filter((i) => i.seat === null || i.seat === undefined);
+  const hiring = kind === "hiring" ? hiringTable(report) : null;
+  const shown = (i) => !hiring || !IN_THE_HIRING_TABLE.has(i.kind);
   return [
+    hiring,
     general.length ? h("div", { class: "report-general" }, general.map(reportLine)) : null,
     h("div", { class: "report" }, seatsFromMe().map((seat) => {
-      const lines = report.items.filter((i) => i.seat === seat).map(reportLine);
+      const lines = report.items.filter((i) => i.seat === seat && shown(i)).map(reportLine);
       return recordArea(chip(seat), "", [lines.length ? lines : h("div", { class: "report-line muted" }, t("Nothing to report.")), creditLine(report, seat)]);
     })),
   ];
