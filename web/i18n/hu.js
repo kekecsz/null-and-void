@@ -316,7 +316,6 @@ I18N.add("hu", "Magyar", {
   "patent": "szabadalom",
   "you already hold its patent": "a szabadalma már a tiéd",
   "no patent ({name} holds it)": "nincs szabadalom ({name} birtokolja)",
-  "{n} AC (preregistered {m})": "{n} TK (előregisztrálva {m})",
   "{n} AC": "{n} TK",
   "If right:": "Ha helyes:",
   "If wrong:": "Ha téves:",
