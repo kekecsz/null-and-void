@@ -122,11 +122,8 @@ function payoffText(x, preregister) {  // the breakdown, shown on hover
   return `${t("If right:")} ${t("{n} AC", { n: signed(own.success) })}${authorPart(x.author_success)}${patentPart(x)}. `
     + `${t("If wrong:")} ${t("{n} AC", { n: signed(own.failure) })}${authorPart(x.author_failure)}${simplified() ? "" : `, ${t("no patent")}`}.`;
 }
-function payoffLine(paper) {  // under the strip: only the patent, which the buttons' numbers leave out
-  const x = (preview().theories || {})[paper.id];
-  if (!x || !x.patent) return null;
-  return h("div", { class: "payoff muted" }, x.patent === "new" ? t("A patent if right.") : patentPart(x).replace(/^, /, ""));
-}
+// The button's amounts: "+3/-1", and "/P" when a success would win the theory's patent (nobody holds it yet).
+const payoffLabel = (x, amounts) => ` ${signed(amounts[0])}/${signed(amounts[1])}${x.patent === "new" ? "/P" : ""}`;
 function outcomeNote(x) {  // what a prediction does once revealed
   if (!x) return null;
   return h("span", { class: x.success ? "good" : "bad" },
@@ -155,11 +152,11 @@ function predictionRows(option) {
         return h("button", { class: on ? "primary" : "", title: hover || null, onclick: () => {
           if (made) send(made.cancel);
           if (!on) send(make);
-        } }, label, amounts ? h("span", { class: "button-credit" }, ` ${signed(amounts[0])}/${signed(amounts[1])}`) : null);
+        } }, label, amounts ? h("span", { class: "button-credit" }, payoffLabel(x, amounts)) : null);
       };
       return h("span", { class: "pair" }, h("b", {}, `P${probe + 1}`), choice(false, t("Predict")), choice(true, t("Preregister")));
     };
-    return [theoryStrip(p, [info(t("Nobel {n}/{max}", { n: p.nobel, max: p.nobel_threshold })), probes.map(pair)]), payoffLine(p)];
+    return [theoryStrip(p, [info(t("Nobel {n}/{max}", { n: p.nobel, max: p.nobel_threshold })), probes.map(pair)])];
   });
 }
 
