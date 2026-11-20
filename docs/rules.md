@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.15. 21:43
+Last updated: 2026.11.20. 21:11
 
 \[Front page goes here\]
 
@@ -20,7 +20,7 @@ The researchers compete with each other and can achieve individual victory as we
 
 # Victory
 
-The ultimate victory condition is to win the Nobel Prize. The Nobel Prize is awarded for a theory that was used to successfully predict the world state \[nobel\_condition\] times consecutively. Winning the Nobel Prize is hard, and in many games, no Nobel Prize will be awarded.
+The ultimate victory condition is to win the Nobel Prize. The Nobel Prize is awarded for a theory that was used to successfully predict the world state (\[nobel\_condition\] \- journal tier) times consecutively. Winning the Nobel Prize is hard, and in many games, no Nobel Prize will be awarded.
 
 A Crisis Crash is the ultimate lose condition. If a crisis hits and there are \[crisis\_condition\] total unsuccessful predictions (false predictions or missed predictions), everyone loses regardless of their academic credit.
 
@@ -283,7 +283,7 @@ Predictions mimic the structure of Probes and Theories. They specify input param
 
 Theories with the Fresh out of print marker can only be used by their authors.
 
-When there are multiple identical theories matching the prediction, the cited theory is determined based on this preference order: 1\. the researcher’s own theory, 2\. the theory with the lowest value on its Nobel Prize counter (to prevent another researcher from getting the Nobel Prize), 3\. the theory of the researcher with the lowest academic credit (to reduce the lead of the leading player), 4\. the earlier published theory is cited.
+When there are multiple identical theories matching the prediction, the cited theory is determined based on this preference order: 1\. the researcher’s own theory, 2\. the theory with the most successes still needed before reaching the Nobel Prize threshold (to prevent another researcher from getting the Nobel Prize), 3\. the theory of the researcher with the lowest academic credit (to reduce the lead of the leading player), 4\. the earlier published theory is cited.
 
 The specified Input Parameter states of the predictions are taken from the State Cards directly (not the Input Parameter Deck or the Probes).
 
@@ -313,7 +313,9 @@ Only revealed predictions count for scoring purposes.
 
 A prediction is considered successful when all world outcomes shown on the theory used for the prediction matches the world outcome revealed for the Probe for which that prediction was made. If a theory shows only one world outcome, it only needs to match that world outcome on the Probe, the other world outcome is disregarded. A prediction is considered failed in every other case.
 
-Predictions are scored in the order they were revealed, so Preregistered predictions are scored first. Furthermore, predictions are scored in turn order, then in Probe order. If there are multiple predictions revealed for the same Probe by the same player, the player can decide the order in which these predictions are scored. (Precise Probe scoring order matters for determining who gets the patent for the successful prediction, and which theory wins the Nobel prize, in cases when there is no competition for these, probe scoring order can be ignored).
+Predictions are scored in two waves, first, all Preregistered predictions are scored, then, all other predictions in the next wave. In each wave, predictions are scored Probe-by-probe, starting with the Probe with the Hot Topic marker, and progressing in the same cycle the Hot Topic marker travels in (e.g. if the Hot Topic marker is on Probe 3, the Predictions are revealed for Probe 3 first, then Probe 4, then Probe 1, etc.). If multiple predictions are revealed for the same Probe, the predictions of the player who has Probe time scores them first. Turn order decides among the others. Among predictions of the same player made for the same Probe, predictions are scored in publication order of their theories. (Precise Probe scoring order matters for determining who gets the patent for the successful prediction, and which theory wins the Nobel prize, in cases when there is no competition for these, probe scoring order can be ignored). 
+
+In the Simplified game, instead of the Hot Topic marker, the cycle of prediction reveal always starts at Probe 1\.
 
 ## Failed predictions: 
 
@@ -452,7 +454,7 @@ Supporting observation records are taken as is, containing exactly what was visi
 
 ## Revisions
 
-When revising a manuscript, the researcher can advance one of their manuscripts in the revise area to the Accept area (place rounds in processing tokens according to the Article processing rules below). (During revision the researcher cannot change any element of the submission.)
+When revising a manuscript, the researcher can place one of their manuscripts in the revise area to the “awaiting peer review” area in the first available numbered position. (During revision the researcher cannot change any element of the submission.)
 
 When no one wants to submit or revise any more manuscripts, the Peer review commences.
 
@@ -467,7 +469,7 @@ This deck is then shuffled and dealt to the researchers, one for each of their s
 
 Researchers reveal the cards they got. If they got “0”, that means that that staff member got another irrelevant manuscript to review and they don’t get to evaluate any player manuscripts. For each card that shows a manuscript position, the researcher gets one pair of Peer review voting cards (one “accept”, one “revise”). For each manuscript they were allocated to review, they can secretly peek at the manuscript (including its supporting records), then must secretly choose one of the voting cards to evaluate the manuscript, placing the card next to the manuscript face down (discarding its voting card pair).
 
-\[peer\_review\_random\_draws\] of the remaining Peer review allocation deck cards are revealed. The manuscripts that are on the (non “0”) indicated positions get one “accept” decision each. \[Designer note: this resembles that the peer review process trundles along slowly even without the top researchers ever peer reviewing anything.\]
+\[peer\_review\_random\_draws\] of the remaining Peer review allocation deck cards are revealed or if there are fewer cards remaining in the deck, all remaining cards. The manuscripts that are on the (non “0”) indicated positions get one “accept” decision each. \[Designer note: this resembles that the peer review process trundles along slowly even without the top researchers ever peer reviewing anything.\]
 
 Once every peer review decision has been made, the face down voting cards next to the manuscripts are shuffled (if more than one) and turned face up.
 
@@ -554,15 +556,13 @@ In the simplified game, researchers get a flat rate of \[funding\_simplified\] e
 
 # Nobel Prize
 
-Once the Nobel Prize counter reaches \[nobel\_condition\], the author of that theory immediately wins the game. 
+Once the Nobel Prize counter reaches (\[nobel\_condition\] \- the journal tier the theory was published in), the author of that theory immediately wins the game. (In the simplified game, the threshold for the Nobel Prize is \[nobel\_condition\_simplified\].)
 
-The Nobel Prize is only awarded during the Calm period. The Nobel Prize counter is not tracked after the Crisis period starts.
+The Nobel Prize is only checked for Nobel Prize during the Calm period and immediately when the Crisis ends. (So reaching the Nobel threshold during the Crisis is not enough for a Nobel Price, the theory needs to maintain its position until the Crisis ends). If multiple theories are eligible for the Nobel Prize at Crisis End, the theory that is furthest above its threshold wins. In case of a tie, the researchers share the Nobel Prize and win together.
 
 # Retraction
 
 Once the Retraction counter reaches \[retraction\_threshold\], the theory becomes unpublished. In the normal game the theory itself is returned to its author, all other cards attached to the theory, like patents, journal tier indicator, etc. are discarded. In the simplified game, the theory is simply discarded. Furthermore, when a theory is retracted, its author suffers a penalty of \[retraction\_ac\_penalty\] academic credits.
-
-Retractions are only made during the Calm period. The Retraction counters are not tracked during the Crisis period.
 
 \[Figure: literature\_theory\_close\_to\_nobel\_another\_close\_to\_retraction.png\]
 

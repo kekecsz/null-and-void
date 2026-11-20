@@ -64,7 +64,8 @@ crisis_pred_citation_reward_bonus: 1
 predictions_per_staff: 2
 
 # Nobel Prize and retraction
-nobel_condition: 6                         # consecutive successful predictions
+nobel_condition: 9                         # consecutive successful predictions, minus the journal tier (Nobel Prize)
+nobel_condition_simplified: 6              # consecutive successful predictions in the simplified game
 retraction_threshold: 3                    # retraction counter value
 retraction_ac_penalty: -5                  # academic credit
 
@@ -74,7 +75,7 @@ crisis_length: 3                           # rounds
 
 # Publication
 submission_portal_positions: 40
-peer_review_random_draws: 2
+peer_review_random_draws: 3
 min_reviews_for_decision: 2
 OA_publication_AC_reward: 1                # academic credit
 
@@ -86,11 +87,11 @@ patent_funding: 1                          # money per patent per round
 # expected_to_increase is null where there is no higher position.
 grant_track:
   - {funding: 1, admin: 0, expected_to_maintain: 0, expected_to_increase: 1}
-  - {funding: 2, admin: 1, expected_to_maintain: 1, expected_to_increase: 2}
+  - {funding: 2, admin: 1, expected_to_maintain: 0, expected_to_increase: 1}
   - {funding: 3, admin: 1, expected_to_maintain: 1, expected_to_increase: 2}
-  - {funding: 4, admin: 2, expected_to_maintain: 2, expected_to_increase: 3}
-  - {funding: 5, admin: 2, expected_to_maintain: 3, expected_to_increase: 4}
-  - {funding: 6, admin: 2, expected_to_maintain: 4, expected_to_increase: null}
+  - {funding: 4, admin: 2, expected_to_maintain: 1, expected_to_increase: 2}
+  - {funding: 5, admin: 2, expected_to_maintain: 2, expected_to_increase: 3}
+  - {funding: 6, admin: 2, expected_to_maintain: 3, expected_to_increase: null}
 
 # Journal tiers: one entry per tier, tier 0 first (list position = tier number).
 #   min_records       observations and experiments combined
@@ -103,10 +104,10 @@ grant_track:
 journal_tiers:
   - {min_records: 0, min_observations: 0, min_experiments: 0, min_elements: 2, rounds_in_processing: 0, peer_review: false, methods_accepted: true,  submission_fee: 1, apc: 0, ac_reward: 0}
   - {min_records: 1, min_observations: 0, min_experiments: 0, min_elements: 2, rounds_in_processing: 1, peer_review: true,  methods_accepted: true,  submission_fee: 0, apc: 1, ac_reward: 1}
-  - {min_records: 2, min_observations: 0, min_experiments: 0, min_elements: 2, rounds_in_processing: 1, peer_review: true,  methods_accepted: true,  submission_fee: 0, apc: 2, ac_reward: 2}
-  - {min_records: 3, min_observations: 0, min_experiments: 0, min_elements: 3, rounds_in_processing: 2, peer_review: true,  methods_accepted: true,  submission_fee: 0, apc: 3, ac_reward: 6}
-  - {min_records: 3, min_observations: 0, min_experiments: 0, min_elements: 4, rounds_in_processing: 2, peer_review: true,  methods_accepted: false, submission_fee: 0, apc: 4, ac_reward: 8}
-  - {min_records: 4, min_observations: 2, min_experiments: 2, min_elements: 5, rounds_in_processing: 3, peer_review: true,  methods_accepted: false, submission_fee: 0, apc: 5, ac_reward: 16}
+  - {min_records: 2, min_observations: 0, min_experiments: 0, min_elements: 3, rounds_in_processing: 1, peer_review: true,  methods_accepted: true,  submission_fee: 0, apc: 1, ac_reward: 3}
+  - {min_records: 3, min_observations: 0, min_experiments: 0, min_elements: 3, rounds_in_processing: 2, peer_review: true,  methods_accepted: true,  submission_fee: 0, apc: 1, ac_reward: 6}
+  - {min_records: 3, min_observations: 0, min_experiments: 0, min_elements: 4, rounds_in_processing: 3, peer_review: true,  methods_accepted: false, submission_fee: 0, apc: 2, ac_reward: 10}
+  - {min_records: 4, min_observations: 2, min_experiments: 2, min_elements: 5, rounds_in_processing: 3, peer_review: true,  methods_accepted: false, submission_fee: 0, apc: 2, ac_reward: 16}
 
 # Talent development track: one entry per track position, position 0 first (list position = position number).
 talent_development_track:

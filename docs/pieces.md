@@ -38,7 +38,7 @@ The game uses the pieces below. The computer version uses the same pieces in vir
 - Rounds in processing tokens: 30\.  
 - Open Access markers: 20, placed on papers for which the article processing charge was paid.  
 - Fresh out of print markers: 10\.  
-- Nobel Prize counters and Retraction counters: 20 of each, one of each for every published theory, tracking 0 to \[nobel\_condition\] and 0 to \[retraction\_threshold\].
+- Nobel Prize counters and Retraction counters: 20 of each, one of each for every published theory, tracking 0 to (\[nobel\_condition\] \+ 4\) and 0 to \[retraction\_threshold\].
 
 ## Academic credit, money and other shared pieces
 
