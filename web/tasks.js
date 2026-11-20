@@ -422,12 +422,25 @@ function submitBox(box, index, option) {
   });
 }
 
+// Research grants: how many of the player's manuscripts are published this round, against what the
+// Grant funding position expects (shown when hiring and when submitting).
+function publicationsDue() {
+  const g = preview().grant_publications;
+  if (!g) return null;
+  const short = g.due < g.to_keep;
+  const text = g.to_move_up === null
+    ? t("Publications due this round: {n} (to keep your grant position: {keep}).", { n: g.due, keep: g.to_keep })
+    : t("Publications due this round: {n} (to keep your grant position: {keep}, to move up: {up}).", { n: g.due, keep: g.to_keep, up: g.to_move_up });
+  return h("div", { class: `publications-due${short ? " short" : ""}`,
+    title: t("Manuscripts in the Accept area with 0 rounds in processing are published in this round's Clean-up phase. A tier 0 submission now is published this round too.") }, text);
+}
+
 function submitRows(option) {
   const ideas = view().lab.ideas;
   for (const box of task.boxes) if (box.manuscript !== null && (!ideas.some((i) => i.id === box.manuscript) || !tiersFor(box.manuscript).length)) Object.assign(box, emptyBox());
   if (!task.boxes.length) task.boxes.push(emptyBox());
   task.target = Math.min(task.target, task.boxes.length - 1);
-  return [task.boxes.map((box, i) => submitBox(box, i, option)),
+  return [publicationsDue(), task.boxes.map((box, i) => submitBox(box, i, option)),
     h("div", { class: "box-foot" }, h("button", { onclick: () => { task.boxes.push(emptyBox()); task.target = task.boxes.length - 1; redraw(); } }, t("Add a submission box")))];
 }
 
@@ -521,6 +534,8 @@ function allocateForm(tpl) {
     ? table([t("Task"), t("When"), t("Postdocs")], [...rows, [h("b", {}, t("Allocated")), "", totals.postdocs]])
     : table([t("Task"), t("When"), t("Postdocs"), t("Students")], [...rows, [h("b", {}, t("Allocated")), "", totals.postdocs, totals.students]]);
   allocationTable.classList.add("alloc");
+  const adminNeeded = preview().grant_admin_needed;
+  const grantsRow = rowsByTask.grants ? rowsByTask.grants[0].box.closest("tr") : null;
   const button = h("button", { class: "primary", title: t("Hire, fire and allocate as shown, and commit: final for this round"), onclick: () => {
     const after = Number(postdocs.value);
     const allocation = {};
@@ -540,6 +555,10 @@ function allocateForm(tpl) {
       allocationTable.classList.toggle(`${kind}-over`, given[kind] > wanted[kind]);
       allocationTable.classList.toggle(`${kind}-short`, given[kind] < wanted[kind]);
       totals[kind].textContent = t("{n} of {m}", { n: given[kind], m: wanted[kind] });
+    }
+    if (grantsRow) {
+      const [p, s] = rowsByTask.grants;
+      grantsRow.classList.toggle("grant-short", (Number(p.value) || 0) + (Number(s.value) || 0) < (adminNeeded || 0));
     }
     let overCap = false;
     for (const [task, [p, s]] of Object.entries(rowsByTask)) {
@@ -568,6 +587,7 @@ function allocateForm(tpl) {
       ...(noStudents ? [] : [`\u00b7 ${t("students to hire:")} `, students.box, maxButton(students, tpl.max_students), ` (${t("at most {n}", { n: tpl.max_students })}) `]),
       h("button", { type: "button", disabled: previous ? null : true, title: t("Fill in the task allocation of your last round"), onclick: repeat }, t("Repeat"))),
     allocationTable,
+    publicationsDue(),
     h("div", { class: "small muted" }, (noStudents ? t("Every staff member needs a task") : t("Every staff member needs a task; Development and Talent development take postdocs only; at most one on Talent development"))
       + (caps.experimentation !== undefined ? `; ${t("at most {n} on Experimentation (your lab capacity).", { n: caps.experimentation })}` : ".")),
     button,

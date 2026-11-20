@@ -249,7 +249,7 @@ def test_no_processing_preview_without_write_up_staff():
     state, _ = _at_submission()
     state = state.clone()
     state.researcher(1).used[Task.WRITE_UP] = 1
-    assert task_preview(state, 1) == {"processing": {}}
+    assert task_preview(state, 1)["processing"] == {}
 
 
 def test_apply_ignores_the_preview():
@@ -285,3 +285,23 @@ def test_prediction_preview_counts_against_the_limit():
     state, _ = _predict(state, 0, t.id, 0)
     assert task_preview(state, 0)["prediction_limit"]["made"] == 1
 
+
+
+def test_hiring_preview_counts_the_publications_due_this_round():
+    """Research grants: the manuscripts in the Accept area with 0 Rounds in processing tokens are
+    published this round; the preview sets them against the current position's expectations."""
+    from tests.core.test_rules_publication import _manuscript
+
+    state = game()
+    assert state.phase == Phase.HIRING
+    due, later, other = (_manuscript(901, 0, "accept"), _manuscript(902, 0, "accept"), _manuscript(903, 1, "accept"))
+    due.tokens, later.tokens, other.tokens = 0, 1, 0
+    state.manuscripts += [due, later, other]
+    position = S.grant_track[state.researcher(0).grant_position - 1]
+    assert task_preview(state, 0)["grant_publications"] == {
+        "due": 1, "to_keep": position.expected_to_maintain, "to_move_up": position.expected_to_increase}
+
+
+def test_the_simplified_game_has_no_grant_publications():
+    state = game(mode="simplified")
+    assert task_preview(state, 0).get("grant_publications") is None

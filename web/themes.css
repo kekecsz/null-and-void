@@ -76,6 +76,7 @@ html.theme-light {
 .theme-light td { border: 0; border-bottom: 1px solid var(--hair); }
 .theme-light tr:last-child td { border-bottom: 1.5px solid var(--ink); }
 .theme-light .alloc.postdocs-short tr > :nth-child(3), .theme-light .alloc.students-short tr > :nth-child(4) { background: #E9E1CF; }
+.theme-light .alloc tr.grant-short > td { background: #E9E1CF; }
 .theme-light .alloc.postdocs-over tr > :nth-child(3), .theme-light .alloc.students-over tr > :nth-child(4) { background: #F1C6BD; }
 .theme-light tr.past td { color: #A39A8A; }
 
@@ -175,6 +176,7 @@ html.theme-dark {
 .theme-dark td { border-color: var(--line); }
 .theme-dark tr.past td { color: #7A6B5A; }
 .theme-dark .alloc.postdocs-short tr > :nth-child(3), .theme-dark .alloc.students-short tr > :nth-child(4) { background: #2F2B27; }
+.theme-dark .alloc tr.grant-short > td { background: #2F2B27; }
 .theme-dark .alloc.postdocs-over tr > :nth-child(3), .theme-dark .alloc.students-over tr > :nth-child(4) { background: #5E211A; }
 
 /* Controls */

@@ -96,6 +96,17 @@ def _processing(ctx: Ctx, r: Researcher, seat: int) -> dict[str, dict[str, Any]]
     return result
 
 
+def grant_publications(state: GameState, seat: int) -> dict[str, Any] | None:
+    """Research grants: the publications the Grant funding track expects this round, and the
+    researcher's manuscripts due to be published in this round's Clean-up phase (in the Accept area
+    with 0 Rounds in processing tokens). None in the simplified game, which has no grants."""
+    if state.settings.simplified:
+        return None
+    position = state.settings.grant_track[state.researcher(seat).grant_position - 1]
+    due = sum(1 for m in state.manuscripts if m.author == seat and m.area == "accept" and m.tokens == 0)
+    return {"due": due, "to_keep": position.expected_to_maintain, "to_move_up": position.expected_to_increase}
+
+
 def task_preview(state: GameState, seat: int) -> dict[str, Any]:
     """Only what the current step can use."""
     ctx = Ctx(state)
@@ -103,7 +114,8 @@ def task_preview(state: GameState, seat: int) -> dict[str, Any]:
     needed = state.settings.grant_track[r.grant_position - 1].admin  # to keep the current position
     if state.phase == Phase.HIRING:
         previous = {t.value: c.model_dump() for t, c in r.last_allocation.items()}
-        return {"previous_allocation": previous or None, "grant_admin_needed": needed}
+        return {"previous_allocation": previous or None, "grant_admin_needed": needed,
+                "grant_publications": grant_publications(state, seat)}
     if state.phase == Phase.STUDENT_CHECK:
         return {"grant_admin_needed": needed}
     if state.phase == Phase.PREDICTION:
@@ -113,5 +125,5 @@ def task_preview(state: GameState, seat: int) -> dict[str, Any]:
     if state.phase == Phase.REVEAL:
         return {"reveals": _reveals(ctx, seat)}
     if state.phase == Phase.SUBMISSION:
-        return {"processing": _processing(ctx, r, seat)}
+        return {"processing": _processing(ctx, r, seat), "grant_publications": grant_publications(state, seat)}
     return {}
