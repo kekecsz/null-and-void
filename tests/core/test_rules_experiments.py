@@ -194,6 +194,20 @@ def test_sensor_installed_this_round_shows_a_reading_this_round():
     assert state.probes[0].probe_time == seat
 
 
+def test_the_sensor_option_tells_the_credit_it_brings():
+    """Specification 7.4 (Sensors): each sensor choice carries the credit for the level it reaches and
+    what each cited method pays its author, equal to what the engine then gives."""
+    state = _experimentation()
+    seat = state.current
+    state.probes[0].sensors = {"IP3": 1}
+    m1, m2 = publish(state, seat, parameter="IP3"), publish(state, seat, parameter="IP3")
+    option = next(o for o in legal_actions(state, seat) if o.type == "install_sensor")
+    choice = next(c for c in option.template["choices"] if c["probe"] == 0 and c["parameter"] == "IP3")
+    credit = state.researcher(seat).credit
+    state = do(state, a.InstallSensor(seat=seat, probe=0, parameter="IP3", cited_methods=[m1.id, m2.id]))
+    assert state.researcher(seat).credit == credit + choice["credit"] + 2 * choice["citation_credit"]
+
+
 def test_no_sensor_installation_or_upgrade_in_the_crisis():
     """Sensor installation and upgrade: during the Crisis period, sensor installation and upgrades
     are no longer allowed (neither offered nor accepted)."""

@@ -112,13 +112,20 @@ function patentPart(x) {
   if (x.patent === "new") return `, ${t("patent")}`;
   return `, ${x.patent_holder === msg.you ? t("you already hold its patent") : t("no patent ({name} holds it)", { name: nameOf(x.patent_holder) })}`;
 }
-function payoffLine(paper) {
+// What a prediction with this theory brings you (your own citation included): [if right, if wrong].
+function payoff(x, preregister) {
+  const own = preregister ? x.preregistered : x.plain;
+  return own ? [own.success + (x.author_success || 0), own.failure + (x.author_failure || 0)] : null;
+}
+function payoffText(x, preregister) {  // the breakdown, shown on hover
+  const own = preregister ? x.preregistered : x.plain;
+  return `${t("If right:")} ${t("{n} AC", { n: signed(own.success) })}${authorPart(x.author_success)}${patentPart(x)}. `
+    + `${t("If wrong:")} ${t("{n} AC", { n: signed(own.failure) })}${authorPart(x.author_failure)}${simplified() ? "" : `, ${t("no patent")}`}.`;
+}
+function payoffLine(paper) {  // under the strip: only the patent, which the buttons' numbers leave out
   const x = (preview().theories || {})[paper.id];
-  if (!x) return null;
-  const amounts = (key) => (x.plain ? t("{n} AC (preregistered {m})", { n: signed(x.plain[key]), m: signed(x.preregistered[key]) }) : t("{n} AC", { n: signed(x.preregistered[key]) }));
-  return h("div", { class: "payoff" },
-    h("span", { class: "good" }, `${t("If right:")} ${amounts("success")}${authorPart(x.author_success)}${patentPart(x)}.`), " ",
-    h("span", { class: "bad" }, `${t("If wrong:")} ${amounts("failure")}${authorPart(x.author_failure)}${simplified() ? "" : `, ${t("no patent")}`}.`));
+  if (!x || !x.patent) return null;
+  return h("div", { class: "payoff muted" }, x.patent === "new" ? t("A patent if right.") : patentPart(x).replace(/^, /, ""));
 }
 function outcomeNote(x) {  // what a prediction does once revealed
   if (!x) return null;
@@ -142,10 +149,13 @@ function predictionRows(option) {
         const make = makes.find((a) => a.theory === p.id && a.probe === probe && Boolean(a.preregister) === preregister);
         const on = made && made.q.preregistered === preregister;
         if (!make && !on) return null;
-        return h("button", { class: on ? "primary" : "", title: on ? t("Press again to withdraw") : null, onclick: () => {
+        const x = (preview().theories || {})[p.id];
+        const amounts = x ? payoff(x, preregister) : null;
+        const hover = [on ? t("Press again to withdraw") : null, amounts ? payoffText(x, preregister) : null].filter(Boolean).join(" ");
+        return h("button", { class: on ? "primary" : "", title: hover || null, onclick: () => {
           if (made) send(made.cancel);
           if (!on) send(make);
-        } }, label);
+        } }, label, amounts ? h("span", { class: "button-credit" }, ` ${signed(amounts[0])}/${signed(amounts[1])}`) : null);
       };
       return h("span", { class: "pair" }, h("b", {}, `P${probe + 1}`), choice(false, t("Predict")), choice(true, t("Preregister")));
     };
@@ -252,6 +262,14 @@ function experimentRows(option) {
     sensorRow()];
 }
 
+function sensorCreditText(choice, ownCited) {
+  const level = choice.methods_needed;  // the level the sensor reaches
+  const parts = [t("+{n} AC for reaching level {level}", { n: choice.credit, level })];
+  if (ownCited) parts.push(t("+{n} AC for citing your own method(s) ({m} \u00d7 {each})", { n: ownCited * choice.citation_credit, m: ownCited, each: choice.citation_credit }));
+  else parts.push(t("each method you cite pays its author {n} AC (you too, for your own)", { n: choice.citation_credit }));
+  return parts.join("; ");
+}
+
 function sensorRow() {
   const option = optionOf("install_sensor");
   if (!task.sensor || !option) return null;
@@ -269,7 +287,12 @@ function sensorRow() {
   const go = () => sendThen({ type: "install_sensor", probe, parameter, cited_methods: [...cited, ...proposed] },
     () => { task.sensor = null; task.sensorCited = new Set(); });
   const heading = level ? t("Upgrade the {parameter} sensor on P{probe}:", { parameter, probe: probe + 1 }) : t("Install the {parameter} sensor on P{probe}:", { parameter, probe: probe + 1 });
-  return h("div", { class: "cite" }, h("b", {}, heading), t("cite {n}", { n: choice.methods_needed }),
+  const mine = new Set(view().published.filter((m) => m.author === msg.you).map((m) => m.id));
+  const ownCited = [...cited, ...proposed].filter((id) => mine.has(id)).length;
+  const credit = choice.credit + ownCited * choice.citation_credit;
+  return h("div", { class: "cite" }, h("b", {}, heading),
+    h("span", { class: "plus-credit", title: sensorCreditText(choice, ownCited) }, t("{n} AC", { n: signed(credit) })), " ",
+    t("cite {n}", { n: choice.methods_needed }),
     citeButtons(ids, cited, proposed, (id) => task.sensorCited.has(id) || !ready, toggle),
     h("button", { class: "primary", onclick: go }, ready ? verb : level ? t("Auto-cite and upgrade") : t("Auto-cite and install")),
     h("button", { onclick: () => { task.sensor = null; redraw(); } }, t("Cancel")));

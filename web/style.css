@@ -124,6 +124,8 @@ body.tiles-compact { --head: 92px; --cell: 122px; --tile: 21px; }
 .credit-table .credit-head th { text-align: left; padding-top: 6px; }
 .credit-table tr.credit-now { background: #f3e2b8; }
 .hover-info { text-decoration: underline dotted; cursor: help; }
+.plus-credit { font-size: 11px; font-weight: 600; color: var(--good, #2f7d32); margin-left: 2px; cursor: help; }
+.button-credit { font-size: 11.5px; font-weight: 400; opacity: .85; }
 .hire-report td:not(:first-child), .hire-report th:not(:first-child) { text-align: center; min-width: 5em; }
 .report-switches td { border: 0; padding: 0 6px 0 0; }
 .report-switches button { margin: 1px 0; padding: 0 7px; font-size: 11.5px; }

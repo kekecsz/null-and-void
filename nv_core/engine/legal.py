@@ -121,9 +121,13 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
                 level = probe.sensors.get(parameter, 0)
                 usable = [m.id for m in methods if m.idea.parameter == parameter]
                 if level < MAX_SENSOR_LEVEL and len(usable) >= level + 1:
-                    sensors.append(
-                        {"probe": probe.index, "parameter": parameter, "methods_needed": level + 1, "methods": usable}
-                    )
+                    sensors.append({
+                        "probe": probe.index, "parameter": parameter, "methods_needed": level + 1, "methods": usable,
+                        # Experimentation and equipment phase: the credit for the level reached, and
+                        # what each cited method pays its author.
+                        "credit": ctx.settings.sensor_install_and_upgrade_AC_reward * (level + 1),
+                        "citation_credit": ctx.settings.experiment_method_citation_AC_reward,
+                    })
         if sensors:
             options.append(Option(type="install_sensor", template={"choices": sensors}))
         if not ctx.must_use_staff(r):

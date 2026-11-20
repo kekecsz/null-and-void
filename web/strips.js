@@ -236,8 +236,9 @@ function probeStrip(p) {
         level ? h("span", { class: "badge", title: t("sensor level {level}: may be noise", { level }) }, `L${level}`) : null,
         wrong ? h("div", { class: "truth" }, t("true: {state}", { state: tn(truth[variable.id]) })) : null,
         choice ? h("button", { class: `plus${task.sensor === slot ? " on" : ""}`,
-          title: level ? t("Upgrade this sensor: cite {n} method(s)", { n: choice.methods_needed }) : t("Install this sensor: cite {n} method(s)", { n: choice.methods_needed }),
-          onclick: () => { task.sensor = task.sensor === slot ? null : slot; task.sensorCited = new Set(); redraw(); } }, "+") : null);
+          title: `${level ? t("Upgrade this sensor: cite {n} method(s)", { n: choice.methods_needed }) : t("Install this sensor: cite {n} method(s)", { n: choice.methods_needed })} ${sensorCreditText(choice)}`,
+          onclick: () => { task.sensor = task.sensor === slot ? null : slot; task.sensorCited = new Set(); redraw(); } }, "+") : null,
+        choice ? h("span", { class: "plus-credit", title: sensorCreditText(choice) }, signed(choice.credit)) : null);
     },
     tail: p.probe_time !== null && p.probe_time !== undefined ? [info(t("Probe time")), chip(p.probe_time)] : null,
   });
