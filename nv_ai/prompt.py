@@ -42,7 +42,6 @@ DESCRIPTIONS: dict[str, str] = {
     "cancel_prediction": "Formulating predictions and preregistration: withdraw one of your predictions.",
     "set_preregistered": "Formulating predictions and preregistration: preregister a prediction, or undo that.",
     "reveal_prediction": "Outcome and Prediction Reveal: choose a hidden prediction to reveal (reveal=false undoes).",
-    "order_predictions": "Scoring predictions: the order of your predictions on one Probe.",
     "formulate_theory": "Development phase: formulate a theory (at least one input parameter and one world outcome).",
     "develop_method": "Development phase: develop a method for one input parameter.",
     "cancel_development": "Development phase: drop one of this phase's choices (0-based index).",

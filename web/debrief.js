@@ -176,8 +176,8 @@ function overTime(d) {
   return panel("Over time",
     h("h3", {}, "Academic credit at the end of each round"),
     table(["Round", ...o.credit.map((c) => c.name)], o.rounds.map((r, i) => [r, ...o.credit.map((c) => c.values[i])])),
-    o.nobel.length ? h("h3", {}, `Nobel Prize counters of the leading theories (a prize at ${o.nobel_condition})`) : null,
-    o.nobel.length ? table(["Round", ...o.nobel.map((t) => `T${t.theory}`)],
+    o.nobel.length ? h("h3", {}, "Nobel Prize counters of the leading theories (in brackets: the counter that wins the prize)") : null,
+    o.nobel.length ? table(["Round", ...o.nobel.map((t) => t.threshold == null ? `T${t.theory}` : `T${t.theory} (${t.threshold})`)],
       o.rounds.map((r, i) => [r, ...o.nobel.map((t) => t.values[i] ?? "")])) : null,
     csvButton("credit_by_round"));
 }

@@ -237,8 +237,9 @@ def build_debrief(
     over_time = {
         "rounds": [r for r, _, _ in points],
         "credit": [{"name": names[s], "values": [c[s] for _, c, _ in points]} for s in range(state.n_players)],
-        "nobel": [{"theory": t, "values": [n.get(t) for _, _, n in points]} for t in leading],
-        "nobel_condition": state.settings.nobel_condition,
+        # Nobel Prize: each theory's threshold depends on its journal tier.
+        "nobel": [{"theory": t, "values": [n.get(t) for _, _, n in points],
+                   "threshold": state.settings.nobel_threshold(papers[t].tier) if t in papers else None} for t in leading],
     }
 
     return {

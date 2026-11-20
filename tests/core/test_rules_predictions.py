@@ -24,6 +24,7 @@ OUTCOMES = {"WO1": ["up", "down"], "WO2": ["big", "small"]}
 SHOWN = {"IP1": "a", "IP2": "x", "IP3": "p"}
 TRUE = {"WO1": "up", "WO2": "big"}
 STEPS = (Phase.PREDICTION, Phase.REVEAL, Phase.SCORING_ORDER)
+NOBEL = S.nobel_threshold(1)  # the Nobel Prize threshold of a theory published in tier 1 (the test default)
 
 
 def two_outcome_world() -> WorldData:
@@ -230,26 +231,6 @@ def test_a_theory_retracted_during_scoring_still_scores_the_later_predictions():
     assert state.researcher(second).credit - before[second] == expected
 
 
-def test_scoring_order_choice_follows_counters_moved_earlier_in_the_round():
-    """Scoring predictions: a theory one step from the Nobel Prize only after an earlier prediction
-    this round moved its counter still makes the later group's order a choice."""
-    state = _at_prediction()
-    first, second = state.turn_order()[:2]
-    near = _theory(state, first, {"IP3": "p"}, {"WO1": "up"}, nobel=S.nobel_condition - 2)
-    other = _theory(state, second, {"IP1": "a"}, {"WO1": "up"}, nobel=S.nobel_condition - 1)
-    state, _ = _predict(state, first, near.id, 0, prereg=True)
-    state, a_id = _predict(state, second, near.id, 1, prereg=True)
-    state, b_id = _predict(state, second, other.id, 1, prereg=True)
-    for _ in range(10):
-        if state.phase == Phase.SCORING_ORDER or state.result or state.phase not in STEPS:
-            break
-        state = do(state, a.CommitPhase(seat=state.waiting[0]))
-    assert state.phase == Phase.SCORING_ORDER and state.waiting == [second]
-    state = do(state, a.OrderPredictions(seat=second, order=[a_id, b_id]))
-    state = _finish(state)
-    assert state.result.primary == [first]
-
-
 # Scoring predictions ---------------------------------------------------------------------
 @pytest.mark.parametrize("prereg", [False, True])
 def test_success_value_is_inputs_times_outcomes_doubled_if_preregistered(prereg):
@@ -344,33 +325,51 @@ def test_one_below_the_retraction_threshold_stays_published():
     assert state.researcher(1).credit == before[1]
 
 
-def test_retraction_counter_not_tracked_in_crisis():
-    """Retraction: the Retraction counters are not tracked during the Crisis period."""
-    state = _at_prediction(period="crisis")
-    t = _theory(state, 1, {"IP1": "a"}, {"WO1": "down"}, retraction=S.retraction_threshold - 1)
+def test_retraction_in_the_crisis():
+    """Retraction: the Retraction counters are tracked in the Crisis period too, and a theory that
+    reaches [retraction_threshold] is retracted at once. [crisis_condition] is raised so the game goes on."""
+    state = _at_prediction(period="crisis", crisis_condition=10)
+    t = _theory(state, 1, {"IP1": "a"}, {"WO1": "down"}, retraction=S.retraction_threshold - 1, nobel=2)
+    state.researcher(1).credit = 30
     state, _ = _predict(state, 0, t.id, 0)
     state = _finish(state)
-    assert any(p.id == t.id for p in state.published)
-    assert state.paper(t.id).retraction == S.retraction_threshold - 1
+    assert all(p.id != t.id for p in state.published)
+    assert state.researcher(1).credit == 30 + S.crisis_failed_pred_citation_penalty + S.retraction_ac_penalty
 
 
-def test_one_below_the_nobel_condition_does_not_win():
-    """Nobel Prize: the author wins once the counter reaches [nobel_condition], not before."""
-    state = _at_prediction()
-    t = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"}, nobel=S.nobel_condition - 2)
+@pytest.mark.parametrize("tier", [0, 1, 3])
+def test_the_nobel_threshold_is_the_condition_minus_the_journal_tier(tier):
+    """Nobel Prize: the author wins once the counter reaches [nobel_condition] minus the journal
+    tier the theory was published in, not before."""
+    threshold = S.nobel_condition - tier
+    for start, wins in ((threshold - 2, False), (threshold - 1, True)):
+        state = _at_prediction()
+        t = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"}, nobel=start, tier=tier)
+        state, _ = _predict(state, 0, t.id, 0, prereg=True)
+        state = _finish(state)
+        if wins:
+            assert state.result.ending == "nobel" and state.result.primary == [1]
+        else:
+            assert state.result is None and state.paper(t.id).nobel == threshold - 1
+
+
+def test_the_simplified_game_has_its_own_nobel_threshold():
+    """Nobel Prize: in the simplified game the threshold is [nobel_condition_simplified]."""
+    state = _at_prediction(mode="simplified")
+    t = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"}, nobel=S.nobel_condition_simplified - 1, tier=0)
     state, _ = _predict(state, 0, t.id, 0, prereg=True)
     state = _finish(state)
-    assert state.result is None
-    assert state.paper(t.id).nobel == S.nobel_condition - 1
+    assert state.result.ending == "nobel" and state.result.primary == [1]
 
 
 def test_preregistered_predictions_are_scored_before_revealed_ones():
-    """Scoring predictions: scored in the order revealed, Preregistered first. Both theories are one
-    success from the Nobel Prize; the Preregistered one (later in turn order) wins it."""
+    """Scoring predictions: two waves, Preregistered predictions first. Both theories are one success
+    from the Nobel Prize; the Preregistered one wins it although the other is on the Hot topic Probe."""
     state = _at_prediction()
     first, second = state.turn_order()[:2]
-    a_theory = _theory(state, first, {"IP3": "p"}, {"WO1": "up"}, nobel=S.nobel_condition - 1)
-    b_theory = _theory(state, second, {"IP1": "a"}, {"WO1": "up"}, nobel=S.nobel_condition - 1)
+    state.hot_topic = 0
+    a_theory = _theory(state, first, {"IP3": "p"}, {"WO1": "up"}, nobel=NOBEL - 1)
+    b_theory = _theory(state, second, {"IP1": "a"}, {"WO1": "up"}, nobel=NOBEL - 1)
     state, hidden = _predict(state, first, a_theory.id, 0)
     state, _ = _predict(state, second, b_theory.id, 1, prereg=True)
     state = _to_reveal(state)
@@ -379,40 +378,116 @@ def test_preregistered_predictions_are_scored_before_revealed_ones():
     assert state.result.ending == "nobel" and state.result.primary == [second]
 
 
-def test_turn_order_comes_before_probe_order_in_scoring():
-    """Scoring predictions: predictions are scored in turn order, then in Probe order. The first
-    researcher predicts on a later Probe; their prediction is still scored first."""
+_BY_AUTHOR = ({"IP1": "a"}, {"IP2": "x"}, {"IP3": "p"})  # a different theory for each author; all fit every Probe
+
+
+@pytest.mark.parametrize("hot_topic", [0, 1, 2])
+def test_probes_are_scored_from_the_hot_topic_probe_onwards(hot_topic):
+    """Scoring predictions: Probe by Probe, from the Hot topic Probe in the order the marker travels.
+    Each Probe has a theory one success from the Nobel Prize, by a different author; the one on the
+    Hot topic Probe wins."""
+    state = _at_prediction(n=3, dc=3)
+    state.hot_topic = hot_topic
+    theories = [_theory(state, author, _BY_AUTHOR[author], {"WO1": "up"}, nobel=NOBEL - 1) for author in range(3)]
+    for probe, t in enumerate(theories):
+        state, _ = _predict(state, 0, t.id, probe, prereg=True)
+    state = _finish(state)
+    assert state.result.ending == "nobel" and state.result.primary == [theories[hot_topic].author]
+
+
+def test_the_simplified_game_scores_from_probe_1():
+    """Scoring predictions: in the simplified game the cycle starts at Probe 1."""
+    state = _at_prediction(mode="simplified")
+    assert state.hot_topic is None
+    near = S.nobel_condition_simplified - 1
+    later = _theory(state, 0, _BY_AUTHOR[0], {"WO1": "up"}, nobel=near, tier=0)
+    first = _theory(state, 1, _BY_AUTHOR[1], {"WO1": "up"}, nobel=near, tier=0)
+    state, _ = _predict(state, 0, later.id, 2, prereg=True)
+    state, _ = _predict(state, 0, first.id, 0, prereg=True)
+    state = _finish(state)
+    assert state.result.ending == "nobel" and state.result.primary == [1]
+
+
+@pytest.mark.parametrize("holder_index", [0, 1])
+def test_the_researcher_with_probe_time_is_scored_first_on_that_probe(holder_index):
+    """Scoring predictions: on one Probe, the predictions of the researcher with Probe time are scored
+    first, then turn order decides. Each cites their own theory, one success from the Nobel Prize."""
+    state = _at_prediction()
+    seats = state.turn_order()[:2]
+    holder = seats[holder_index]
+    state.probes[0].probe_time = holder
+    theories = {seat: _theory(state, seat, _BY_AUTHOR[seat], {"WO1": "up"}, nobel=NOBEL - 1) for seat in seats}
+    for seat in seats:
+        state, _ = _predict(state, seat, theories[seat].id, 0, prereg=True)
+    state = _finish(state)
+    assert state.result.primary == [holder]
+
+
+def test_turn_order_decides_among_researchers_without_probe_time():
+    """Scoring predictions: on a Probe nobody holds Probe time on, turn order decides."""
     state = _at_prediction()
     first, second = state.turn_order()[:2]
-    a_theory = _theory(state, first, {"IP3": "p"}, {"WO1": "up"}, nobel=S.nobel_condition - 1)
-    b_theory = _theory(state, second, {"IP1": "a"}, {"WO1": "up"}, nobel=S.nobel_condition - 1)
-    state, _ = _predict(state, first, b_theory.id, 1, prereg=True)
-    state, _ = _predict(state, second, a_theory.id, 0, prereg=True)
+    state.probes[0].probe_time = None
+    theories = {seat: _theory(state, seat, _BY_AUTHOR[seat], {"WO1": "up"}, nobel=NOBEL - 1) for seat in (first, second)}
+    state, _ = _predict(state, second, theories[second].id, 0, prereg=True)
+    state, _ = _predict(state, first, theories[first].id, 0, prereg=True)
     state = _finish(state)
-    assert state.result.ending == "nobel" and state.result.primary == [second]
+    assert state.result.primary == [first]
 
 
-@pytest.mark.parametrize("winner_first", [0, 1])
-def test_researcher_orders_own_predictions_on_one_probe(winner_first):
-    """Scoring predictions: a player with several predictions on one Probe decides their scoring order."""
+def test_one_researchers_predictions_on_a_probe_go_in_publication_order():
+    """Scoring predictions: one researcher's predictions on the same Probe are scored in the
+    publication order of their theories (the earlier published first)."""
     state = _at_prediction()
-    theories = [
-        _theory(state, 0, {"IP3": "p"}, {"WO1": "up"}, nobel=S.nobel_condition - 1),
-        _theory(state, 1, {"IP1": "a"}, {"WO1": "up"}, nobel=S.nobel_condition - 1),
-    ]
-    ids = []
-    for t in theories:
-        state, pid = _predict(state, 0, t.id, 0, prereg=True)
-        ids.append(pid)
-    for _ in range(10):
-        if state.phase == Phase.SCORING_ORDER or state.result or state.phase not in STEPS:
+    older = _theory(state, 1, _BY_AUTHOR[2], {"WO1": "up"}, nobel=NOBEL - 1)
+    newer = _theory(state, 0, _BY_AUTHOR[0], {"WO1": "up"}, nobel=NOBEL - 1)
+    state, _ = _predict(state, 0, newer.id, 0, prereg=True)
+    state, _ = _predict(state, 0, older.id, 0, prereg=True)
+    state = _finish(state)
+    assert state.result.primary == [1]
+
+
+# Nobel Prize in the Crisis ----------------------------------------------------------------------
+def test_reaching_the_threshold_in_the_crisis_does_not_win_at_once():
+    """Nobel Prize: in the Crisis the counter moves, but the prize is only checked when the Crisis ends."""
+    state = _at_prediction(period="crisis", crisis_condition=99)
+    t = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"}, nobel=NOBEL - 1)
+    state, _ = _predict(state, 0, t.id, 0)
+    state = _finish(state)
+    assert state.result is None and state.paper(t.id).nobel == NOBEL
+
+
+def _crisis_end(theories):
+    """Play the last Crisis round to its end with published theories given as (author, tier, Nobel
+    counter); nobody predicts, so the counters stay as given."""
+    state = _at_prediction(period="crisis", crisis_condition=99)
+    state.rounds_in_crisis = S.crisis_length
+    made = [_theory(state, author, _BY_AUTHOR[author], {"WO1": "up"}, tier=tier, nobel=nobel)
+            for author, tier, nobel in theories]
+    for _ in range(200):
+        if state.result:
             break
         state = do(state, a.CommitPhase(seat=state.waiting[0]))
-    assert state.phase == Phase.SCORING_ORDER and state.waiting == [0]
-    order = [ids[winner_first], ids[1 - winner_first]]
-    state = do(state, a.OrderPredictions(seat=0, order=order))
-    state = _finish(state)
-    assert state.result.primary == [theories[winner_first].author]
+    return state, made
+
+
+def test_at_the_end_of_the_crisis_the_theory_furthest_above_its_threshold_wins():
+    """Nobel Prize: when the Crisis ends, of the theories at or above their threshold the one furthest
+    above it wins (a tier-3 theory one above beats a tier-0 theory exactly at it)."""
+    state, made = _crisis_end([(0, 0, S.nobel_condition), (1, 3, S.nobel_condition - 2)])
+    assert state.result.ending == "nobel" and state.result.primary == [1] and state.result.theory == made[1].id
+
+
+def test_a_tie_at_the_end_of_the_crisis_shares_the_prize():
+    """Nobel Prize: on a tie the researchers share the Nobel Prize and win together."""
+    state, _ = _crisis_end([(0, 0, S.nobel_condition), (1, 2, S.nobel_condition - 2)])
+    assert state.result.ending == "nobel" and state.result.primary == [0, 1]
+
+
+def test_without_a_theory_at_its_threshold_the_crisis_ends_with_academic_credit():
+    """Victory: without a Nobel Prize or a Crisis Crash, the game ends with academic credit."""
+    state, _ = _crisis_end([(0, 0, S.nobel_condition - 1)])
+    assert state.result.ending == "credit"
 
 
 # Identical theories (Formulating predictions and preregistration; specification 5.7) ------------
@@ -436,6 +511,16 @@ def test_identical_theory_with_someone_elses_fresh_marker_is_not_a_candidate():
     first = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"}, nobel=3)
     _theory(state, 2, {"IP1": "a"}, {"WO1": "up"}, nobel=0, fresh=True)
     assert _cited(state, first.id) == first.id
+
+
+def test_identical_theories_prefer_the_most_successes_still_needed():
+    """Identical theories: preference 2, the theory with the most successes still needed before its
+    Nobel Prize threshold, not the lowest counter (a tier-3 theory at 3 is closer than a tier-0 at 4)."""
+    state = _identical()
+    high = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"}, tier=3, nobel=3)
+    low = _theory(state, 2, {"IP1": "a"}, {"WO1": "up"}, tier=0, nobel=4)
+    state.researcher(1).credit, state.researcher(2).credit = 5, 20  # preference 3 would pick the other one
+    assert _cited(state, high.id) == low.id
 
 
 def test_identical_theories_prefer_the_author_with_lower_credit():

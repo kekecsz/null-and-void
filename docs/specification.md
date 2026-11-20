@@ -122,7 +122,6 @@ The engine runs the phases in the order, and with the steps, that the rulebook g
 | Probe time | sequential, in the order the rulebook sets |
 | Observation and prediction phase: revealing input parameters, revealing preregistered predictions, outcome reveal, scoring, recording observations | automatic |
 | Observation and prediction phase: formulating predictions and preregistration; prediction reveal | simultaneous secret |
-| Scoring predictions: the order of one researcher's predictions on the same Probe | simultaneous secret, asked only when the order decides who wins the Nobel Prize (otherwise automatic) |
 | Development phase | simultaneous secret |
 | Publication: submission and revisions | open: any researcher acts at any time, each action is applied the moment it arrives (so the first to submit gets the free Submission Portal position), until everyone has committed. Before committing, a researcher can withdraw a submission or revision they made in this step: the submission fee and APC are refunded, the development stack and supporting records go back to where they were, the write-up staff member is free again, and a freed Portal position goes to the next submission (other manuscripts keep their positions) |
 | Publication: peer review votes | simultaneous secret (allocation, random draws and tally automatic) |
@@ -504,7 +503,7 @@ The AI defaults are starting points to tune with the simulator, not tested value
 
 All earlier rule questions are settled in rulebook v4; these items remain open.
 
-- [ ] **Balance check:** whether `[nobel_condition]` consecutive successes fit within the Calm period (about 15 rounds). To be tested with the simulator.
+- [ ] **Balance check:** how often a Nobel Prize is won now that its threshold is `[nobel_condition]` minus the journal tier and the counters keep moving in the Crisis (checked when it ends). To be tested with the simulator.
 - [ ] **Later idea, garden of forking paths** (not planned yet; probably only for a solo or cooperative game mode): an expandable page that shows every possible experiment strip (no blanks) and which of them the player has already covered, from which an uncovered one can be chosen.
 - [ ] **Later:** optimise the board for phones (milestone 8 is designed for laptop screens).
 

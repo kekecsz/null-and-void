@@ -195,12 +195,17 @@ def revise(ctx: Ctx, action: Revise) -> None:
         raise IllegalAction(f"there is no manuscript D{action.manuscript}") from None
     if manuscript.author != action.seat or manuscript.area != "revise":
         raise IllegalAction(f"D{action.manuscript} is not one of your manuscripts in the Revise area")
+    position = free_position(ctx)
+    if position is None:
+        raise IllegalAction("every Awaiting peer review position is occupied")
     ctx.state.pending[action.seat].submissions.append(
         SubmissionUndo(manuscript=manuscript.id, before=manuscript.model_copy(deep=True))
     )
     r.used[Task.WRITE_UP] = r.used.get(Task.WRITE_UP, 0) + 1
-    ctx.log("revision", f"{ctx.name(action.seat)} revises D{manuscript.id}", seat=action.seat, manuscript=manuscript.id)
-    to_accept(ctx, manuscript)
+    # Revisions: back to the first free Awaiting peer review position, to be reviewed again.
+    manuscript.area, manuscript.position, manuscript.votes = "review", position, []
+    ctx.log("revision", f"{ctx.name(action.seat)} revises D{manuscript.id} (Awaiting peer review position {position})",
+            seat=action.seat, manuscript=manuscript.id, position=position)
 
 
 def withdraw_submission(ctx: Ctx, action: WithdrawSubmission) -> None:

@@ -161,7 +161,6 @@ class StrategyBot:
             ("leave_alliance", self._last_chance),
             ("make_prediction", self._predictions),
             ("reveal_prediction", self._reveals),
-            ("order_predictions", self._order),
             ("formulate_theory", self._development),
             ("develop_method", self._development),
             ("submit", self._submissions),
@@ -817,9 +816,6 @@ class StrategyBot:
             if len(plan) < room:
                 plan.append(x)
         return plan
-
-    def _order(self, view, by_type) -> list[BaseModel]:
-        return [a.OrderPredictions(seat=view["seat"], order=list(by_type["order_predictions"].template["predictions"]))]
 
     # Development ------------------------------------------------------------------------------
     def _development(self, view, by_type) -> list[BaseModel]:

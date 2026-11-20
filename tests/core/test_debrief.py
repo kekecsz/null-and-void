@@ -108,7 +108,7 @@ def test_debrief_nobel_prize_with_its_streak():
         pytest.skip("no Nobel Prize in these games")
     nobel = build_debrief(state, events, low_chance=0.5)["ending"]["nobel"]
     assert nobel["theory"] == state.result.theory
-    assert len(nobel["streak"]) >= 2
+    assert len(nobel["streak"]) >= state.settings.nobel_threshold(state.paper(state.result.theory).tier)
     assert nobel["chance"] == pytest.approx(nobel["true_accuracy"] ** len(nobel["streak"]))
 
 

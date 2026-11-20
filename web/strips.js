@@ -317,7 +317,7 @@ function theoryStrip(p, tail) {
   const v = view();
   return strip({ key: `T${p.id}`, head: `T${p.id}`, sub: authorLabel(p), slots: ideaSlots(p), tail: tail || [
     chip(p.author), info(`${t("tier {n}", { n: p.tier })}${p.open_access ? ` ${t("(open access)")}` : ""}`),
-    info(t("Nobel {n}/{max}", { n: p.nobel, max: v.nobel_condition })), info(t("retraction {n}/{max}", { n: p.retraction, max: v.retraction_threshold })),
+    info(t("Nobel {n}/{max}", { n: p.nobel, max: p.nobel_threshold })), info(t("retraction {n}/{max}", { n: p.retraction, max: v.retraction_threshold })),
     p.patents.length ? info(t("patent: {names}", { names: p.patents.map(nameOf).join(", ") })) : null,
     p.fresh ? info(t("fresh out of print")) : null,
   ] });

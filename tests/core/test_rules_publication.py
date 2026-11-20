@@ -265,9 +265,9 @@ def test_a_mismatching_world_outcome_is_refused():
 
 
 # Revisions ----------------------------------------------------------------------------------
-def test_revision_moves_own_revise_area_manuscript_to_accept_with_tokens():
-    """Revisions: a Write-up staff member advances one of the researcher's own manuscripts from the
-    Revise area to the Accept area, with rounds in processing tokens."""
+def test_revision_moves_own_revise_area_manuscript_back_to_awaiting_peer_review():
+    """Revisions: a Write-up staff member places one of the researcher's own manuscripts from the
+    Revise area in the first available numbered position of the "awaiting peer review" area."""
     pending = [
         _manuscript(960, author=0, area="revise", records=1),
         _manuscript(961, author=0, area="revise", records=1, inputs={"IP1": "a", "IP3": "p"}),
@@ -279,7 +279,7 @@ def test_revision_moves_own_revise_area_manuscript_to_accept_with_tokens():
     _refused(state, a.Revise(seat=0, manuscript=963))  # not in the Revise area
     state = do(state, a.Revise(seat=0, manuscript=960))
     m = state.manuscript(960)
-    assert m.area == "accept" and m.tokens == rounds_in_processing(Ctx(state), m)
+    assert m.area == "review" and m.position == 2 and m.votes == []  # position 1 is taken by D963
     _refused(state, a.Revise(seat=0, manuscript=961))  # the only Write-up staff member is used
 
 
@@ -321,7 +321,7 @@ def test_withdrawing_a_revision_puts_the_manuscript_back_in_the_revise_area():
     state = do(state, a.Revise(seat=0, manuscript=960), a.WithdrawSubmission(seat=0, manuscript=960))
     assert state.manuscript(960) == before
     state = do(state, a.Revise(seat=0, manuscript=960))  # the staff member is free again
-    assert state.manuscript(960).area == "accept"
+    assert state.manuscript(960).area == "review"
 
 
 def test_only_this_steps_own_submissions_can_be_withdrawn_and_only_before_committing():

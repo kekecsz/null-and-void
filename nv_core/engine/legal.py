@@ -17,7 +17,7 @@ from nv_core.engine.experimentation import MAX_SENSOR_LEVEL, check_expand_lab
 from nv_core.engine.hiring import POSTDOC_ONLY
 from nv_core.engine.observation import _capacity, _revealable, _success, mismatch, same_theory_on_probe
 from nv_core.engine.development import staff_chosen
-from nv_core.engine.publication import possible_submissions
+from nv_core.engine.publication import free_position, possible_submissions
 from nv_core.engine.records import positions
 from nv_core.state import GameState, Phase, Task
 
@@ -176,11 +176,6 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
                 reveals.append(a.RevealPrediction(seat=seat, prediction=p.id))
         if reveals:
             options.append(Option(type="reveal_prediction", actions=reveals))
-    elif phase == Phase.SCORING_ORDER and waiting:
-        from nv_core.engine.observation import _order_choices
-
-        ids = [p.id for group in _order_choices(ctx).get(seat, []) for p in group]
-        options.append(Option(type="order_predictions", template={"predictions": ids}))
     elif phase == Phase.DEVELOPMENT and waiting:
         pending = s.pending[seat].development
         if staff_chosen(ctx, seat) < r.allocated(Task.DEVELOPMENT):
@@ -229,7 +224,7 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
     elif phase == Phase.SUBMISSION and waiting:
         revisable = [m for m in s.manuscripts if m.author == seat and m.area == "revise"]
         room = r.remaining(Task.WRITE_UP) > 0
-        if revisable and room:
+        if revisable and room and free_position(ctx) is not None:
             options.append(Option(type="revise", actions=[a.Revise(seat=seat, manuscript=m.id) for m in revisable]))
         if s.pending[seat].submissions:
             options.append(

@@ -56,9 +56,7 @@ STEPS: dict[Phase, _Step] = {
     Phase.PROBE_TIME: _Step(experimentation.start_probe_time, experimentation.finish_probe_time),
     Phase.PREDICTION: _Step(_start_prediction, observation.finish_prediction),
     Phase.REVEAL: _Step(observation.start_reveal, observation.finish_reveal, observation.check_commit_reveal),
-    Phase.SCORING_ORDER: _Step(
-        observation.start_scoring_order, observation.finish_scoring, observation.check_commit_order
-    ),
+    Phase.SCORING_ORDER: _Step(observation.start_scoring, observation.finish_scoring),
     Phase.DEVELOPMENT: _Step(development.start, development.finish, development.check_commit),
     Phase.SUBMISSION: _Step(
         publication.start_submission, lambda ctx: None, publication.check_commit_submission
@@ -76,7 +74,6 @@ SIMULTANEOUS = {
     Phase.STUDENT_CHECK,
     Phase.PREDICTION,
     Phase.REVEAL,
-    Phase.SCORING_ORDER,
     Phase.DEVELOPMENT,
     Phase.SUBMISSION,
     Phase.PEER_REVIEW,
@@ -137,7 +134,6 @@ HANDLERS: dict[type, tuple[Phase | None, Callable]] = {
     a.CancelPrediction: (Phase.PREDICTION, observation.cancel_prediction),
     a.SetPreregistered: (Phase.PREDICTION, observation.set_preregistered),
     a.RevealPrediction: (Phase.REVEAL, observation.reveal_prediction),
-    a.OrderPredictions: (Phase.SCORING_ORDER, observation.order_predictions),
     a.FormulateTheory: (Phase.DEVELOPMENT, development.formulate_theory),
     a.DevelopMethod: (Phase.DEVELOPMENT, development.develop_method),
     a.CancelDevelopment: (Phase.DEVELOPMENT, development.cancel_development),

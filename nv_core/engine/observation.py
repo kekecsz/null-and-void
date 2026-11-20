@@ -1,6 +1,6 @@
 """Observation and prediction phase, Nobel Prize, Retraction and the Crisis count."""
 
-from nv_core.actions import CancelPrediction, MakePrediction, OrderPredictions, RevealPrediction, SetPreregistered
+from nv_core.actions import CancelPrediction, MakePrediction, RevealPrediction, SetPreregistered
 from nv_core.engine.context import Ctx, IllegalAction, stack_cards
 from nv_core.engine.ending import allies, check_crisis_crash, end_game
 from nv_core.settings import Settings
@@ -170,8 +170,9 @@ def cited_theory(ctx: Ctx, prediction: Prediction) -> int:
     own = [p for p in candidates if p.author == prediction.seat]
     if own:
         candidates = own
-    candidates.sort(
-        key=lambda p: (p.nobel, state.researcher(p.author).credit, p.round, order.index(p.author), p.id)
+    threshold = ctx.settings.nobel_threshold
+    candidates.sort(  # the most successes still needed before the Nobel Prize threshold first
+        key=lambda p: (p.nobel - threshold(p.tier), state.researcher(p.author).credit, p.round, order.index(p.author), p.id)
     )
     return candidates[0].id
 
@@ -276,68 +277,28 @@ def finish_reveal(ctx: Ctx) -> None:
 
 
 # Scoring predictions ---------------------------------------------------------------------------
-def _scoring_groups(ctx: Ctx) -> list[list[Prediction]]:
-    """Revealed predictions in scoring order, grouped by (step, researcher, Probe)."""
+def scoring_order(ctx: Ctx) -> list[Prediction]:
+    """Revealed predictions in scoring order (Scoring predictions): Preregistered predictions
+    first, then the others; in each wave Probe by Probe, from the Hot topic Probe (Probe 1 in the
+    simplified game) in the order the Hot topic marker travels; on one Probe the researcher with
+    Probe time first, then turn order; one researcher's predictions on a Probe in the publication
+    order of their theories."""
     state = ctx.state
     order = state.turn_order()
+    n = len(state.probes)
+    start = state.hot_topic or 0
+
+    def researcher_rank(p: Prediction) -> int:
+        holder = state.probes[p.probe].probe_time
+        return -1 if p.seat == holder else order.index(p.seat)
+
     alive = [p for p in state.predictions if p.status == "revealed"]
-    alive.sort(key=lambda p: (p.reveal_step, order.index(p.seat), p.probe, p.id))
-    groups: list[list[Prediction]] = []
-    for p in alive:
-        if groups and (groups[-1][0].reveal_step, groups[-1][0].seat, groups[-1][0].probe) == (
-            p.reveal_step,
-            p.seat,
-            p.probe,
-        ):
-            groups[-1].append(p)
-        else:
-            groups.append([p])
-    return groups
+    alive.sort(key=lambda p: (p.reveal_step, (p.probe - start) % n, researcher_rank(p), p.cited, p.id))
+    return alive
 
 
-def _order_choices(ctx: Ctx) -> dict[int, list[list[Prediction]]]:
-    """Groups whose order decides who wins the Nobel Prize: the predictor chooses the order.
-    The Nobel Prize counters are followed through the round's scoring, as scoring will move them."""
-    state = ctx.state
-    choices: dict[int, list[list[Prediction]]] = {}
-    if state.period != "calm":
-        return choices
-    counters = {p.id: p.nobel for p in state.published if p.kind == "theory"}
-    adjusted: set[tuple[int, int]] = set()
-    for group in _scoring_groups(ctx):
-        moving = [p for p in group if p.cited in counters and (p.cited, p.probe) not in adjusted]
-        winners = {
-            state.paper(p.cited).author
-            for p in moving
-            if _success(ctx, p) and counters[p.cited] + 1 >= ctx.settings.nobel_condition
-        }
-        if len(winners) > 1:
-            choices.setdefault(group[0].seat, []).append(group)
-        for p in moving:
-            counters[p.cited] = counters[p.cited] + 1 if _success(ctx, p) else 0
-            adjusted.add((p.cited, p.probe))
-    return choices
-
-
-def start_scoring_order(ctx: Ctx) -> None:
-    state = ctx.state
-    choices = _order_choices(ctx)
-    state.waiting = [seat for seat in state.turn_order() if seat in choices]
-    for seat in state.waiting:
-        state.pending[seat].scoring_order = None
-
-
-def order_predictions(ctx: Ctx, action: OrderPredictions) -> None:
-    groups = _order_choices(ctx).get(action.seat, [])
-    expected = sorted(p.id for g in groups for p in g)
-    if sorted(action.order) != expected:
-        raise IllegalAction(f"order exactly these predictions: {', '.join(f'Q{i}' for i in expected)}")
-    ctx.state.pending[action.seat].scoring_order = list(action.order)
-
-
-def check_commit_order(ctx: Ctx, seat: int) -> None:
-    if ctx.state.pending[seat].scoring_order is None:
-        raise IllegalAction("choose the scoring order first")
+def start_scoring(ctx: Ctx) -> None:
+    ctx.state.waiting = []  # the order is fixed by the rules: nothing to decide
 
 
 def finish_scoring(ctx: Ctx) -> None:
@@ -376,16 +337,10 @@ def _prediction_report(ctx: Ctx, missed: list[int]) -> dict | None:
 def _score_round(ctx: Ctx, missed: list[int]) -> None:
     state = ctx.state
     adjusted: set[tuple[int, int]] = set()  # (theory, Probe): counters already adjusted this round
-    for group in _scoring_groups(ctx):
-        chosen = state.pending[group[0].seat].scoring_order
-        if chosen:
-            group.sort(key=lambda p: chosen.index(p.id) if p.id in chosen else p.id)
-        for prediction in group:
-            score(ctx, prediction, adjusted)
-            if state.result:
-                return
-    for seat in state.turn_order():
-        state.pending[seat].scoring_order = None
+    for prediction in scoring_order(ctx):
+        score(ctx, prediction, adjusted)
+        if state.result:
+            return
     if state.period == "crisis":
         for probe in state.probes:
             if not any(p.probe == probe.index and p.status == "scored" for p in state.predictions):
@@ -445,10 +400,11 @@ def score(ctx: Ctx, p: Prediction, adjusted: set[tuple[int, int]] | None = None)
             p.patent, p.patent_holder = "new", p.seat
             paper.patents = [p.seat]
             ctx.log("patent", f"{ctx.name(p.seat)} gets a patent on T{paper.id}", seat=p.seat, theory=paper.id)
-        if not crisis and first:
+        if first:
             paper.nobel += 1
             paper.retraction = 0
-            if paper.nobel >= s.nobel_condition:
+            # Nobel Prize: checked at once in the Calm period; in the Crisis only when it ends.
+            if not crisis and paper.nobel >= s.nobel_threshold(paper.tier):
                 p.won_nobel = True
                 ctx.log("nobel", f"T{paper.id} reaches {paper.nobel} on its Nobel Prize counter")
                 end_game(ctx, "nobel", [paper.author], theory=paper.id)
@@ -457,9 +413,10 @@ def score(ctx: Ctx, p: Prediction, adjusted: set[tuple[int, int]] | None = None)
         ctx.credit(p.seat, gained, "failed prediction in the Crisis")
         ctx.credit(paper.author, author_gained, f"T{paper.id} failed in the Crisis")
         state.unsuccessful_predictions += 1
-        check_crisis_crash(ctx)
-        return
-    ctx.credit(p.seat, gained, "failed prediction")
+        if check_crisis_crash(ctx):
+            return
+    else:
+        ctx.credit(p.seat, gained, "failed prediction")
     if not first:
         return
     paper.nobel = 0

@@ -193,7 +193,7 @@ def test_crisis_success_bonus_and_crash():
     state, _ = _finish_predictions(state)
     assert state.researcher(0).credit - before[0] == (1 + S.crisis_pred_base_bonus) * 1 * 2
     assert state.researcher(1).credit - before[1] == S.citation_reward + S.crisis_pred_citation_reward_bonus
-    assert state.paper(t["T"]).nobel == 0  # not tracked in the Crisis
+    assert state.paper(t["T"]).nobel == 1  # tracked in the Crisis too
 
     crash, _ = _prediction_phase(period="crisis", T=(1, {"IP3": "p"}, {"WO1": "up"}))
     crash.unsuccessful_predictions = S.crisis_condition - 1

@@ -122,6 +122,9 @@ class Settings(_Strict):
     predictions_per_staff: StrictInt | None = None
     # Nobel Prize and retraction
     nobel_condition: StrictInt
+    # A game saved before this setting existed uses nobel_condition in the simplified game too.
+    # The parameter file must still list it: see _validate.
+    nobel_condition_simplified: StrictInt | None = None
     retraction_threshold: StrictInt
     retraction_ac_penalty: StrictInt
     # Crisis
@@ -145,6 +148,12 @@ class Settings(_Strict):
         """Publication scoring: the academic credit for a paper published in this tier."""
         reward = self.journal_tiers[tier].ac_reward
         return (tier if reward is None else reward) + (self.OA_publication_AC_reward if open_access else 0)
+
+    def nobel_threshold(self, tier: int) -> int:
+        """Nobel Prize: the Nobel Prize counter at which a theory published in this journal tier wins."""
+        if self.simplified:
+            return self.nobel_condition if self.nobel_condition_simplified is None else self.nobel_condition_simplified
+        return self.nobel_condition - tier
 
     @property
     def simplified(self) -> bool:

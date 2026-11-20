@@ -86,11 +86,6 @@ class RandomBot:
         if "choose_leaving_students" in by_type and "leave" not in self._done:
             self._done.add("leave")
             return self._leaving(seat, by_type["choose_leaving_students"].template)
-        if "order_predictions" in by_type and "order" not in self._done:
-            self._done.add("order")
-            ids = list(by_type["order_predictions"].template["predictions"])
-            rng.shuffle(ids)
-            return a.OrderPredictions(seat=seat, order=ids)
         if "review_vote" in by_type and "votes" not in self._done:
             self._done.add("votes")
             # One vote per card; the engine keeps the last vote for each card.

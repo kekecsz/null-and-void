@@ -149,7 +149,7 @@ function predictionRows(option) {
       };
       return h("span", { class: "pair" }, h("b", {}, `P${probe + 1}`), choice(false, t("Predict")), choice(true, t("Preregister")));
     };
-    return [theoryStrip(p, [info(t("Nobel {n}/{max}", { n: p.nobel, max: v.nobel_condition })), probes.map(pair)]), payoffLine(p)];
+    return [theoryStrip(p, [info(t("Nobel {n}/{max}", { n: p.nobel, max: p.nobel_threshold })), probes.map(pair)]), payoffLine(p)];
   });
 }
 
@@ -588,12 +588,6 @@ function leavingForm(tpl) {
   ];
 }
 
-function orderForm(tpl) {
-  const input = h("input", { value: tpl.predictions.map((id) => `Q${id}`).join(", "), size: 30 });
-  return [h("p", { class: "small" }, t("Several of your predictions are on the same Probe: the order in which they are scored.")), input,
-    h("button", { onclick: () => send({ type: "order_predictions", order: input.value.split(",").map((x) => Number(x.trim().replace(/^Q/, ""))) }) }, t("Set the order"))];
-}
-
 // The task panel ------------------------------------------------------------------------------------
 // What each option looks like in the panel: its strips and form, without a heading of its own for
 // the main task of a phase.
@@ -603,12 +597,12 @@ const TASK_ROWS = {
 };
 const FORMS = {
   allocate_staff: (o) => allocateForm(o.template), choose_leaving_students: (o) => leavingForm(o.template),
-  order_predictions: (o) => orderForm(o.template), revise: (o) => manuscriptActionRows(o, t("Revise")),
+  revise: (o) => manuscriptActionRows(o, t("Revise")),
   withdraw_submission: (o) => manuscriptActionRows(o, t("Withdraw")), archive_records: (o) => archiveForm(o.template),
 };
 const TITLES = {
   allocate_staff: "Hiring and task allocation", choose_leaving_students: "Student task check", claim_probe_time: "Probe time",
-  order_predictions: "Scoring order", develop_method: "Develop a method", revise: "Revise a manuscript", archive_records: "Archive records",
+  develop_method: "Develop a method", revise: "Revise a manuscript", archive_records: "Archive records",
   withdraw_submission: "Undo this step's submission or revision", leave_alliance: "Last chance to leave an alliance",
   stay_in_alliance: "Stay in an alliance",
 };

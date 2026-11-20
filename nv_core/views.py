@@ -56,6 +56,7 @@ def _paper(state: GameState, paper: Paper) -> dict[str, Any]:
         "open_access": paper.open_access,
         "round": paper.round,
         "nobel": paper.nobel,
+        "nobel_threshold": state.settings.nobel_threshold(paper.tier),  # Nobel Prize: depends on the tier
         "retraction": paper.retraction,
         "fresh": paper.fresh,
         "patents": list(paper.patents),
@@ -261,7 +262,6 @@ def _lab(state: GameState, seat: int, all_rounds: bool = False) -> dict[str, Any
             "development": [_idea(i) for i in pending.development],
             "archive": list(pending.archive),
             "votes": {str(k): v for k, v in pending.votes.items()},
-            "scoring_order": pending.scoring_order,
         },
         "experiments": [e.model_dump() for e in r.experiments if all_rounds or e.round == state.round],
     }

@@ -35,6 +35,23 @@ def credit_victory(ctx: Ctx) -> list[int]:
     return [seat for seat in leaders if theories(seat) == most]
 
 
+def nobel_at_crisis_end(ctx: Ctx) -> bool:
+    """Nobel Prize: checked once more when the Crisis ends. Of the theories at or above their
+    threshold, the one furthest above it wins; on a tie the authors share the prize."""
+    state, s = ctx.state, ctx.settings
+    above = {p.id: p.nobel - s.nobel_threshold(p.tier) for p in state.published
+             if p.kind == "theory" and p.nobel >= s.nobel_threshold(p.tier)}
+    if not above:
+        return False
+    best = max(above.values())
+    theories = sorted(t for t, margin in above.items() if margin == best)
+    for t in theories:
+        ctx.log("nobel", f"T{t} is at {state.paper(t).nobel} on its Nobel Prize counter when the Crisis ends")
+    # GameResult holds one theory: on a shared prize, the earliest published of them.
+    end_game(ctx, "nobel", sorted({state.paper(t).author for t in theories}), theory=theories[0])
+    return True
+
+
 def check_crisis_crash(ctx: Ctx) -> bool:
     state = ctx.state
     if state.period == "crisis" and state.unsuccessful_predictions >= ctx.settings.crisis_condition:

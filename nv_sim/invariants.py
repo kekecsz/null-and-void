@@ -55,8 +55,10 @@ def check(state: GameState, input_deck_builds: dict[str, int]) -> list[str]:
         bad("a paper id appears twice")
     for paper in state.published:
         if paper.kind == "theory":
-            limit = s.nobel_condition if state.result else s.nobel_condition - 1
-            if not 0 <= paper.nobel <= limit:
+            # Nobel Prize: in the Calm period a theory at its threshold ends the game; in the Crisis
+            # the counter may pass it (checked when the Crisis ends).
+            calm = state.period == "calm" and not state.result
+            if paper.nobel < 0 or (calm and paper.nobel >= max(1, s.nobel_threshold(paper.tier))):
                 bad(f"T{paper.id}: Nobel counter {paper.nobel} out of range")
             if not 0 <= paper.retraction < s.retraction_threshold:
                 bad(f"T{paper.id}: Retraction counter {paper.retraction} out of range")

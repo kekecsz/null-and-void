@@ -197,8 +197,6 @@ def parse(state: GameState, seat: int, line: str) -> BaseModel:
         if verb in ("prereg", "unprereg"):
             return a.SetPreregistered(seat=seat, prediction=prediction, preregister=verb == "prereg")
         return a.RevealPrediction(seat=seat, prediction=prediction, reveal=verb == "reveal")
-    if verb == "order":
-        return a.OrderPredictions(seat=seat, order=[_id(t, "Q") for t in args])
     if verb == "theory":
         if "->" not in args:
             raise CommandError("write e.g. theory IP1=fat_blue IP2=smooth -> WO1=fat_blue")

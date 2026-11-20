@@ -89,13 +89,6 @@ class RevealPrediction(_Action):
     reveal: bool = True
 
 
-class OrderPredictions(_Action):
-    """The scoring order of several predictions on the same Probe (Scoring predictions)."""
-
-    type: Literal["order_predictions"] = "order_predictions"
-    order: list[int]
-
-
 # Development phase
 class FormulateTheory(_Action):
     type: Literal["formulate_theory"] = "formulate_theory"
@@ -206,7 +199,6 @@ Action = Annotated[
         CancelPrediction,
         SetPreregistered,
         RevealPrediction,
-        OrderPredictions,
         FormulateTheory,
         DevelopMethod,
         CancelDevelopment,

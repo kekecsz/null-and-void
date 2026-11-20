@@ -332,7 +332,7 @@ class Pending(_Model):
     development: list[Idea] = []
     archive: list[int] = []  # Development phase: the record slips chosen to archive
     votes: dict[int, Literal["accept", "revise"]] = {}
-    scoring_order: list[int] | None = None
+    scoring_order: list[int] | None = None  # unused: kept so games saved under the earlier scoring order load
     submissions: list[SubmissionUndo] = []  # Publication: submission and revisions
 
 
