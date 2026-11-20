@@ -40,5 +40,5 @@ def test_the_bot_game_has_every_situation_and_the_adjustments_hold():
     state = state.clone()
     near_nobel_and_retraction(state, seat)
     s = state.settings
-    assert any(p.nobel == s.nobel_condition - 1 for p in state.published)
+    assert any(p.nobel == s.nobel_threshold(p.tier) - 1 for p in state.published)
     assert any(p.retraction == s.retraction_threshold - 1 for p in state.published)

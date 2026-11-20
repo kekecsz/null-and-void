@@ -198,7 +198,7 @@ def near_nobel_and_retraction(state: GameState, seat: int) -> None:
     """One theory a step from the Nobel Prize, another a step from retraction."""
     theories = sorted((p for p in state.published if p.idea.kind == "theory"), key=lambda p: (-p.nobel, p.id))
     leader = theories[0]
-    leader.nobel = state.settings.nobel_condition - 1
+    leader.nobel = state.settings.nobel_threshold(leader.tier) - 1  # Nobel Prize: the threshold depends on the tier
     other = next((p for p in theories[1:] if p.author != leader.author), theories[1])
     other.nobel, other.retraction = 0, state.settings.retraction_threshold - 1
 
