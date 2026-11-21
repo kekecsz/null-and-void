@@ -234,8 +234,8 @@ function probeStrip(p, pastRound) {
       const wrong = truth && (!p.readings || p.readings[variable.id] !== truth[variable.id]);
       return cell(
         known ? tile(seen[variable.id], "blank")
-          : tile(null, specialty ? "revealed" : level ? "sensor" : "no sensor", specialty ? "is-specialty" : level ? "is-sensor" : null),
-        level ? h("span", { class: "badge", title: t("sensor level {level}: may be noise", { level }) }, `L${level}`) : null,
+          : tile(null, specialty ? "revealed" : level && !v.crisis ? "sensor" : "no sensor", specialty ? "is-specialty" : level && !v.crisis ? "is-sensor" : null),
+        level && !v.crisis ? h("span", { class: "badge", title: t("sensor level {level}: may be noise", { level }) }, `L${level}`) : null,  // in the Crisis every reading is true
         wrong ? h("div", { class: "truth" }, t("true: {state}", { state: tn(truth[variable.id]) })) : null,
         choice ? h("button", { class: `plus${task.sensor === slot ? " on" : ""}`,
           title: `${level ? t("Upgrade this sensor: cite {n} method(s)", { n: choice.methods_needed }) : t("Install this sensor: cite {n} method(s)", { n: choice.methods_needed })} ${sensorCreditText(choice)}`,

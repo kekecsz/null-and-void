@@ -109,7 +109,7 @@ const signed = (n) => (n > 0 ? `+${n}` : String(n));
 const authorPart = (n) => (n ? `, ${t("{n} as author", { n: signed(n) })}` : "");
 function patentPart(x) {
   if (!x.patent) return "";  // no patents in the simplified game
-  if (x.patent === "new") return `, ${t("patent")}`;
+  if (x.patent === "new") return `, ${t("patent?")}`;  // before scoring: an earlier success on the same theory may take it
   return `, ${x.patent_holder === msg.you ? t("you already hold its patent") : t("no patent ({name} holds it)", { name: nameOf(x.patent_holder) })}`;
 }
 // What a prediction with this theory brings you (your own citation included): [if right, if wrong].
@@ -305,7 +305,7 @@ function ownCopies(idea, except) {  // my other theories with the same content: 
   const key = theoryKey(idea);
   const found = [];
   for (const i of v.lab.ideas) if (i.kind === "theory" && i.id !== except && theoryKey(i) === key) found.push(t("D{id} (development stack)", { id: i.id }));
-  v.lab.pending.development.forEach((i, n) => { if (i.kind === "theory" && theoryKey(i) === key) found.push(t("choice {n} of this phase", { n: n + 1 })); });
+  v.lab.pending.development.forEach((i, n) => { if (i.kind === "theory" && theoryKey(i) === key) found.push(t("product {n} of this phase", { n: n + 1 })); });
   for (const m of v.manuscripts) {
     if (m.author === msg.you && m.id !== except && m.content && m.content.kind === "theory" && theoryKey(m.content) === key) {
       found.push(t("D{id} (submitted, {area})", { id: m.id, area: t(AREA_NAMES[m.area] || m.area) }));
@@ -337,7 +337,7 @@ function pendingDevelopmentRows(option) {
   const pending = view().lab.pending.development;
   return [groupLabel(t("Chosen this phase")), option.actions.map((a) => {
     const i = pending[a.index];
-    return strip({ key: `pending${a.index}`, head: t("Choice {n}", { n: a.index + 1 }), slots: i.kind === "theory" ? ideaSlots(i) : {},
+    return strip({ key: `pending${a.index}`, head: t("Product {n}", { n: a.index + 1 }), slots: i.kind === "theory" ? ideaSlots(i) : {},
       text: i.kind === "method" ? t("method for {parameter}", { parameter: i.parameter }) : null, tail: h("button", { onclick: () => send(a) }, t("Drop")) });
   })];
 }
