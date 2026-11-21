@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.20. 21:11
+Last updated: 2026.11.22. 20:15
 
 \[Front page goes here\]
 
@@ -134,7 +134,7 @@ Each research staff member is allocated to one of the following tasks during the
 - Write-up: writing up research papers  
 - Peer-review: reviewing manuscripts submitted by others.  
 - Talent development (postdoc only, one staff member only): training research staff and scouting talents  
-- Grants: writing and administering grants
+- Grants: administering your grants (needed to keep your position on the Grant funding track)
 
 (Designer’s note: Students can and do develop new theories and methods, and they can train and scout staff. Restricting their allocation to these tasks was strictly a game mechanical choice, to limit too fast engine development.)
 
@@ -538,7 +538,7 @@ Each round in the Clean-up phase the Grant funding track requirements are checke
 
 Note that through this process the marker can not move more than one position on the track. (Designer’s note: this resembles that grant funding issued by governments are slow to react to changes in the field.)
 
-As many staff members are used as specified in the admin requirement of the current grant track position of the researcher.
+As many staff members are used as specified in the admin requirement of the current grant track position of the researcher. However, staff on Grants beyond the admin requirement do nothing and count as unused staff (see Clean-up phase).
 
 The values for each position are in parameter\_defaults.yaml in the \[grant\_track\] table.
 
