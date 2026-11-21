@@ -190,7 +190,7 @@ The server is a stateless FastAPI app: every request rebuilds the game from stor
 
 ### 6.3 Creating and joining games
 
-1. The host opens the lobby (on a server with an **organiser password**, which the deployed server must have, entering it is needed to create a game or see the list of games; players only need their link), chooses a scenario and world (or generates a new one), the game mode (normal or simplified; normal by default), a settings preset, and the seats (within the player limits in parameter\_defaults.yaml), each marked human, AI (with its model and persona) or scripted bot (9.4).
+1. The host opens the lobby (on a server with an **organiser password**, which the deployed server must have, entering it is needed to create a game or see the list of games; players only need their link), chooses a scenario and world (or generates a new one), the game mode (normal or simplified; normal by default), a settings preset, and the seats (within the player limits in parameter\_defaults.yaml), each marked human, AI (with its model and reasoning effort) or scripted bot (9.4).
 2. The host gets a **join link** and an optional password, and an optional **spectator password**. Without a spectator password, only the host link can spectate.
 3. A player opens the link, enters a nickname and picks a free seat and a colour from a fixed list. The browser keeps a seat token, so a refresh or a dropped connection rejoins the same seat; a link with the token (`#seat=...`) takes the seat to another device.
 4. The host starts the game when all human seats are filled. Settings are locked from then on.
@@ -328,7 +328,7 @@ The screens can be shown in other languages; English is the source and the defau
 
 ## 8. AI opponents (`nv_ai`)
 
-An AI seat is a language model that reads the same text view a human could and answers each decision with a tool call naming one legal action. It never sees hidden information it isn't entitled to. The provider and model are settings (section 11): the first version uses OpenAI's GPT-6 Luna, which is cheap enough for testing, and GPT-6.1 Terra can be chosen per seat; Claude models can be added through the same interface. Every model with prices in `ai_price_table` can be chosen: an AI seat's type names its persona and model, `ai:<persona>@<model>` (`ai` alone: the neutral persona and `ai_default_model`). The lobby offers each persona with each model.
+An AI seat is a language model that reads the same text view a human could and answers each decision with a tool call naming one legal action. It never sees hidden information it isn't entitled to. The provider and model are settings (section 11): the first version uses OpenAI's GPT-6 Luna, which is cheap enough for testing, and GPT-6.1 Terra can be chosen per seat; Claude models can be added through the same interface. Every model with prices in `ai_price_table` can be chosen: an AI seat's type names its persona, model and reasoning effort, `ai:<persona>@<model>/<effort>` (left out: the neutral persona, `ai_default_model` and `ai_reasoning_effort`). The lobby offers the seats listed in `ai_lobby_seats` (each a model and an effort, neutral persona, shown as "ai (GPT-6.1 Terra) - medium"); every other combination can be given to the simulator.
 
 ### 8.1 One decision
 
@@ -351,7 +351,7 @@ World states are remembered only through the Records area, as at the table, wher
 
 ### 8.3 Personas
 
-Each AI seat can be given a persona in the lobby: **neutral** (default: play to win), **cooperative** (share knowledge, avoid sabotage) or **selfish** (sabotage rivals' Nobel candidates when it can). This lets the simulator test your target outcome rates for cooperative and selfish play with AI players.
+Each AI seat can be given a persona (in the simulator; the lobby offers neutral seats only): **neutral** (default: play to win), **cooperative** (share knowledge, avoid sabotage) or **selfish** (sabotage rivals' Nobel candidates when it can). This lets the simulator test your target outcome rates for cooperative and selfish play with AI players.
 
 ### 8.4 Token limits and cost display
 
@@ -481,7 +481,8 @@ The software's own settings live in `settings/software.yaml`:
 | --- | --- |
 | `ai_provider` | `openai` (Anthropic later) |
 | `ai_default_model` | `gpt-6-luna`; any model in `ai_price_table` can be chosen per seat in the lobby |
-| `ai_reasoning_effort` | `high` (reasoning was under 4% of an AI seat's cost at `medium`) |
+| `ai_reasoning_effort` | `high` (reasoning was under 4% of an AI seat's cost at `medium`); the default for seats that name no effort |
+| `ai_lobby_seats` | the AI seats the lobby offers: GPT-6.1 Terra at `medium` and at `high`, GPT-6 Luna at `high` |
 | `ai_max_cost_per_decision` | 0.50 USD, reasoning included |
 | `ai_total_budget` | 50.00 USD for all AI calls, across runs (testing in milestones 4 and 5) |
 | `ai_max_input_tokens` | 80,000 per decision (the rulebook and tools take about 22,000; the rest holds the game log) |

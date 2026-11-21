@@ -89,7 +89,9 @@ def test_lobby_lists_worlds_and_seat_kinds(db):
         assert any(w["file"] == WORLD for w in options["worlds"])
         assert {"human", "selfish", "cooperative", "random"} <= set(options["seat_kinds"])
         # an AI seat for each persona with each model that has prices (specification 8)
-        assert {"ai@gpt-6-luna", "ai:selfish@gpt-6-luna", "ai@gpt-6.1-terra", "ai:cooperative@gpt-6.1-terra"} <= set(options["seat_kinds"])
+        ai = [k for k in options["seat_kinds"] if k.startswith("ai")]
+        from nv_ai.config import load_software_settings
+        assert ai == [seat.kind for seat in load_software_settings().ai_lobby_seats] and ai
         assert client.get("/").status_code == 200 and client.get("/game/x").status_code == 200
 
 

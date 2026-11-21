@@ -24,15 +24,17 @@ class AIContext:
 
     software: Any
     ledger: Any
-    make_provider: Any  # (model) -> Provider; the default model when called without one
+    make_provider: Any  # (model, effort) -> Provider; the defaults when called without them
 
 
-def ai_seat(kind: str) -> tuple[str, str | None] | None:
-    """(persona, model) of an AI seat type: ``ai``, ``ai:<persona>``, ``ai@<model>`` or
-    ``ai:<persona>@<model>`` (model None: the default model); None for any other seat type."""
+def ai_seat(kind: str) -> tuple[str, str | None, str | None] | None:
+    """(persona, model, reasoning effort) of an AI seat type: ``ai``, ``ai:<persona>``,
+    ``ai@<model>``, ``ai@<model>/<effort>`` or ``ai:<persona>@<model>[/<effort>]`` (None: the
+    default model or effort of settings/software.yaml); None for any other seat type."""
     kind, _, model = kind.partition("@")
     base, _, persona = kind.partition(":")
-    return (persona or "neutral", model or None) if base == "ai" else None
+    model, _, effort = model.partition("/")
+    return (persona or "neutral", model or None, effort or None) if base == "ai" else None
 
 
 def ai_models() -> list[str]:
@@ -64,7 +66,7 @@ def check_seat_types(seat_types: list[str]) -> None:
     for kind in seat_types:
         ai = ai_seat(kind)
         if ai:
-            persona, model = ai
+            persona, model, _ = ai
             if persona not in PERSONAS:
                 raise ValueError(f"unknown persona {persona!r} (available: {', '.join(PERSONAS)})")
             if model is not None and model not in ai_models():
@@ -73,7 +75,7 @@ def check_seat_types(seat_types: list[str]) -> None:
         elif kind not in BOTS and kind not in SEAT_TYPES:
             raise ValueError(
                 f"unknown seat type {kind!r} (available: {', '.join([*BOTS, *SEAT_TYPES])}, ai, ai:<persona>, "
-                "ai:<persona>@<model>)"
+                "ai:<persona>@<model>, ai:<persona>@<model>/<effort>)"
             )
 
 
@@ -93,13 +95,13 @@ def make_player(
     """The automated player for one seat (its random choices are seeded by game seed and seat)."""
     check_seat_types([kind])
     if parts := ai_seat(kind):
-        persona, model = parts
+        persona, model, effort = parts
         if ai is None or world is None:
             raise ValueError("AI seats need the AI settings (nv_ai)")
         from nv_ai.player import AIPlayer
 
         return AIPlayer(
-            ai.make_provider(model) if model else ai.make_provider(), ai.software, ai.ledger, world.story, persona,
+            ai.make_provider(model, effort) if model or effort else ai.make_provider(), ai.software, ai.ledger, world.story, persona,
             game=str(seed), name=name or f"{kind}{seat + 1}", fallback_seed=f"{seed}/seat{seat}/fallback",
             mode=settings.mode if settings else "normal",
         )

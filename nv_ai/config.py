@@ -28,6 +28,18 @@ class Prices(BaseModel):
     output: float
 
 
+class LobbySeat(BaseModel):
+    """An AI seat offered in the lobby: a model and its reasoning effort."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    model: str
+    effort: str
+
+    @property
+    def kind(self) -> str:
+        return f"ai@{self.model}/{self.effort}"
+
+
 class SoftwareSettings(BaseModel):
     model_config = ConfigDict(extra="allow", frozen=True)
 
@@ -40,6 +52,7 @@ class SoftwareSettings(BaseModel):
     ai_retry_limit: int
     ai_notes_max_chars: int
     ai_price_table: dict[str, Prices]
+    ai_lobby_seats: list[LobbySeat] = []
     # Scripted strategy bots (specification 9.4)
     debrief_low_chance: float
     bot_confidence_threshold: float

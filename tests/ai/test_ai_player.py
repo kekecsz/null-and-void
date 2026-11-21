@@ -380,10 +380,11 @@ def test_nv_sim_max_cost_holds_within_a_game(software, monkeypatch, tmp_path):
 
 # Models, the game log and the game mode (specification 8 and 8.1) ------------------------------------
 def test_an_ai_seat_type_names_its_persona_and_model():
-    assert ai_seat("ai") == ("neutral", None)
-    assert ai_seat("ai:selfish") == ("selfish", None)
-    assert ai_seat("ai@gpt-6-luna") == ("neutral", "gpt-6-luna")
-    assert ai_seat("ai:cooperative@gpt-6.1-terra") == ("cooperative", "gpt-6.1-terra")
+    assert ai_seat("ai") == ("neutral", None, None)
+    assert ai_seat("ai:selfish") == ("selfish", None, None)
+    assert ai_seat("ai@gpt-6-luna") == ("neutral", "gpt-6-luna", None)
+    assert ai_seat("ai:cooperative@gpt-6.1-terra") == ("cooperative", "gpt-6.1-terra", None)
+    assert ai_seat("ai@gpt-6.1-terra/medium") == ("neutral", "gpt-6.1-terra", "medium")
     assert ai_seat("cooperative") is None
     check_seat_types(["ai:cooperative@gpt-6.1-terra", "ai"])
     with pytest.raises(ValueError, match="unknown AI model"):
@@ -400,13 +401,14 @@ def test_an_ai_seat_plays_with_the_model_its_type_names(venus, software):
     world, settings = venus
     asked = []
 
-    def factory(model=None):
-        asked.append(model)
+    def factory(model=None, effort=None):
+        asked.append((model, effort))
         return FakeProvider()
 
     make_player("ai:selfish@gpt-6.1-terra", 0, 1, world, _context(software, factory), settings)
-    make_player("ai", 1, 1, world, _context(software, factory), settings)
-    assert asked == ["gpt-6.1-terra", None]  # None: the default model
+    make_player("ai@gpt-6-luna/medium", 1, 1, world, _context(software, factory), settings)
+    make_player("ai", 2, 1, world, _context(software, factory), settings)
+    assert asked == [("gpt-6.1-terra", None), ("gpt-6-luna", "medium"), (None, None)]  # None: the default
 
 
 @pytest.mark.parametrize("mode", ["normal", "simplified"])
