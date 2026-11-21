@@ -216,7 +216,7 @@ function hiringTable(report) {
     return parts ? (strong ? h("b", {}, parts) : parts) : "";
   };
   const row = (cells, cls) => h("tr", { class: cls || null }, cells.map((c) => h("td", {}, c)));
-  const body = tasks.map((task) => row([tTask(task), ...seats.map((seat) => tokens(...cellOf(seat, task)))]));
+  const body = tasks.map((task) => row([taskName(task), ...seats.map((seat) => tokens(...cellOf(seat, task)))]));
   body.push(h("tr", { class: "gap" }, h("td", { colspan: 1 + seats.length })));
   body.push(row([h("b", {}, t("Staff")), ...seats.map((seat) => numbers(...total(seat), true))], "summary"));
   body.push(row([t("Hired"), ...seats.map((seat) => (hired[seat] ? numbers(hired[seat].hired_postdocs, hired[seat].hired_students) : ""))], "summary"));

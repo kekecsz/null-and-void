@@ -309,6 +309,11 @@ const TASK_WHEN = {
 const TASK_ORDER = ["experimentation", "data_collection", "development", "write_up", "peer_review", "talent_development", "grants"];
 const taskOrder = (task) => (TASK_ORDER.includes(task) ? TASK_ORDER.indexOf(task) : TASK_ORDER.length);
 const tTask = (task) => t(task.replace("_", " "));      // a staff task's name, translated
+// A staff task's name with, on hover, what the task does (docs/task_actions.yaml, sent in the view).
+function taskName(task) {
+  const actions = ((view() && view().reference && view().reference.task_actions) || {})[task];
+  return actions ? h("span", { class: "hover-info", title: actions.map((x) => `\u2022 ${x}`).join("\n") }, tTask(task)) : tTask(task);
+}
 const tWhen = (task) => (TASK_WHEN[task] ? t(TASK_WHEN[task]) : "");
 
 function renderLab() {
@@ -345,7 +350,7 @@ function labInto(box, v, me, lab) {
         const cls = now < 0 || !steps.length ? "" : now > last ? "past" : now >= first ? "current" : "";
         const name = task.replace("_", " ");
         const when = TASK_WHEN[task] && TASK_WHEN[task].toLowerCase() !== name ? h("div", { class: "muted" }, tWhen(task)) : null;
-        return h("tr", { class: cls }, h("td", {}, tTask(task), when), [c.postdocs, c.students, c.used].map((x) => h("td", {}, x)));
+        return h("tr", { class: cls }, h("td", {}, taskName(task), when), [c.postdocs, c.students, c.used].map((x) => h("td", {}, x)));
       })));
   }
   if (lab.leaving_students) box.append(h("p", { class: "bad" }, t("{n} student(s) must leave.", { n: lab.leaving_students })));

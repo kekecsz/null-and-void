@@ -4,12 +4,16 @@ A view is plain JSON-ready data. ``player_view`` holds everything public plus th
 hidden material; ``spectator_view`` holds everything. ``nv_core.text.render_text`` renders either.
 """
 
+import functools
 from typing import Any
+
+import yaml
 
 from nv_core.engine import SIMULTANEOUS
 from nv_core.engine.context import Event
 from nv_core.engine.reports import player_reports
 from nv_core.engine.records import positions, slips
+from nv_core.paths import TASK_ACTIONS
 from nv_core.state import Card, GameState, Idea, Manuscript, Paper, Phase, Prediction, RecordArea, Researcher
 
 # Probes are dealt at the start of the Observation and prediction phase.
@@ -72,6 +76,12 @@ CREDIT_SETTINGS = (
 )
 
 
+@functools.cache
+def task_actions() -> dict[str, list[str]]:
+    """What each staff task does, in a few words (docs/task_actions.yaml), for the web client's hover texts."""
+    return yaml.safe_load(TASK_ACTIONS.read_text(encoding="utf-8")) or {}
+
+
 def _reference(state: GameState) -> dict[str, Any]:
     """The game's own tables and credit values, for the Reference panel (specification 7.4)."""
     s = state.settings
@@ -82,6 +92,7 @@ def _reference(state: GameState) -> dict[str, Any]:
         "journal_tiers": [t.model_dump() for t in s.journal_tiers],
         "publication_rewards": [s.publication_reward(tier, False) for tier in range(len(s.journal_tiers))],
         "credit": {name: getattr(s, name) for name in CREDIT_SETTINGS},
+        "task_actions": task_actions(),
     }
 
 

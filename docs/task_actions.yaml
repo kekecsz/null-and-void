@@ -1,0 +1,27 @@
+# What each staff task does, in a few words: the web client shows this list when the mouse rests
+# on a task's name (the allocation form, the student choice, the hiring report, the lab panel).
+#
+# A summary only: the rulebook stays the authority (Hiring and task allocation phase, and the
+# section of each step). Update this file when a rule export changes what a task does.
+# One entry per task of the staff allocation mat; the keys are the engine's task names.
+
+experimentation:
+  - run an experiment
+  - install or upgrade a sensor
+  - increase the lab capacity (no staff member needed)
+data_collection:
+  - make predictions, and preregister them
+  - reveal hidden predictions
+development:
+  - formulate a theory
+  - develop a method
+  - archive records
+write_up:
+  - submit a manuscript
+  - revise a manuscript
+peer_review:
+  - review manuscripts awaiting peer review
+talent_development:
+  - advance on the Talent development track
+grants:
+  - administer your grants, to keep your Grant funding track position

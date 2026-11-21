@@ -516,7 +516,7 @@ function completeActions(option) {
 // A number box with a larger - and + on either side. The box itself is in .box; read .value as usual.
 function taskLabel(name) {  // a staff task, with what the Grant funding position asks of the Grants row
   const needed = preview().grant_admin_needed;
-  const label = tTask(name);
+  const label = taskName(name);
   return name === "grants" && needed !== undefined ? [label, h("span", { class: "grant-need" }, t("grant track needs: {n}", { n: needed }))] : label;
 }
 

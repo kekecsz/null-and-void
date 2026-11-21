@@ -333,3 +333,14 @@ def test_the_view_carries_the_games_own_reference_values():
     assert len(ref["grant_track"]) == len(S.grant_track) and len(ref["journal_tiers"]) == len(S.journal_tiers)
     assert ref["talent"][0] == {"hire_cap": S.student_hire_cap(0), "leave_below": S.student_leave_threshold(0)}
     assert ref["publication_rewards"] == [S.publication_reward(t, False) for t in range(len(S.journal_tiers))]
+
+
+def test_every_staff_task_has_its_hover_text():
+    """Specification 7.4: docs/task_actions.yaml names what each task of the allocation mat does."""
+    from nv_core.state import Task
+    from nv_core.views import task_actions
+
+    actions = task_actions()
+    assert set(actions) == {task.value for task in Task}
+    assert all(isinstance(x, list) and x and all(isinstance(line, str) for line in x) for x in actions.values())
+    assert player_view(game(), 0)["reference"]["task_actions"] == actions
