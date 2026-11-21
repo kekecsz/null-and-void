@@ -120,9 +120,31 @@ PERSONAS = {
 }
 
 
-def rules_text() -> str:
-    """The rulebook without the sections a player does not need."""
-    lines = read_markdown(RULEBOOK).splitlines()
+def rules_text(settings: dict[str, Any] | None = None) -> str:
+    """The rulebook without the sections a player does not need. With ``settings`` (the game's,
+    shaped like parameter_defaults.yaml) every [parameter] is filled in with this game's value and
+    the tables (Grant funding track, Talent development track, journal tiers) are written out, as
+    in the PDF edition; a game whose settings cannot fill the rulebook gets it unfilled."""
+    text = read_markdown(RULEBOOK)
+    if settings is not None:
+        from nv_rulebook.fill import TABLE_LINE, FillError, fill_rulebook, table_rows
+
+        try:
+            filled = fill_rulebook(text, settings)
+        except FillError:
+            filled = None
+        if filled is not None:
+            out = []
+            for line in filled.splitlines():
+                table = TABLE_LINE.match(line.strip())
+                if table is None:
+                    out.append(line)
+                    continue
+                header, rows = table_rows(table.group(1), settings)
+                out += ["| " + " | ".join(header) + " |", "|" + " --- |" * len(header)]
+                out += ["| " + " | ".join(row) + " |" for row in rows]
+            text = "\n".join(out)
+    lines = text.splitlines()
     kept, skipping = [], False
     for line in lines:
         heading = re.match(r"^(#+)\s+(.*)$", line)
@@ -187,15 +209,16 @@ def tool_definitions(notes_max: int) -> list[dict[str, Any]]:
     return tools
 
 
-def instructions(story: str, persona: str, notes_max: int, mode: str = "normal") -> str:
-    """Rulebook first (shared by every seat), then the interface, the game mode, the story and the persona."""
+def instructions(story: str, persona: str, notes_max: int, mode: str = "normal", settings: dict[str, Any] | None = None) -> str:
+    """Rulebook first (filled in with the game's settings; shared by every seat of the game), then
+    the interface, the game mode, the story and the persona."""
     if persona not in PERSONAS:
         raise ValueError(f"unknown persona {persona!r} (available: {', '.join(PERSONAS)})")
     if mode not in GAME_MODES:
         raise ValueError(f"unknown game mode {mode!r} (available: {', '.join(GAME_MODES)})")
     return "\n\n".join(
         [
-            rules_text(),
+            rules_text(settings),
             INTERFACE.format(notes_max=notes_max),
             "# This game\n\n" + GAME_MODES[mode],
             "# The scenario\n\n" + story,

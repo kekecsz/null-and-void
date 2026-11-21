@@ -419,7 +419,7 @@ def test_the_model_is_told_which_game_it_plays(venus, software, mode):
     settings = settings.model_copy(update={"mode": mode})
     player = make_player("ai", 0, 1, world, _context(software), settings)
     assert f"This is the {mode} game." in player.instructions
-    assert player.instructions.startswith(rules_text())  # the shared, cached prefix stays first
+    assert player.instructions.startswith(rules_text(settings.model_dump()))  # the shared, cached prefix stays first
     state = new_game(world, settings, 1, ["a", "b"])
     assert f"{mode.upper()} GAME" in render_text(player_view(state, 0))  # the view's header, in every decision
 
@@ -634,3 +634,26 @@ def test_the_openai_provider_asks_for_and_reads_several_tool_calls(monkeypatch):
     reply = provider.respond("THE RULES", [], [provider.user_item("view")], 100)
     assert sent[0]["parallel_tool_calls"] is True
     assert [c.name for c in reply.calls] == ["pass", "commit"] and reply.call.name == "pass"
+
+
+def test_the_model_reads_the_rulebook_with_this_games_values_and_tables(venus, software):
+    """Specification 8.1: the rulebook in the system prompt is filled in with the game's settings."""
+    import re
+
+    world, settings = venus
+    settings = settings.model_copy(update={"unused_staff_penalty": -7})
+    player = make_player("ai", 0, 1, world, _context(software), settings)
+    rules = player.instructions.split("# How you play")[0]
+    assert not re.findall(r"\[[a-z_]+\]", rules)  # no [parameter] left
+    assert "suffers 7 academic credit penalty" in rules  # this game's value ("penalty" carries the sign)
+    assert "| Position | Funding | Admin" in rules  # the Grant funding track as a table
+
+
+def test_the_view_tells_the_grant_positions_admin_need_and_the_publications_due(venus):
+    world, settings = venus
+    state = new_game(world, settings, 1, ["a", "b"])
+    position = state.researcher(0).grant_position
+    text = render_text(player_view(state, 0))
+    needed = settings.grant_track[position - 1].admin
+    assert f"Grant funding: position {position} needs {needed} staff member(s) on Grants" in text
+    assert "publications due this round: 0" in text

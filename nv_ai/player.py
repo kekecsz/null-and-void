@@ -40,12 +40,13 @@ class AIPlayer:
         name: str = "",
         fallback_seed: str = "fallback",
         mode: str = "normal",
+        settings: dict[str, Any] | None = None,  # the game's settings: the rulebook is filled in with them
     ):
         self.provider = provider
         self.software = software
         self.ledger = ledger
         self.prices = software.prices(provider.model)
-        self.instructions = instructions(story, persona, software.ai_notes_max_chars, mode)
+        self.instructions = instructions(story, persona, software.ai_notes_max_chars, mode, settings)
         self.tools = tool_definitions(software.ai_notes_max_chars)
         self.persona = persona
         self.game = game

@@ -180,7 +180,23 @@ def render_text(view: dict[str, Any]) -> str:
     labs = [view["lab"]] if "lab" in view else view.get("labs", [])
     for lab in labs:
         lines += _lab_lines(lab, name)
+        lines += _grant_lines(view, lab["seat"])
     return "\n".join(lines)
+
+
+def _grant_lines(view: dict[str, Any], seat: int) -> list[str]:
+    """Research grants (normal game): what the researcher's Grant funding position asks this round,
+    as the web client's hiring form shows it."""
+    reference = view.get("reference")
+    if view.get("mode") == "simplified" or not reference:
+        return []
+    position = view["researchers"][seat]["grant_position"]
+    g = reference["grant_track"][position - 1]
+    due = sum(1 for m in view["manuscripts"] if m["author"] == seat and m["area"] == "accept" and m["tokens"] == 0)
+    up = "" if g["expected_to_increase"] is None else f", to move up: {g['expected_to_increase']}"
+    return [f"  Grant funding: position {position} needs {g['admin']} staff member(s) on Grants (see Research grants); "
+            f"publications due this round: {due} (to keep the position: "
+            f"{g['expected_to_maintain']}{up})"]
 
 
 def _lab_lines(lab: dict[str, Any], name) -> list[str]:

@@ -104,6 +104,7 @@ def make_player(
             ai.make_provider(model, effort) if model or effort else ai.make_provider(), ai.software, ai.ledger, world.story, persona,
             game=str(seed), name=name or f"{kind}{seat + 1}", fallback_seed=f"{seed}/seat{seat}/fallback",
             mode=settings.mode if settings else "normal",
+            settings=settings.model_dump() if settings else None,
         )
     if kind in SEAT_TYPES:
         if world is None or settings is None:
