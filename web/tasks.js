@@ -460,8 +460,11 @@ function submitRows(option) {
   for (const box of task.boxes) if (box.manuscript !== null && (!ideas.some((i) => i.id === box.manuscript) || !tiersFor(box.manuscript).length)) Object.assign(box, emptyBox());
   if (!task.boxes.length) task.boxes.push(emptyBox());
   task.target = Math.min(task.target, task.boxes.length - 1);
+  // Below the boxes, every unpublished work of the player (as in the "Your unpublished work" panel), to pick from.
+  const unpublished = ideas.map((i) => ideaStrip(i, { key: `task-D${i.id}`, tail: useIdeaButton(i) }));
   return [publicationsDue(), task.boxes.map((box, i) => submitBox(box, i, option)),
-    h("div", { class: "box-foot" }, h("button", { onclick: () => { task.boxes.push(emptyBox()); task.target = task.boxes.length - 1; redraw(); } }, t("Add a submission box")))];
+    h("div", { class: "box-foot" }, h("button", { onclick: () => { task.boxes.push(emptyBox()); task.target = task.boxes.length - 1; redraw(); } }, t("Add a submission box"))),
+    unpublished.length ? h("div", { class: "rows" }, groupLabel(t("Your unpublished work")), unpublished) : null];
 }
 
 function manuscriptActionRows(option, label) {  // revising and withdrawing: the manuscript's strip with one button
