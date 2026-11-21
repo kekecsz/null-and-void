@@ -113,7 +113,6 @@ body.tiles-compact { --head: 92px; --cell: 122px; --tile: 21px; }
 .token.staff-P { background: #fff; color: #222; box-shadow: 0 0 0 1px #888, inset 0 0 0 2px #ddd; }
 .token.staff-S { background: #9a9a94; color: #fff; box-shadow: 0 0 0 1px #6f6f6a, inset 0 0 0 2px rgba(255, 255, 255, .35); }
 .hire-report td { height: 24px; }
-.hire-report tr td:nth-child(2), .hire-report tr th:nth-child(2) { text-align: left; }
 .hire-report .chip-stack .token { margin-left: -4px; }
 .hire-report .chip-stack .token:first-child { margin-left: 0; }
 .hire-report tr.gap td { height: 10px; border: none; }
@@ -219,8 +218,8 @@ input.plain::-webkit-inner-spin-button, input.plain::-webkit-outer-spin-button {
 .grant-need { margin-left: 8px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .hire-row button { margin: 0 3px; }
 .hire-row .stepper button { margin: 0; }
-.alloc.postdocs-short tr > :nth-child(3), .alloc.students-short tr > :nth-child(4) { background: #e4e4de; }
-.alloc.postdocs-over tr > :nth-child(3), .alloc.students-over tr > :nth-child(4) { background: #f6c9c5; }
+.alloc.postdocs-short tr > :nth-child(2), .alloc.students-short tr > :nth-child(3) { background: #e4e4de; }
+.alloc.postdocs-over tr > :nth-child(2), .alloc.students-over tr > :nth-child(3) { background: #f6c9c5; }
 .alloc input.over { outline: 2px solid var(--bad); }
 .alloc tr.grant-short > td { background: #e4e4de; }
 .publications-due { margin: 6px 0; font-size: 13px; }

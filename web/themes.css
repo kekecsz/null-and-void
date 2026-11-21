@@ -75,9 +75,9 @@ html.theme-light {
 .theme-light th { background: transparent; border: 0; border-top: 1.5px solid var(--ink); border-bottom: 1px solid var(--ink); font: 600 10.5px "NV Sans"; letter-spacing: .05em; }
 .theme-light td { border: 0; border-bottom: 1px solid var(--hair); }
 .theme-light tr:last-child td { border-bottom: 1.5px solid var(--ink); }
-.theme-light .alloc.postdocs-short tr > :nth-child(3), .theme-light .alloc.students-short tr > :nth-child(4) { background: #E9E1CF; }
+.theme-light .alloc.postdocs-short tr > :nth-child(2), .theme-light .alloc.students-short tr > :nth-child(3) { background: #E9E1CF; }
 .theme-light .alloc tr.grant-short > td { background: #E9E1CF; }
-.theme-light .alloc.postdocs-over tr > :nth-child(3), .theme-light .alloc.students-over tr > :nth-child(4) { background: #F1C6BD; }
+.theme-light .alloc.postdocs-over tr > :nth-child(2), .theme-light .alloc.students-over tr > :nth-child(3) { background: #F1C6BD; }
 .theme-light tr.past td { color: #A39A8A; }
 
 /* Controls */
@@ -175,9 +175,9 @@ html.theme-dark {
 .theme-dark th { background: #261D13; border-color: var(--line); color: var(--gold); font: 600 12.5px "NV Condensed"; letter-spacing: 1px; text-transform: uppercase; }
 .theme-dark td { border-color: var(--line); }
 .theme-dark tr.past td { color: #7A6B5A; }
-.theme-dark .alloc.postdocs-short tr > :nth-child(3), .theme-dark .alloc.students-short tr > :nth-child(4) { background: #2F2B27; }
+.theme-dark .alloc.postdocs-short tr > :nth-child(2), .theme-dark .alloc.students-short tr > :nth-child(3) { background: #2F2B27; }
 .theme-dark .alloc tr.grant-short > td { background: #2F2B27; }
-.theme-dark .alloc.postdocs-over tr > :nth-child(3), .theme-dark .alloc.students-over tr > :nth-child(4) { background: #5E211A; }
+.theme-dark .alloc.postdocs-over tr > :nth-child(2), .theme-dark .alloc.students-over tr > :nth-child(3) { background: #5E211A; }
 
 /* Controls */
 .theme-dark button { font: 600 13px "NV Condensed"; letter-spacing: .9px; text-transform: uppercase; background: #2A2118; color: var(--ink); border: 1px solid #5B4A38; border-radius: 3px; }

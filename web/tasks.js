@@ -547,12 +547,12 @@ function allocateForm(tpl) {
     inputs[task] = [p, s];
     rowsByTask[task] = [p, s];
     const limit = task in caps && !tpl.at_most_one.includes(task) ? h("div", { class: "muted" }, t("at most {n} (lab capacity)", { n: caps[task] })) : null;
-    return [h("span", {}, taskLabel(task), limit), tWhen(task), p.box, ...(noStudents ? [] : [s.box])];
+    return [h("span", {}, taskLabel(task), limit), p.box, ...(noStudents ? [] : [s.box])];
   });
   const totals = { postdocs: h("b", {}), students: h("b", {}) };
   const allocationTable = noStudents
-    ? table([t("Task"), t("When"), t("Postdocs")], [...rows, [h("b", {}, t("Allocated")), "", totals.postdocs]])
-    : table([t("Task"), t("When"), t("Postdocs"), t("Students")], [...rows, [h("b", {}, t("Allocated")), "", totals.postdocs, totals.students]]);
+    ? table([t("Task"), t("Postdocs")], [...rows, [h("b", {}, t("Allocated")), totals.postdocs]])
+    : table([t("Task"), t("Postdocs"), t("Students")], [...rows, [h("b", {}, t("Allocated")), totals.postdocs, totals.students]]);
   allocationTable.classList.add("alloc");
   const adminNeeded = preview().grant_admin_needed;
   const grantsRow = rowsByTask.grants ? rowsByTask.grants[0].box.closest("tr") : null;
@@ -619,7 +619,7 @@ function leavingForm(tpl) {
     .map(([task, n]) => [task, numberInput(0, 0, n), n]);
   return [
     h("p", {}, t("{n} student(s) must leave. Choose from which tasks:", { n: tpl.count })),
-    table([t("Task"), t("When"), t("Students there"), t("Leaving")], inputs.map(([task, input, n]) => [taskLabel(task), tWhen(task), n, input.box])),
+    table([t("Task"), t("Students there"), t("Leaving")], inputs.map(([task, input, n]) => [taskLabel(task), n, input.box])),
     h("button", { class: "primary", title: t("These students leave; final for this round"), onclick: () => {
       const by_task = {};
       for (const [task, input] of inputs) if (Number(input.value)) by_task[task] = Number(input.value);
