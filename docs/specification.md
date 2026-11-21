@@ -216,6 +216,7 @@ The server is a stateless FastAPI app: every request rebuilds the game from stor
 - `deploy/cloud_run.py` does the work; the project, region and service limits are in `settings/cloud.yaml`.
 - The image is built from the `Dockerfile`, which names each folder it copies, so local keys, the local ledger and saved games cannot end up in it; `.gcloudignore` also keeps them out of the upload.
 - The server runs as its own service account, which may use Firestore and read its two secrets.
+- Every response outside `/api/` (the pages, scripts and styles of the web client) carries `Cache-Control: no-cache`, so a browser checks for a newer version on each load (an unchanged file costs only a "not modified" answer) and nobody keeps an old client after a deploy.
 
 ## 7. Clients
 

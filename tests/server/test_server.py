@@ -456,3 +456,13 @@ def test_resume_restarts_an_ai_seat_stuck_in_its_call(db):
             assert session.workers[1] is not old  # a fresh worker; the old call's answer will be ignored
     finally:
         release.set()
+
+
+def test_pages_and_scripts_are_revalidated_after_a_deploy(db):
+    """Specification 6.6: browsers check the client's files for a newer version on every load."""
+    with TestClient(create_app(db=db)) as client:
+        for path in ("/", "/web/game.js", "/web/style.css"):
+            response = client.get(path)
+            assert response.status_code == 200 and response.headers["cache-control"] == "no-cache", path
+        etag = client.get("/web/game.js").headers["etag"]
+        assert client.get("/web/game.js", headers={"If-None-Match": etag}).status_code == 304  # unchanged: cheap

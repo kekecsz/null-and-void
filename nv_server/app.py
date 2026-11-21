@@ -183,6 +183,15 @@ def create_app(storage: Storage | None = None, ai_context=None, db: Path | str =
     app.state.manager = manager
     app.mount("/web", StaticFiles(directory=WEB_DIR), name="web")
 
+    @app.middleware("http")
+    async def revalidate_pages(request, call_next):
+        """Pages and their scripts and styles are checked for a newer version on every load (a
+        cheap "not modified" answer when unchanged), so after a deploy no browser keeps old ones."""
+        response = await call_next(request)
+        if not request.url.path.startswith("/api/"):
+            response.headers.setdefault("Cache-Control", "no-cache")
+        return response
+
     async def session(game_id: str):
         try:
             return await manager.get(game_id)
