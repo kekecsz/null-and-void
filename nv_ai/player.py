@@ -95,6 +95,21 @@ class AIPlayer:
             return
         self._refusal = reason
 
+    def dropped(self, action: BaseModel, reason: str) -> None:
+        """The server did not carry out the action because the game changed (or was paused) while the
+        model decided: it decides again on the board as it is now, told why."""
+        if self._step_choices:
+            self._step_choices.pop()
+        if self.decisions:
+            self.decisions[-1]["refusals"].append(f"not carried out: {reason}")
+        self._commit_next, self._queue, self._refusal, self._automatic = False, [], None, False
+        self._automatic_refused = f"Your {action.type} was not carried out: {reason}. Decide again on the board as it is now."
+
+    def skip(self, view: dict[str, Any], options: list[Option]) -> BaseModel:
+        """The host skipped this seat's model call (specification 6.4): the safe default instead."""
+        self._current = {"round": view["round"], "phase": view["phase"]}
+        return self._fall_back(view, options, "skipped by the host")
+
     def choose(self, view: dict[str, Any], options: list[Option]) -> BaseModel:
         step = (view["round"], view["phase"])
         if step != self._step:

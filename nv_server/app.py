@@ -14,6 +14,8 @@ import asyncio
 import csv
 import hmac
 import io
+import json
+import logging
 import os
 import random
 import socket
@@ -367,8 +369,32 @@ def _lan_address() -> str | None:
         return None
 
 
+class _LogLine(logging.Formatter):
+    """One JSON line per message, with its severity: Cloud Logging reads these (structured logging),
+    so warnings and errors of the server show up as such, tracebacks included."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        message = record.getMessage()
+        if record.exc_info:
+            message += "\n" + self.formatException(record.exc_info)
+        return json.dumps({"severity": record.levelname, "message": message, "logger": record.name})
+
+
+def _server_logging() -> None:
+    """The server's own messages (nv_server: refused or dropped AI actions, crashed seats)."""
+    logger = logging.getLogger("nv_server")
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(_LogLine())
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+        logger.propagate = False
+
+
 def main(argv: list[str] | None = None) -> int:
     import uvicorn
+
+    _server_logging()
 
     parser = argparse.ArgumentParser(prog="nv-server", description="Null & Void multiplayer server")
     parser.add_argument("--host", default="127.0.0.1", help="0.0.0.0 lets other devices on your network join")

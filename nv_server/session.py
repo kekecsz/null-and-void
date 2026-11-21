@@ -89,6 +89,8 @@ class _SeatWorker:
     task: asyncio.Task | None = None
     refusals: int = 0
     stored_decisions: int = 0
+    thinking: bool = False  # an AI call is running (in a thread)
+    skip: bool = False  # the host skipped its call: its next decision is the safe default
 
 
 class GameSession:
@@ -143,13 +145,26 @@ class GameSession:
         return player
 
     def start_workers(self) -> None:
+        """A worker for every automated seat that has none, or whose worker stopped (crashed)."""
         if self.state is None or self.closed or self.status in ("finished", "ended"):
             return
         for seat, kind in enumerate(self.meta["seats"]):
-            if kind != HUMAN and seat not in self.workers:
-                worker = _SeatWorker(self._make_player(seat))
-                self.workers[seat] = worker
-                worker.task = asyncio.create_task(self._run_seat(seat), name=f"{self.id}/seat{seat}")
+            old = self.workers.get(seat)
+            if kind != HUMAN and (old is None or (old.task is not None and old.task.done())):
+                self._new_worker(seat)
+
+    def _new_worker(self, seat: int, skip: bool = False) -> None:
+        """Start a fresh worker for an automated seat, replacing any old one: an old AI call that is
+        still running goes on in its thread, but its answer is ignored (specification 6.4)."""
+        old = self.workers.pop(seat, None)
+        if old is not None:
+            if old.task is not None:
+                old.task.cancel()
+            if str(seat) in self.meta["ai_cost"]:  # the new player's cost adds to what was spent so far
+                self.meta["ai_cost_base"][str(seat)] = self.meta["ai_cost"][str(seat)]
+        worker = _SeatWorker(self._make_player(seat), skip=skip)
+        self.workers[seat] = worker
+        worker.task = asyncio.create_task(self._run_seat(seat), name=f"{self.id}/seat{seat}")
 
     def stop_worker(self, seat: int) -> None:
         worker = self.workers.pop(seat, None)
@@ -336,6 +351,18 @@ class GameSession:
             elif command == "resume":
                 self._require("paused")
                 self.meta["status"] = "running"
+                for s, w in list(self.workers.items()):  # an AI seat stuck in a call starts afresh
+                    if w.thinking:
+                        log.warning("game %s: resume restarts seat %s, whose AI call was still running", self.id, s)
+                        self._new_worker(s)
+            elif command == "skip_ai":
+                self._require("running")
+                deciding = [s for s in self.workers if ai_seat(self.meta["seats"][s]) and self.must_act(s)]
+                if not deciding:
+                    raise GameError("no AI seat is deciding now")
+                for s in deciding:
+                    log.warning("game %s: the host skips the AI call of seat %s", self.id, s)
+                    self._new_worker(s, skip=True)
             elif command == "end":
                 if self.status not in ("running", "paused"):
                     raise GameError("only a game in progress can be ended")
@@ -431,14 +458,29 @@ class GameSession:
                     options = legal_actions(state, seat)
                     view = self._decision_view(state, seat) if player.needs_view else {
                         "round": state.round, "phase": state.phase.value, "seat": seat}
-                if getattr(player, "provider", None) is not None:  # an AI: think without blocking anyone
-                    action = await asyncio.to_thread(player.choose, view, options)
+                if getattr(player, "provider", None) is not None and worker.skip:  # skipped by the host
+                    worker.skip = False
+                    action = player.skip(view, options)
+                elif getattr(player, "provider", None) is not None:  # an AI: think without blocking anyone
+                    worker.thinking = True
+                    try:
+                        action = await asyncio.to_thread(player.choose, view, options)
+                    finally:
+                        worker.thinking = False
                 else:
                     action = player.choose(view, options)
                 async with self.cond:
+                    if self.workers.get(seat) is not worker:  # replaced meanwhile (skip, resume): ignore the answer
+                        return
                     stale = self.seq != seq
                     problem = self._apply_locked(seat, action)
-                    if problem and not stale and self.status == "running":
+                    if problem:
+                        log.warning("game %s, seat %s (%s): %s not carried out: %s%s", self.id, seat, self.meta["seats"][seat],
+                                    action.type, problem, " (the game changed while it decided)" if stale else "")
+                    if problem and (stale or self.status != "running"):
+                        if hasattr(player, "dropped"):  # it decided on a board that is gone: it decides again
+                            player.dropped(action, problem)
+                    elif problem:
                         worker.refusals += 1
                         if hasattr(player, "refused"):
                             player.refused(action, problem)

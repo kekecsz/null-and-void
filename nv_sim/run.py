@@ -57,7 +57,8 @@ def ai_context(spending: Any = None) -> AIContext:
         software,
         ledger,
         lambda model=None, effort=None: make_provider(
-            software.ai_provider, model or software.ai_default_model, effort or software.ai_reasoning_effort),
+            software.ai_provider, model or software.ai_default_model, effort or software.ai_reasoning_effort,
+            software.ai_request_timeout, software.ai_request_retries),
     )
 
 

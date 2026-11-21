@@ -505,6 +505,10 @@ async function renderHost() {
   if (msg.status === "running") buttons.push(h("button", { onclick: () => hostCommand("pause") }, t("Pause")));
   if (msg.status === "paused") buttons.push(h("button", { class: "primary", onclick: () => hostCommand("resume") }, t("Resume")));
   if (["running", "paused"].includes(msg.status)) buttons.push(h("button", { onclick: () => { if (confirm(t("End the game for everyone?"))) hostCommand("end"); } }, t("End the game")));
+  if (msg.status === "running" && msg.seats.some((s) => String(s.kind).startsWith("ai"))) {
+    buttons.push(h("button", { title: t("The AI seats the game is waiting for take their safe default decision now; a late answer from their model is ignored."),
+      onclick: () => hostCommand("skip_ai") }, t("Skip current AI call")));
+  }
   box.append(h("div", {}, buttons));
   const rows = msg.seats.map((s) => {
     const controls = [];

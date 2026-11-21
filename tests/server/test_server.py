@@ -376,3 +376,83 @@ def test_a_game_that_does_not_replay_the_same_keeps_its_incomplete_debrief(db):
     storage.close()
     with TestClient(create_app(db=db)) as client:
         assert not client.post(f"/api/games/{game}/debrief", json={"host_token": host}).json()["bookkeeping_recorded"]
+
+
+# A stuck AI seat (specification 6.4: skip the current AI call; resume restarts a stuck seat) ------------
+def _hanging_ai_game(db, release):
+    """A game with an AI seat whose model call waits until ``release`` is set."""
+    from nv_ai.config import Prices, load_software_settings
+    from nv_ai.costs import Ledger
+    from nv_sim.game import AIContext
+    from tests.ai.test_ai_player import FakeProvider
+
+    class Hanging(FakeProvider):
+        def respond(self, *args, **kwargs):
+            release.wait(20)
+            return super().respond(*args, **kwargs)
+
+    base = load_software_settings()
+    software = base.model_copy(update={"ai_price_table": {**base.ai_price_table, "fake-model": Prices(
+        input=0.1, cached_input=0.01, cache_write=0.125, output=0.5)}})
+    context = AIContext(software, Ledger(None, software.ai_total_budget), lambda *a, **k: Hanging())
+    return create_app(db=db, ai_context=lambda: context)
+
+
+def _wait(test, seconds=10):
+    import time
+
+    end = time.time() + seconds
+    while time.time() < end:
+        if test():
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def test_the_host_skips_a_hanging_ai_call_and_the_seat_takes_its_safe_default(db):
+    import threading
+
+    release = threading.Event()
+    try:
+        with TestClient(_hanging_ai_game(db, release)) as client:
+            game, host = _create(client, [{"kind": "human"}, {"kind": "ai"}])
+            _join(client, game, 0, "Ann")
+            assert _host(client, game, host, "start").status_code == 200
+            session = client.app.state.manager.sessions[game]
+            assert _wait(lambda: 1 in session.workers and session.workers[1].thinking)
+            old = session.workers[1]
+            assert _host(client, game, host, "skip_ai").status_code == 200
+            assert session.workers[1] is not old
+            storage = client.app.state.manager.storage
+            assert _wait(lambda: any(d["fallback"] == "skipped by the host" for d in storage.ai_decisions(game)))
+            release.set()  # the old call answers now: its answer is ignored
+            assert _wait(lambda: old.task.done())
+    finally:
+        release.set()
+
+
+def test_skipping_needs_an_ai_seat_that_is_deciding(db):
+    with TestClient(create_app(db=db)) as client:
+        game, host = _create(client, [{"kind": "human"}, {"kind": "selfish"}])
+        _join(client, game, 0, "Ann")
+        _host(client, game, host, "start")
+        assert _host(client, game, host, "skip_ai").status_code == 400
+
+
+def test_resume_restarts_an_ai_seat_stuck_in_its_call(db):
+    import threading
+
+    release = threading.Event()
+    try:
+        with TestClient(_hanging_ai_game(db, release)) as client:
+            game, host = _create(client, [{"kind": "human"}, {"kind": "ai"}])
+            _join(client, game, 0, "Ann")
+            _host(client, game, host, "start")
+            session = client.app.state.manager.sessions[game]
+            assert _wait(lambda: 1 in session.workers and session.workers[1].thinking)
+            old = session.workers[1]
+            _host(client, game, host, "pause")
+            _host(client, game, host, "resume")
+            assert session.workers[1] is not old  # a fresh worker; the old call's answer will be ignored
+    finally:
+        release.set()

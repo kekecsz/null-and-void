@@ -201,6 +201,7 @@ The server is a stateless FastAPI app: every request rebuilds the game from stor
 - Hand a disconnected player's seat to an AI and back again.
 - Remove a player or reassign a seat.
 - See who the game is waiting for in each simultaneous phase. There are no turn timers.
+- Skip the current AI call ("Skip current AI call", next to "End the game"): every AI seat the game is waiting for takes its safe default decision at once (8.1, step 4); a late answer from its model is ignored. Resuming a paused game also restarts an AI seat whose call was still running, or whose worker stopped.
 - Spectate at any time (7.3), also while playing a seat in the same browser: the host is trusted, like a facilitator who knows the hidden world.
 
 ### 6.5 Security and data
@@ -339,7 +340,8 @@ An AI seat is a language model that reads the same text view a human could and a
    - **System prompt** (cached; sent as a developer message, because the provider's top-level instructions cannot hold a breakpoint): the rulebook itself (`docs/rules.md` with its Markdown escapes removed, leaving out the sections a player does not need, such as the designer's tabletop notes; every `[parameter]` filled in with the game's own settings and the Grant funding, Talent development and journal tier tables written out, as in the PDF edition (`nv_rulebook.fill`), so the model knows every value a person reads; a game whose settings cannot fill it gets it unfilled), then which game is being played (the rulebook's normal or simplified game, and which of its marked rules apply), then the scenario story, then the seat's persona (section 8.3). The rulebook stays the only rules document; no separate summary is maintained. AI seats with the same scenario, game mode, settings and persona share its cached copy.
    - **Context:** first the game log: every event the seat was allowed to see since the start, oldest first, without the "is ready" lines and without world states (8.2), one block per round. It only grows at its end, so a finished round's block never changes and stays cached; when the log is too long, whole rounds are left out from the start. Then the seat's `render_text` view, whose header names the game mode, the actions legal now (from `legal_actions`: complete actions, or templates with their limits), the seat's own notes (8.2), and the choices the engine has already accepted from it in the current step, with a reminder to commit when they are final (each decision is a fresh conversation, so without them a model repeats its choice instead of committing).
 3. The model replies with one or more tool calls, each with a one-line reason, so it can make all the choices of a step in one reply (all its predictions, experiments, reveals or submissions); the instructions ask it to. They are carried out in order, one per decision of the seat, without a further model call (in the Experimentation phase, one per turn); the first carries the call's cost in the decision log. When one of them does not fit its tool, none is carried out. The engine validates each; when the reply's first action is refused, every tool call of the reply gets its answer (the refused one with the reason, the others "not carried out") and the model tries again, for up to `ai_retry_limit` attempts; when a later one is refused, the rest is dropped and the model decides again with a fresh view, told what was refused. A new step drops whatever is left of a reply.
-4. If the model still fails, goes over its token limit, or the API errors, the seat takes a safe default action (pass, or commit with no further choices), and the log records why.
+4. If the model still fails, goes over its token limit, or the API errors (a call that takes longer than `ai_request_timeout` counts as an error, after `ai_request_retries` retries), the seat takes a safe default action (pass, or commit with no further choices), and the log records why.
+5. When the server cannot carry out an action because the game changed while the model decided (another seat acted, or the host paused), the seat is told it was not carried out and decides again on the board as it is now. The server logs every action of an automated seat it does not carry out, with the reason, and every crash of a seat, as structured log lines with their severity.
 
 In simultaneous phases, AI seats decide in parallel in the background while humans play, so they rarely hold up the table.
 
@@ -487,6 +489,8 @@ The software's own settings live in `settings/software.yaml`:
 | `ai_total_budget` | 50.00 USD for all AI calls, across runs (testing in milestones 4 and 5) |
 | `ai_max_input_tokens` | 80,000 per decision (the rulebook and tools take about 22,000; the rest holds the game log) |
 | `ai_retry_limit` | 2 |
+| `ai_request_timeout` | 180 seconds per model call |
+| `ai_request_retries` | 1 (the API client's retries of a failed or timed-out call) |
 | `ai_notes_max_chars` | 2,000 |
 | `ai_price_table` | per model: input, cached-input, cache-write and output price per million tokens |
 | `debrief_low_chance` | 0.5 (debrief, Luck panel, section 10) |

@@ -67,12 +67,12 @@ class OpenAIProvider:
 
     MAX_OUTPUT_TOKENS = 128_000  # the model's limit (GPT-6 Luna)
 
-    def __init__(self, model: str, reasoning_effort: str | None = None, timeout: float = 600.0):
+    def __init__(self, model: str, reasoning_effort: str | None = None, timeout: float = 600.0, retries: int = 2):
         from openai import OpenAI  # imported here so the rest of the project runs without the SDK
 
         self.model = model
         self.reasoning_effort = reasoning_effort
-        self.client = OpenAI(timeout=timeout, max_retries=2)
+        self.client = OpenAI(timeout=timeout, max_retries=retries)
 
     def respond(self, instructions: str, tools: list[dict], items: list[Any], max_output_tokens: int) -> Reply:
         kwargs: dict[str, Any] = {}
@@ -132,7 +132,7 @@ class OpenAIProvider:
         return {"type": "function_call_output", "call_id": call.call_id, "output": text}
 
 
-def make_provider(provider: str, model: str, reasoning_effort: str | None) -> Provider:
+def make_provider(provider: str, model: str, reasoning_effort: str | None, timeout: float = 600.0, retries: int = 2) -> Provider:
     if provider == "openai":
-        return OpenAIProvider(model, reasoning_effort)
+        return OpenAIProvider(model, reasoning_effort, timeout, retries)
     raise ValueError(f"unknown AI provider {provider!r} (available: openai)")

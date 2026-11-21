@@ -50,6 +50,8 @@ class SoftwareSettings(BaseModel):
     ai_total_budget: float
     ai_max_input_tokens: int
     ai_retry_limit: int
+    ai_request_timeout: float = 600.0  # an older settings file: the earlier waits
+    ai_request_retries: int = 2
     ai_notes_max_chars: int
     ai_price_table: dict[str, Prices]
     ai_lobby_seats: list[LobbySeat] = []

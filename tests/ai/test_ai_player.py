@@ -657,3 +657,27 @@ def test_the_view_tells_the_grant_positions_admin_need_and_the_publications_due(
     needed = settings.grant_track[position - 1].admin
     assert f"Grant funding: position {position} needs {needed} staff member(s) on Grants" in text
     assert "publications due this round: 0" in text
+
+
+def test_an_action_dropped_by_the_server_is_decided_again_with_a_note(venus, software):
+    """Specification 8.1: an action the server could not carry out because the game changed while
+    the model decided (or was paused) is decided again, on the board as it is now."""
+    _, view, options = _three_player_hiring(venus)
+    provider = FakeProvider([_propose(1), None])
+    player = _player(provider, software)
+    first = player.choose(view, options)
+    player.dropped(first, "the game is paused")
+    player.choose(view, options)
+    assert len(provider.calls) == 2
+    note = provider.calls[1]["items"][-1]["content"]
+    assert note == "Your propose_alliance was not carried out: the game is paused. Decide again on the board as it is now."
+    assert player.decisions[0]["refusals"] == ["not carried out: the game is paused"]
+
+
+def test_a_skipped_call_gives_the_safe_default(venus, software):
+    _, view, options = _three_player_hiring(venus)
+    provider = FakeProvider()
+    player = _player(provider, software)
+    action = player.skip(view, options)
+    assert action.type == "commit" and provider.calls == []
+    assert player.decisions[-1]["fallback"] == "skipped by the host"
