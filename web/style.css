@@ -221,6 +221,7 @@ input.plain::-webkit-inner-spin-button, input.plain::-webkit-outer-spin-button {
 .alloc.postdocs-short tr > :nth-child(2), .alloc.students-short tr > :nth-child(3) { background: #e4e4de; }
 .alloc.postdocs-over tr > :nth-child(2), .alloc.students-over tr > :nth-child(3) { background: #f6c9c5; }
 .alloc input.over { outline: 2px solid var(--bad); }
+.stepper button.at-limit { outline: 2px solid var(--bad); outline-offset: -1px; }
 .alloc tr.grant-short > td { background: #e4e4de; }
 .publications-due { margin: 6px 0; font-size: 13px; }
 .publications-due.short { font-weight: 600; }

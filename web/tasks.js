@@ -521,6 +521,7 @@ function numberInput(value, min, max, disabled) {
   const limited = max !== null && max !== undefined;
   const input = h("input", { type: "number", class: "plain", value, min, max: limited ? max : false, disabled: disabled ? true : null });
   const step = (by) => {
+    if (by > 0 && input.guard && !input.guard()) return;  // e.g. the column already holds every staff member one may hire
     input.value = Math.min(limited ? max : Infinity, Math.max(min, (Number(input.value) || 0) + by));
     input.dispatchEvent(new Event("input", { bubbles: true }));
   };
@@ -533,9 +534,12 @@ function allocateForm(tpl) {
   const pending = view().lab.pending.allocation;
   const now = tpl.postdocs_now;
   const [low, high] = tpl.postdocs_after;
-  const postdocs = numberInput(pending ? now + pending.hire_postdocs - pending.fire_postdocs : now, low, high);
-  const students = numberInput(pending ? pending.hire_students : 0, 0, tpl.max_students);
   const noStudents = simplified();  // the simplified game has no students: no Students column
+  // Without a choice of this step yet, the form starts at the most one may have: as many postdocs as
+  // one can pay and the student hire cap.
+  const postdocs = numberInput(pending ? now + pending.hire_postdocs - pending.fire_postdocs : (high ?? now), low, high);
+  const students = numberInput(pending ? pending.hire_students : (noStudents ? 0 : tpl.max_students), 0, tpl.max_students);
+  const columnMax = { postdocs: high, students: noStudents ? 0 : tpl.max_students };  // null: no limit
   const inputs = {};
   const caps = tpl.task_caps || {};  // the most staff a task takes: Talent development, and Experimentation (lab capacity)
   const cap = (task) => (task in caps ? caps[task] : tpl.at_most_one.includes(task) ? 1 : null);
@@ -546,9 +550,14 @@ function allocateForm(tpl) {
     const s = numberInput(current.students, 0, cap(task), tpl.postdoc_only.includes(task));
     inputs[task] = [p, s];
     rowsByTask[task] = [p, s];
+    p.guard = () => columnMax.postdocs === null || columnTotal("postdocs") < columnMax.postdocs;
+    s.guard = () => columnTotal("students") < columnMax.students;
     const limit = task in caps && !tpl.at_most_one.includes(task) ? h("div", { class: "muted" }, t("at most {n} (lab capacity)", { n: caps[task] })) : null;
     return [h("span", {}, taskLabel(task), limit), p.box, ...(noStudents ? [] : [s.box])];
   });
+  function columnTotal(kind) {
+    return Object.values(inputs).reduce((sum, [p, s]) => sum + (Number((kind === "postdocs" ? p : s).value) || 0), 0);
+  }
   const totals = { postdocs: h("b", {}), students: h("b", {}) };
   const allocationTable = noStudents
     ? table([t("Task"), t("Postdocs")], [...rows, [h("b", {}, t("Allocated")), totals.postdocs]])
@@ -575,6 +584,11 @@ function allocateForm(tpl) {
       allocationTable.classList.toggle(`${kind}-over`, given[kind] > wanted[kind]);
       allocationTable.classList.toggle(`${kind}-short`, given[kind] < wanted[kind]);
       totals[kind].textContent = t("{n} of {m}", { n: given[kind], m: wanted[kind] });
+    }
+    // At the most one may hire, "+" stops, outlined in red.
+    for (const [p, s] of Object.values(inputs)) {
+      p.box.lastChild.classList.toggle("at-limit", columnMax.postdocs !== null && given.postdocs >= columnMax.postdocs);
+      s.box.lastChild.classList.toggle("at-limit", !s.disabled && given.students >= columnMax.students);
     }
     if (grantsRow) {
       const [p, s] = rowsByTask.grants;
