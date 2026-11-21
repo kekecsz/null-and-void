@@ -681,3 +681,14 @@ def test_a_skipped_call_gives_the_safe_default(venus, software):
     action = player.skip(view, options)
     assert action.type == "commit" and provider.calls == []
     assert player.decisions[-1]["fallback"] == "skipped by the host"
+
+
+def test_the_decision_message_invites_several_tool_calls(venus, software):
+    """Specification 8.1: nothing in the message tells the model to call only one tool."""
+    provider = FakeProvider()
+    player = _player(provider, software)
+    _, view, options = _first_decision(venus, player)
+    player.choose(view, options)
+    message = provider.calls[0]["items"][0]["content"]
+    assert "call one or more tools" in message and "call one tool)" not in message
+    assert "calling exactly one tool" not in player.instructions

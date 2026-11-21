@@ -314,5 +314,8 @@ def decision_message(
             else ""
         )
         parts.append(f"YOUR CHOICES SO FAR IN THIS STEP (accepted by the engine)\n{listed}\n{hint.strip()}".rstrip())
-    parts.append("WHAT YOU CAN DO NOW (call one tool)\n" + options_text(options))
+    # Several tool calls per reply (specification 8.1): this heading sits next to the options, so it
+    # must say so too, or the model follows it and calls one tool at a time.
+    parts.append("WHAT YOU CAN DO NOW (call one or more tools, in order: make all the choices you can of this "
+                 "step in this message)\n" + options_text(options))
     return log_blocks(log, view["round"], left_out) + [("\n" + "\n\n".join(parts), False)]
