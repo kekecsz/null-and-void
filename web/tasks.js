@@ -12,12 +12,13 @@ const task = {
   boxes: [],             // submission boxes: {manuscript, tier, records, payApc}
   target: 0,             // the box that receives what the player "uses"
   open: new Set(),       // boxes shown with their records
+  closed: new Set(),     // prediction task: Probes whose list of possible predictions is folded away
   afterSend: null,       // clears a draft once the server has taken the action
   keyAtSend: null,
   autoSelected: null,    // the strip selected for the player at the start of the prediction step
 };
 function clearDrafts() {
-  Object.assign(task, { picks: {}, cited: new Set(), sensor: null, sensorCited: new Set(), boxes: [], target: 0, afterSend: null });
+  Object.assign(task, { picks: {}, cited: new Set(), sensor: null, sensorCited: new Set(), boxes: [], target: 0, afterSend: null, closed: new Set() });
 }
 const optionOf = (type) => msg.options.find((o) => o.type === type);
 const none = { actions: [] };
@@ -130,33 +131,44 @@ function outcomeNote(x) {  // what a prediction does once revealed
     `${x.success ? t("Success") : t("Failed")}: ${t("{n} AC", { n: signed(x.credit) })}${authorPart(x.author_credit)}${x.success ? patentPart(x) : simplified() ? "" : `, ${t("no patent")}`}`);
 }
 
-// Predictions: one strip per eligible theory, with a choice for each Probe --------------------------------
+// Predictions: one group per Probe (the Probe's strip, folding open and closed), with the theories
+// that fit it and their Predict and Preregister buttons ------------------------------------------------
 function predictionRows(option) {
   const v = view();
   const makes = option ? option.actions : [];
   const cancels = (optionOf("cancel_prediction") || none).actions;
   const current = cancels.map((a) => ({ cancel: a, q: v.predictions.find((q) => q.id === a.prediction) })).filter((x) => x.q);
   const paper = (id) => v.published.find((p) => p.id === id);
-  const papers = [...new Set([...makes.map((a) => a.theory), ...current.map((x) => x.q.theory)])].map(paper).filter(Boolean).sort(closestToNobel);
-  return papers.map((p) => {
-    const probes = [...new Set([...makes.filter((a) => a.theory === p.id).map((a) => a.probe), ...current.filter((x) => x.q.theory === p.id).map((x) => x.q.probe)])].sort((a, b) => a - b);
-    const pair = (probe) => {
-      const made = current.find((x) => x.q.theory === p.id && x.q.probe === probe);
+  const probes = [...new Set([...makes.map((a) => a.probe), ...current.map((x) => x.q.probe)])].sort((a, b) => a - b);
+  return probes.map((probe) => {
+    const id = `probe${probe}`;
+    const isOpen = !task.closed.has(id);
+    const toggle = h("button", { class: "toggle", title: isOpen ? t("Fold away the predictions on this Probe") : t("Show the predictions on this Probe"),
+      onclick: () => { if (isOpen) task.closed.add(id); else task.closed.delete(id); redraw(); } }, isOpen ? "\u25be" : "\u25b8");
+    const papers = [...new Set([...makes.filter((a) => a.probe === probe).map((a) => a.theory), ...current.filter((x) => x.q.probe === probe).map((x) => x.q.theory)])]
+      .map(paper).filter(Boolean).sort(closestToNobel);
+    const made = (p) => current.find((x) => x.q.theory === p.id && x.q.probe === probe);
+    const count = current.filter((x) => x.q.probe === probe).length;
+    const head = probeStrip(v.probes[probe], null, { key: `task-P${probe}`, toggle,
+      subStrong: count ? t("{n} prediction(s) made", { n: count }) : null });
+    const rows = papers.map((p) => {
       const choice = (preregister, label) => {
         const make = makes.find((a) => a.theory === p.id && a.probe === probe && Boolean(a.preregister) === preregister);
-        const on = made && made.q.preregistered === preregister;
+        const done = made(p);
+        const on = done && done.q.preregistered === preregister;
         if (!make && !on) return null;
         const x = (preview().theories || {})[p.id];
         const amounts = x ? payoff(x, preregister) : null;
         const hover = [on ? t("Press again to withdraw") : null, amounts ? payoffText(x, preregister) : null].filter(Boolean).join(" ");
         return h("button", { class: on ? "primary" : "", title: hover || null, onclick: () => {
-          if (made) send(made.cancel);
+          if (done) send(done.cancel);
           if (!on) send(make);
         } }, label, amounts ? h("span", { class: "button-credit" }, payoffLabel(x, amounts)) : null);
       };
-      return h("span", { class: "pair" }, h("b", {}, `P${probe + 1}`), choice(false, t("Predict")), choice(true, t("Preregister")));
-    };
-    return [theoryStrip(p, [info(t("Nobel {n}/{max}", { n: p.nobel, max: p.nobel_threshold })), probes.map(pair)])];
+      return theoryStrip(p, [info(t("Nobel {n}/{max}", { n: p.nobel, max: p.nobel_threshold })),
+        h("span", { class: "pair" }, choice(false, t("Predict")), choice(true, t("Preregister")))]);
+    });
+    return h("div", { class: "probe-group" }, head, isOpen ? h("div", { class: "probe-predictions" }, rows) : null);
   });
 }
 
@@ -664,7 +676,7 @@ const TITLES = {
   stay_in_alliance: "Stay in an alliance",
 };
 const TASK_NAMES = {
-  make_prediction: ["make predictions", 'your own theories first, then those closest to the Nobel Prize. Click a Probe in the World Grid to see which theories fit it. Amounts apply if revealed.'],
+  make_prediction: ["make predictions", 'your own theories first, then those closest to the Nobel Prize. Under each Probe, the theories that fit it. Amounts apply if revealed.'],
   cancel_prediction: ["make predictions", ""],
   reveal_prediction: ["reveal predictions", "what each would bring"],
   run_experiment: ["experiments and sensors", 'press "+" on a Probe tile to install or upgrade its sensor'],

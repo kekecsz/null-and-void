@@ -110,6 +110,8 @@ body.tiles-compact { --head: 92px; --cell: 122px; --tile: 21px; }
 .report-credit { font-size: 12.5px; padding: 3px 6px 1px; border-top: 1px dashed var(--line); margin-top: 2px; }
 .report-general { font-size: 12.5px; margin-bottom: 6px; }
 .hire-report { margin-bottom: 8px; }
+.probe-group { margin-bottom: 6px; }
+.probe-predictions { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
 .token.staff-P { background: #fff; color: #222; box-shadow: 0 0 0 1px #888, inset 0 0 0 2px #ddd; }
 .token.staff-S { background: #9a9a94; color: #fff; box-shadow: 0 0 0 1px #6f6f6a, inset 0 0 0 2px rgba(255, 255, 255, .35); }
 .hire-report td { height: 24px; }

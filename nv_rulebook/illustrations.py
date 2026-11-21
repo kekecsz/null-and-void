@@ -242,7 +242,7 @@ SCENES = [
     Scene("records_are_with_example_experiment_slips", find_records, "#records-panel"),
     Scene("world_grid_exp_with_different_sensor_levels", find_grid_experimentation, "section[data-panel=grid]", adjust=add_sensors),
     Scene("world_grid_obs_before_prediction_reveal", find_grid_observation, "section[data-panel=grid]", adjust=add_sensors),
-    Scene("prediction_formulation_task_panel", find_prediction_panel, TASK, keep_rows=3),
+    Scene("prediction_formulation_task_panel", find_prediction_panel, TASK),
     Scene("example_predictions_report_page", find_prediction_report, TASK, report="prediction"),
     Scene("example_theory_formation", find_theory, TASK, prepare="""() => {
       copyToTheory(view().lab.records.experiments[0].cards);

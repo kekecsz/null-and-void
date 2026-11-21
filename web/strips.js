@@ -213,8 +213,9 @@ const groupLabel = (...content) => h("div", { class: "group-label" }, content);
 
 // World Grid --------------------------------------------------------------------------------------
 // A Probe's row. ``pastRound``: a copy of an earlier round's row (the prediction report), without
-// the true states or the sensor buttons of the current round.
-function probeStrip(p, pastRound) {
+// the true states or the sensor buttons of the current round. ``extra``: strip options to add
+// (e.g. a toggle and a key of its own, for the prediction task's Probe headers).
+function probeStrip(p, pastRound, extra) {
   const v = view();
   const known = Boolean(p.readings);
   const seen = { ...(p.readings || {}), ...(p.outcomes || {}) };
@@ -243,6 +244,7 @@ function probeStrip(p, pastRound) {
         choice ? h("span", { class: "plus-credit", title: sensorCreditText(choice) }, signed(choice.credit)) : null);
     },
     tail: p.probe_time !== null && p.probe_time !== undefined ? [info(t("Probe time")), chip(p.probe_time)] : null,
+    ...(extra || {}),
   });
 }
 function renderGrid() {
