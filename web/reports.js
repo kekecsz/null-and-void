@@ -199,23 +199,31 @@ function hiringTable(report) {
   }
   if (!Object.keys(staff).length) return null;
   const noStudents = simplified();
-  const count = (p, s) => [p ? t("{n}p", { n: p }) : null, s && !noStudents ? t("{n}s", { n: s }) : null].filter(Boolean).join(" ");
-  const tasks = [...new Set(Object.values(staff).flatMap((x) => Object.keys(x)))]
-    .filter((task) => seats.some((seat) => staff[seat] && staff[seat][task] && (staff[seat][task][0] || staff[seat][task][1])))
-    .sort((a, b) => taskOrder(a) - taskOrder(b));
-  const rows = tasks.map((task) => [tTask(task), ...seats.map((seat) => count(...((staff[seat] || {})[task] || [0, 0])))]);
   const total = (seat) => Object.values(staff[seat] || {}).reduce(([p, s], [a, b]) => [p + a, s + b], [0, 0]);
-  rows.push([h("b", {}, t("Staff")), ...seats.map((seat) => h("b", {}, count(...total(seat)) || "0"))]);
-  rows.push([t("Hired"), ...seats.map((seat) => {
-    const d = hired[seat];
-    if (!d) return "";
-    const parts = [count(d.hired_postdocs, d.hired_students), d.fired_postdocs ? t("fired {n}p", { n: d.fired_postdocs }) : null];
-    return parts.filter(Boolean).join(", ");
-  })]);
-  if (!noStudents) rows.push([t("Students who left"), ...seats.map((seat) => (left[seat] ? h("b", { class: "bad" }, String(left[seat])) : ""))]);
-  const tableBox = table(["", ...seats.map((seat) => chip(seat))], rows);
-  tableBox.classList.add("hire-report");
-  return tableBox;
+  // Every task of the allocation form (the simplified game has no publication, Talent development or Grants tasks).
+  const formTasks = noStudents ? ["experimentation", "data_collection", "development"] : TASK_ORDER;
+  const used = Object.values(staff).flatMap((x) => Object.keys(x));
+  const tasks = [...new Set([...formTasks, ...used])].sort((a, b) => taskOrder(a) - taskOrder(b));
+  const cellOf = (seat, task) => (staff[seat] || {})[task] || [0, 0];
+  // A task's staff as tokens: a white P per postdoc, a grey S per student, overlapping.
+  const tokens = (p, s) => {
+    const list = [...Array(p).fill("P"), ...Array(noStudents ? 0 : s).fill("S")];
+    return list.length ? h("span", { class: "chip-stack" }, list.map((x) => h("span", { class: `token staff-${x}`, title: x === "P" ? t("postdoc") : t("student") }, x))) : "";
+  };
+  // The totals below as numbers: "1 P · 2 S".
+  const numbers = (p, s, strong) => {
+    const parts = [p ? `${p} P` : null, s && !noStudents ? `${s} S` : null].filter(Boolean).join(" \u00b7 ");
+    return parts ? (strong ? h("b", {}, parts) : parts) : "";
+  };
+  const row = (cells, cls) => h("tr", { class: cls || null }, cells.map((c) => h("td", {}, c)));
+  const body = tasks.map((task) => row([tTask(task), tWhen(task), ...seats.map((seat) => tokens(...cellOf(seat, task)))]));
+  body.push(h("tr", { class: "gap" }, h("td", { colspan: 2 + seats.length })));
+  body.push(row([h("b", {}, t("Staff")), "", ...seats.map((seat) => numbers(...total(seat), true))], "summary"));
+  body.push(row([t("Hired"), "", ...seats.map((seat) => (hired[seat] ? numbers(hired[seat].hired_postdocs, hired[seat].hired_students) : ""))], "summary"));
+  body.push(row([t("Fired"), "", ...seats.map((seat) => (hired[seat] ? numbers(hired[seat].fired_postdocs, 0) : ""))], "summary"));
+  if (!noStudents) body.push(row([t("Students who left"), "", ...seats.map((seat) => (left[seat] ? h("b", { class: "bad" }, `${left[seat]} S`) : ""))], "summary"));
+  return h("table", { class: "hire-report" },
+    h("tr", {}, h("th", {}, t("Task")), h("th", {}, t("When")), seats.map((seat) => h("th", {}, chip(seat)))), body);
 }
 
 function phaseReportBody(report, kind) {
