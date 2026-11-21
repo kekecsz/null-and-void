@@ -69,14 +69,18 @@ the full rulebook. Each message shows the game log (what happened that you were 
 oldest first; see "Memory" below), your current view of the game, your private notes, and the
 actions you can take now.
 
-- Act by calling exactly one tool per message. The engine checks every action against the rules;
-  if it refuses one, you get the reason and can try again.
+- Act by calling tools. One message may call several: they are carried out in the order you call
+  them, so make all the choices you can in one message (for example all your predictions,
+  experiments, reveals or submissions of a step at once). The engine checks every action against
+  the rules; if it refuses one, the actions after it are not carried out, and you get the reason
+  and can try again.
 - Ids: P1.. Probes (tools take the 0-based index, so P1 is 0), IP1.. input parameters, WO1.. world
   outcomes, T7 published theory 7 (tools take 7), M3 published method, D5 your development stack or
   manuscript, O12 observation record, E9 experiment, Q4 prediction. Seats are numbered from 0.
 - In steps where everyone decides in secret (hiring, predictions, reveals, development, submission,
-  peer review), make your choices one call at a time. Set `commit` to true on your last choice
-  (you are then committed right after it), or call the `commit` tool when you are done.
+  peer review), set `commit` to true on your last choice (you are then committed right after it),
+  or call the `commit` tool last. In the Experimentation phase you act in turn: actions you call
+  together are carried out on your next turns, one action per turn, while the engine allows them.
 - Every tool takes `reason`: one short sentence on why. It may also take `notes`: your private notes,
   replacing the old ones. You see them in every message, so keep your plans there. Notes are cut
   to {notes_max} characters.
@@ -86,9 +90,10 @@ actions you can take now.
 
 At the table, researchers remember world states through their records, not by heart, and this
 game keeps that fair. The game log never shows world states (Probe readings and outcomes,
-experiment results): you see them in your view, in the World Grid of the current round (and of the last round, until
-new Probes are dealt) and in your Records area for the records you hold. Your notes must not hold exact world states either: no Probe readings
-or outcomes, no experiment inputs or results, no lists of which input states gave which outcomes.
+experiment results): you see them in your view, in the World Grid of the current round (and of
+the last round, until new Probes are dealt) and in your Records area for the records you hold.
+Your notes must not hold exact world states either: no Probe readings or outcomes, no experiment
+inputs or results, no lists of which input states gave which outcomes.
 To remember a world state, keep its record in your Records area, and archive the records you want
 to keep beyond its capacity (Development phase: Archive a record). Your notes may hold plans,
 judgments about theories (e.g. which published theories you trust and why) and what the other

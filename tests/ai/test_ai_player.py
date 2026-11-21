@@ -27,7 +27,8 @@ WORLD_FILE = "scenarios/venus_expedition/worlds/world_seed1.json"
 class FakeProvider:
     """Answers like a model would, without any network call.
 
-    ``script`` is a list of replies (dicts: name/arguments, or "raise", or "nothing"); when it
+    ``script`` is a list of replies (dicts: name/arguments, a list of them for several tool calls in
+    one reply, or "raise", or "nothing"); when it
     runs out, the fake picks the first complete action listed in the decision message.
     """
 
@@ -47,8 +48,9 @@ class FakeProvider:
             return Reply(None, "I am not sure.", [], self.usage)
         if step is None:
             step = self._first_listed(items)
-        call = ToolCall(step["name"], step["arguments"], f"call{len(self.calls)}")
-        return Reply(call, "", [{"type": "function_call", "call_id": call.call_id}], self.usage)
+        steps = step if isinstance(step, list) else [step]  # a list: several tool calls in one reply
+        calls = [ToolCall(x["name"], x["arguments"], f"call{len(self.calls)}.{i}") for i, x in enumerate(steps)]
+        return Reply(calls[0], "", [{"type": "function_call", "call_id": c.call_id} for c in calls], self.usage, calls=calls)
 
     @staticmethod
     def _first_listed(items):
@@ -556,3 +558,79 @@ def test_a_refused_automatic_commit_goes_back_to_the_model_with_the_reason(venus
     player.choose(view, options)
     items = provider.calls[0]["items"]
     assert items[-1]["content"] == "Your automatic commit was refused: staff must be allocated first."
+
+
+# Several tool calls in one reply (specification 8.1) ----------------------------------------------
+def _propose(partner, commit=False):
+    return {"name": "propose_alliance", "arguments": {"partner": partner, "reason": f"ally {partner}", "commit": commit}}
+
+
+def _three_player_hiring(venus):
+    world, settings = venus
+    state = new_game(world, settings, 1, ["a", "b", "c"])
+    return state, player_view(state, 0), legal_actions(state, 0)
+
+
+def test_several_tool_calls_in_one_reply_are_carried_out_in_order_with_one_model_call(venus, software):
+    state, view, options = _three_player_hiring(venus)
+    provider = FakeProvider([[_propose(1), _propose(2, commit=True)]])
+    player = _player(provider, software)
+    done = []
+    for _ in range(3):
+        action = player.choose(player_view(state, 0), legal_actions(state, 0))
+        done.append(action)
+        state, _ = apply(state, action)
+    assert [x.type for x in done] == ["propose_alliance", "propose_alliance", "commit"]
+    assert [x.partner for x in done[:2]] == [1, 2]
+    assert len(provider.calls) == 1
+    assert player.decisions[0]["cost"] > 0 and player.decisions[1]["cost"] == 0  # the call's cost is on the first
+
+
+def test_when_the_first_action_of_a_reply_is_refused_every_call_gets_its_answer(venus, software):
+    _, view, options = _three_player_hiring(venus)
+    provider = FakeProvider([[_propose(1), _propose(2)], None])
+    player = _player(provider, software)
+    first = player.choose(view, options)
+    player.refused(first, "not now")
+    player.choose(view, options)
+    outputs = [i["output"] for i in provider.calls[1]["items"] if isinstance(i, dict) and i.get("type") == "function_call_output"]
+    assert outputs[0].startswith("Refused: not now") and outputs[1].startswith("Not carried out")
+
+
+def test_when_a_later_action_of_a_reply_is_refused_the_model_decides_again_on_the_board_as_it_is(venus, software):
+    _, view, options = _three_player_hiring(venus)
+    provider = FakeProvider([[_propose(1), _propose(2)], None])
+    player = _player(provider, software)
+    player.choose(view, options)
+    second = player.choose(view, options)
+    assert len(provider.calls) == 1
+    player.refused(second, "not now")
+    player.choose(view, options)
+    last = provider.calls[1]["items"][-1]["content"]
+    assert "propose_alliance (called in your last message) was refused: not now" in last
+
+
+def test_the_openai_provider_asks_for_and_reads_several_tool_calls(monkeypatch):
+    httpx = pytest.importorskip("httpx")
+    pytest.importorskip("openai")
+    sent = []
+
+    def handler(request):
+        sent.append(json.loads(request.content))
+        call = lambda i, name: {"type": "function_call", "id": f"fc{i}", "call_id": f"c{i}", "name": name,
+                                "arguments": json.dumps({"reason": "r"}), "status": "completed"}
+        return httpx.Response(200, json={
+            "id": "r1", "object": "response", "created_at": 0, "model": "m", "status": "completed",
+            "output": [call(1, "pass"), call(2, "commit")],
+            "tool_choice": "required", "tools": [], "parallel_tool_calls": True,
+            "usage": {"input_tokens": 10, "output_tokens": 1, "total_tokens": 11,
+                      "input_tokens_details": {"cached_tokens": 0}, "output_tokens_details": {"reasoning_tokens": 0}},
+        })
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    provider = OpenAIProvider("gpt-6.1-terra")
+    from openai import OpenAI
+    provider.client = OpenAI(http_client=httpx.Client(transport=httpx.MockTransport(handler)), max_retries=0)
+    reply = provider.respond("THE RULES", [], [provider.user_item("view")], 100)
+    assert sent[0]["parallel_tool_calls"] is True
+    assert [c.name for c in reply.calls] == ["pass", "commit"] and reply.call.name == "pass"

@@ -1,8 +1,8 @@
 """Model providers behind one small interface, so the AI player does not depend on one API.
 
 A provider answers one request: fixed tools and instructions, a conversation (``items``), and
-an output-token limit. It returns the tool call (if any), the output items to send back when
-the conversation continues, and the token use.
+an output-token limit. It returns the tool calls (none, one or several, in order), the output
+items to send back when the conversation continues, and the token use.
 """
 
 import json
@@ -22,11 +22,18 @@ class ToolCall:
 
 @dataclass
 class Reply:
-    call: ToolCall | None
+    call: ToolCall | None  # the first tool call
     text: str
     output_items: list[Any] = field(default_factory=list)
     usage: Usage = field(default_factory=Usage)
     incomplete: str | None = None  # why the reply stopped early (e.g. the output-token limit)
+    calls: list[ToolCall] = field(default_factory=list)  # every tool call, in order
+
+    def __post_init__(self):
+        if not self.calls and self.call is not None:
+            self.calls = [self.call]
+        if self.call is None and self.calls:
+            self.call = self.calls[0]
 
 
 class Provider(Protocol):
@@ -77,22 +84,22 @@ class OpenAIProvider:
             model=self.model,
             tools=tools,
             tool_choice="required",
-            parallel_tool_calls=False,
+            parallel_tool_calls=True,  # several actions in one reply (specification 8.1)
             input=[developer, *items],
             max_output_tokens=min(max_output_tokens, self.MAX_OUTPUT_TOKENS),
             prompt_cache_key="null-and-void-ai",  # routes every seat's requests to the same cache
             extra_body={"prompt_cache_options": {"mode": "explicit"}},
             **kwargs,
         )
-        call = None
+        calls = []
         texts = []
         for item in response.output:
-            if item.type == "function_call" and call is None:
+            if item.type == "function_call":
                 try:
                     arguments = json.loads(item.arguments)
                 except json.JSONDecodeError:
                     arguments = None
-                call = ToolCall(item.name, arguments, item.call_id, item.arguments)
+                calls.append(ToolCall(item.name, arguments, item.call_id, item.arguments))
             elif item.type == "message":
                 texts += [c.text for c in item.content if getattr(c, "type", "") == "output_text"]
         usage = Usage()
@@ -109,7 +116,7 @@ class OpenAIProvider:
         incomplete = None
         if getattr(response, "status", "") == "incomplete":
             incomplete = getattr(getattr(response, "incomplete_details", None), "reason", "incomplete")
-        return Reply(call, "\n".join(texts), list(response.output), usage, incomplete)
+        return Reply(calls[0] if calls else None, "\n".join(texts), list(response.output), usage, incomplete, calls)
 
     @staticmethod
     def user_item(content: str | list[tuple[str, bool]]) -> Any:

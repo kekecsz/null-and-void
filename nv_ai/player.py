@@ -1,5 +1,6 @@
-"""The AI player (specification section 8): one tool call per decision, refusals fed back,
-a safe fallback, and every call's tokens and cost recorded."""
+"""The AI player (specification section 8): one model call per decision, whose tool calls (one or
+several) are carried out in order; refusals fed back, a safe fallback, and every call's tokens and
+cost recorded."""
 
 import json
 from typing import Any
@@ -55,7 +56,9 @@ class AIPlayer:
         self.decisions: list[dict[str, Any]] = []
         self._fallback = RandomBot(fallback_seed)
         self._items: list[Any] = []
-        self._last_call = None
+        self._calls: list = []  # the tool calls of the reply being carried out
+        self._done = 0  # how many of them were handed to the engine so far
+        self._queue: list[tuple[BaseModel, bool, str]] = []  # the rest: (action, commit after it, reason)
         self._refusal: str | None = None
         self._attempts = 0
         self._decision_cost = 0.0  # since the last recorded action (for the decision log)
@@ -84,6 +87,11 @@ class AIPlayer:
             self._automatic = False
             self._automatic_refused = f"Your automatic {action.type} was refused: {reason}."
             return
+        self._queue = []  # the actions after a refused one are not carried out
+        if self._done > 1:  # a later action of the reply: the model decides again, with the board as it is now
+            self._automatic_refused = (f"Your {action.type} (called in your last message) was refused: {reason}. "
+                                       "The actions after it were not carried out.")
+            return
         self._refusal = reason
 
     def choose(self, view: dict[str, Any], options: list[Option]) -> BaseModel:
@@ -91,18 +99,22 @@ class AIPlayer:
         if step != self._step:
             self._step, self._step_actions, self._step_choices = step, 0, []
             self._commit_next = False
+            self._queue = []  # a new step: what was left of the last reply no longer applies
         self._step_actions += 1
         self._automatic = False
         if self._refusal is None and not self._automatic_refused:
+            if self._queue and self._step_actions <= MAX_ACTIONS_PER_STEP:
+                return self._next_queued(view)
             action = self._without_a_call(view, options)
             if action is not None:
                 return action
         if self._refusal is None:
             self._new_decision(view, options)
-        elif self._last_call is not None:
-            self._items.append(
-                self.provider.tool_result_item(self._last_call, f"Refused: {self._refusal}. Call one tool again.")
-            )
+        else:  # the reply's first action was refused: every tool call of the reply gets its answer
+            for i, call in enumerate(self._calls):
+                text = (f"Refused: {self._refusal}. Call the tools again." if i == 0
+                        else "Not carried out: an action before it was refused.")
+                self._items.append(self.provider.tool_result_item(call, text))
         self._refusal = None
 
         if self._step_actions > MAX_ACTIONS_PER_STEP:
@@ -128,18 +140,28 @@ class AIPlayer:
             self._api_errors = 0
             self._attempts += 1
             self._account(reply)
-            action, problem = self._action(reply, view["seat"])
+            actions, problem = self._actions(reply, view["seat"])
             self._items += reply.output_items
-            if action is not None:
-                self._last_call = reply.call
-                self._record(action=action, reply=reply)
-                return action
-            if reply.call is not None:
-                self._items.append(self.provider.tool_result_item(reply.call, f"Refused: {problem}. Call one tool again."))
-            else:
-                self._items.append(self.provider.user_item(f"{problem} Call exactly one tool."))
+            if actions:
+                self._calls, self._done, self._queue = reply.calls, 0, actions
+                return self._next_queued(view)
+            for call in reply.calls:  # nothing is carried out when one of them does not fit
+                self._items.append(self.provider.tool_result_item(call, f"Refused: {problem}. Nothing of this reply was carried out; call the tools again."))
+            if not reply.calls:
+                self._items.append(self.provider.user_item(f"{problem} Call at least one tool."))
 
     # ------------------------------------------------------------------------------------
+    def _next_queued(self, view: dict[str, Any]) -> BaseModel:
+        """The next action of the model's reply (specification 8.1: several tool calls in one reply
+        are carried out in order, one per decision; the first one carries the call's cost)."""
+        action, commit, reason = self._queue.pop(0)
+        self._done += 1
+        self._commit_next = self._commit_next or commit
+        self._current = {"round": view["round"], "phase": view["phase"]}
+        self._reason = reason if self._done == 1 else f"(same reply) {reason}".strip()
+        self._record(action=action, reply=None)
+        return action
+
     def _without_a_call(self, view: dict[str, Any], options: list[Option]) -> BaseModel | None:
         """Actions that need no model call (specification 8.1): the only legal action is commit or
         pass, or the model's last choice asked to commit right after it."""
@@ -169,7 +191,7 @@ class AIPlayer:
         if self._automatic_refused:
             self._items.append(self.provider.user_item(self._automatic_refused))
             self._automatic_refused = ""
-        self._last_call = None
+        self._calls, self._done, self._queue = [], 0, []
         self._attempts = 0
         self._spent = 0.0
         self._current = {"round": view["round"], "phase": view["phase"]}
@@ -189,26 +211,31 @@ class AIPlayer:
         self._decision_usage = self._decision_usage + reply.usage
         self.ledger.add(self.game, self.name, self.provider.model, reply.usage, amount)
 
-    def _action(self, reply: Reply, seat: int) -> tuple[BaseModel | None, str]:
-        if reply.call is None:
+    def _actions(self, reply: Reply, seat: int) -> tuple[list[tuple[BaseModel, bool, str]], str]:
+        """The reply's tool calls as actions, in order, each with its commit flag and reason; none
+        when one of them does not fit (then nothing is carried out)."""
+        if not reply.calls:
             why = f" (the reply stopped early: {reply.incomplete})" if reply.incomplete else ""
-            return None, f"No tool was called{why}."
-        if reply.call.arguments is None:
-            return None, "The tool arguments were not valid JSON"
-        data = dict(reply.call.arguments)
-        self._reason = str(data.pop("reason", ""))[:300]
-        notes = data.pop("notes", None)
-        commit_next = data.pop("commit", None) is True
-        data.update(type=reply.call.name, seat=seat)
-        try:
-            action = ACTION_ADAPTER.validate_python(data)
-        except ValidationError as exc:
-            problems = "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()[:5])
-            return None, f"The tool arguments do not fit {reply.call.name}: {problems}"
-        if isinstance(notes, str):
+            return [], f"No tool was called{why}."
+        actions, notes = [], None
+        for call in reply.calls:
+            if call.arguments is None:
+                return [], f"The arguments of {call.name} were not valid JSON"
+            data = dict(call.arguments)
+            reason = str(data.pop("reason", ""))[:300]
+            if isinstance(given := data.pop("notes", None), str):
+                notes = given
+            commit = data.pop("commit", None) is True
+            data.update(type=call.name, seat=seat)
+            try:
+                action = ACTION_ADAPTER.validate_python(data)
+            except ValidationError as exc:
+                problems = "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()[:5])
+                return [], f"The tool arguments do not fit {call.name}: {problems}"
+            actions.append((action, commit, reason))
+        if notes is not None:
             self.notes = notes[: self.software.ai_notes_max_chars]
-        self._commit_next = commit_next
-        return action, ""
+        return actions, ""
 
     def _fall_back(self, view: dict[str, Any], options: list[Option], why: str) -> BaseModel:
         """The safe default (specification 8.1): commit or pass; a required choice is made at random."""
@@ -219,7 +246,7 @@ class AIPlayer:
             action = by_type["pass"].actions[0]
         else:
             action = self._fallback.choose(view, options)
-        self._items, self._last_call, self._attempts, self._spent = [], None, 0, 0.0
+        self._items, self._calls, self._done, self._queue, self._attempts, self._spent = [], [], 0, [], 0, 0.0
         self._reason = ""
         self._record(action=action, reply=None, fallback=why)
         return action
