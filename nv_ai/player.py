@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError
 
 from nv_ai.config import SoftwareSettings
 from nv_ai.costs import Ledger, Usage, cost
-from nv_ai.prompt import decision_message, fit_log, instructions, message_text, tool_definitions
+from nv_ai.prompt import PREDICTION, PREDICTIONS, decision_message, fit_log, instructions, message_text, tool_definitions
 from nv_ai.provider import Provider, Reply
 from nv_core.actions import ACTION_ADAPTER
 from nv_core.engine import Option
@@ -242,13 +242,20 @@ class AIPlayer:
             if isinstance(given := data.pop("notes", None), str):
                 notes = given
             commit = data.pop("commit", None) is True
-            data.update(type=call.name, seat=seat)
-            try:
-                action = ACTION_ADAPTER.validate_python(data)
-            except ValidationError as exc:
-                problems = "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()[:5])
-                return [], f"The tool arguments do not fit {call.name}: {problems}"
-            actions.append((action, commit, reason))
+            if call.name == PREDICTIONS:  # a list of predictions, made in order
+                items = data.get("predictions")
+                if not isinstance(items, list) or not items or not all(isinstance(x, dict) for x in items):
+                    return [], f"{PREDICTIONS} needs a non-empty list of predictions"
+                parts = [{**x, "type": PREDICTION, "seat": seat} for x in items]
+            else:
+                parts = [{**data, "type": call.name, "seat": seat}]
+            for n, part in enumerate(parts, start=1):
+                try:
+                    action = ACTION_ADAPTER.validate_python(part)
+                except ValidationError as exc:
+                    problems = "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()[:5])
+                    return [], f"The tool arguments do not fit {call.name}: {problems}"
+                actions.append((action, commit and n == len(parts), reason))
         if notes is not None:
             self.notes = notes[: self.software.ai_notes_max_chars]
         return actions, ""

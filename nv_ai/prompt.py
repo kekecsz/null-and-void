@@ -37,8 +37,9 @@ DESCRIPTIONS: dict[str, str] = {
     "expand_lab": "Experimentation and equipment phase: pay to increase your lab capacity by 1 (once a round; "
     "does not use a staff member or end your turn).",
     "claim_probe_time": "Probe time: place your marker on a free Probe (0-based index: P1 is 0).",
-    "make_prediction": "Formulating predictions and preregistration: copy a published theory onto a Probe "
-    "(0-based index), optionally preregistered.",
+    "make_predictions": "Formulating predictions and preregistration: ALL your predictions of this step in one "
+    "call, as a list; each copies a published theory onto a Probe (0-based index), optionally preregistered. "
+    "They are made in the order listed.",
     "cancel_prediction": "Formulating predictions and preregistration: withdraw one of your predictions.",
     "set_preregistered": "Formulating predictions and preregistration: preregister a prediction, or undo that.",
     "reveal_prediction": "Outcome and Prediction Reveal: choose a hidden prediction to reveal (reveal=false undoes).",
@@ -172,8 +173,12 @@ def _inline_refs(schema: dict[str, Any]) -> dict[str, Any]:
     return walk(schema)
 
 
+PREDICTION, PREDICTIONS = "make_prediction", "make_predictions"
+
+
 def tool_definitions(notes_max: int) -> list[dict[str, Any]]:
-    """One function tool per action type, always the same list in the same order."""
+    """One function tool per action type, always the same list in the same order; predictions come
+    as one tool taking a list (make_predictions), so a step's predictions need one call."""
     tools = []
     union = typing.get_args(a.Action)[0]  # Action is Annotated[Union[...], discriminator]
     for cls in typing.get_args(union):
@@ -181,6 +186,11 @@ def tool_definitions(notes_max: int) -> list[dict[str, Any]]:
         schema = _inline_refs(cls.model_json_schema())
         properties = {k: v for k, v in schema.get("properties", {}).items() if k not in ("seat", "type")}
         required = [k for k in schema.get("required", []) if k not in ("seat", "type")]
+        if name == PREDICTION:  # all of a step's predictions in one call (specification 8.1)
+            name = PREDICTIONS
+            properties = {"predictions": {"type": "array", "minItems": 1, "items": {
+                "type": "object", "properties": properties, "required": required, "additionalProperties": False}}}
+            required = ["predictions"]
         properties["reason"] = {"type": "string", "description": "One short sentence: why this action."}
         properties["notes"] = {
             "type": "string",
@@ -235,9 +245,29 @@ def _compact(action: BaseModel) -> str:
 MAX_LISTED = 40  # complete actions listed per option; the rest are counted
 
 
+def _prediction_lines(option: Option) -> list[str]:
+    """The possible predictions, one line per theory with the Probes it fits (0-based), and whether
+    they may, must or cannot be preregistered (the same for every one of them)."""
+    probes: dict[int, list[int]] = {}
+    kinds: set[bool] = set()
+    for x in option.actions:
+        probes.setdefault(x.theory, [])
+        if x.probe not in probes[x.theory]:
+            probes[x.theory].append(x.probe)
+        kinds.add(bool(x.preregister))
+    preregister = {frozenset({False, True}): "true or false", frozenset({True}): "must be true (Crisis)",
+                   frozenset({False}): "must be false (no data collection staff left to preregister)"}[frozenset(kinds)]
+    lines = [f"- {PREDICTIONS} (one call, every prediction you want in its list; preregister: {preregister}):"]
+    lines += [f"    theory {t} on probe {', '.join(map(str, sorted(p)))}" for t, p in probes.items()]
+    return lines
+
+
 def options_text(options: list[Option]) -> str:
     lines = []
     for option in options:
+        if option.type == PREDICTION and option.actions:
+            lines += _prediction_lines(option)
+            continue
         if option.actions:
             shown = option.actions[:MAX_LISTED]
             lines.append(f"- {option.type}:")

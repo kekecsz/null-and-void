@@ -62,6 +62,8 @@ class FakeProvider:
             line = line.strip()
             if line.startswith("{"):
                 data = json.loads(line)
+                if "type" not in data:
+                    continue
                 if data["type"] not in (
                     "propose_alliance", "leave_alliance", "cancel_prediction", "cancel_development", "withdraw_submission"
                 ):
@@ -692,3 +694,52 @@ def test_the_decision_message_invites_several_tool_calls(venus, software):
     message = provider.calls[0]["items"][0]["content"]
     assert "call one or more tools" in message and "call one tool)" not in message
     assert "calling exactly one tool" not in player.instructions
+
+
+# Predictions as one list (specification 8.1) --------------------------------------------------------
+def test_predictions_are_one_tool_taking_a_list(software):
+    tools = {t["name"]: t for t in _player(FakeProvider(), software).tools}
+    assert "make_prediction" not in tools
+    item = tools["make_predictions"]["parameters"]["properties"]["predictions"]
+    assert item["type"] == "array" and {"theory", "probe", "preregister"} <= set(item["items"]["properties"])
+
+
+def _prediction_step():
+    from tests.core.test_rules_predictions import _at_prediction, _theory
+
+    state = _at_prediction()
+    t1 = _theory(state, 1, {"IP1": "a"}, {"WO1": "up"})
+    t2 = _theory(state, 1, {"IP2": "x"}, {"WO1": "up"})
+    return state, t1, t2
+
+
+def test_the_prediction_options_are_one_line_per_theory():
+    state, t1, t2 = _prediction_step()
+    text = options_text(legal_actions(state, 0))
+    assert f"theory {t1.id} on probe 0, 1, 2" in text and f"theory {t2.id} on probe 0, 1, 2" in text
+    assert "preregister: true or false" in text and '"make_prediction"' not in text
+
+
+def test_a_list_of_predictions_is_made_in_order_with_one_model_call(software):
+    state, t1, t2 = _prediction_step()
+    provider = FakeProvider([{"name": "make_predictions", "arguments": {"reason": "all at once", "commit": True, "predictions": [
+        {"theory": t1.id, "probe": 0, "preregister": True}, {"theory": t2.id, "probe": 1}]}}])
+    player = _player(provider, software)
+    made = []
+    for _ in range(3):
+        action = player.choose(player_view(state, 0), legal_actions(state, 0))
+        made.append(action)
+        state, _ = apply(state, action)
+    assert [(x.type, getattr(x, "theory", None), getattr(x, "probe", None)) for x in made] == [
+        ("make_prediction", t1.id, 0), ("make_prediction", t2.id, 1), ("commit", None, None)]
+    assert made[0].preregister and not made[1].preregister
+    assert len(provider.calls) == 1
+
+
+def test_an_empty_prediction_list_is_sent_back(software):
+    state, _, _ = _prediction_step()
+    provider = FakeProvider([{"name": "make_predictions", "arguments": {"reason": "?", "predictions": []}}, None])
+    player = _player(provider, software)
+    player.choose(player_view(state, 0), legal_actions(state, 0))
+    outputs = [i["output"] for i in provider.calls[1]["items"] if isinstance(i, dict) and i.get("type") == "function_call_output"]
+    assert outputs and "non-empty list" in outputs[0]
