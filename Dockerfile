@@ -9,6 +9,7 @@ COPY nv_world nv_world
 COPY nv_server nv_server
 COPY nv_ai nv_ai
 COPY nv_sim nv_sim
+COPY nv_rulebook nv_rulebook
 COPY web web
 COPY docs docs
 COPY scenarios scenarios

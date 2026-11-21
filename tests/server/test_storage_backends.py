@@ -168,3 +168,7 @@ def test_the_deployment_files_keep_local_secrets_out():
         assert "settings/api_keys.env" in lines and "settings/ai_spending.csv" in lines and "games/" in lines, name
     copies = [line.split()[1] for line in (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8").splitlines() if line.startswith("COPY")]
     assert "." not in copies and "settings" not in copies and "settings/" not in copies
+    # every package of the project is in the image (the server imports nv_rulebook for the AI's rulebook)
+    import tomllib
+    packages = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["setuptools"]["packages"]["find"]["include"]
+    assert {name.rstrip("*") for name in packages} <= set(copies)
