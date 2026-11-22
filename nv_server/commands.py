@@ -36,7 +36,6 @@ O12 observation, E9 experiment, Q4 prediction; state names with _ for spaces, pr
   Experiments   experiment IP1=fat_blue IP3=sugar [cite M3 M5]
                 sensor P2 IP3 cite M3 [M5 ...]       install, or upgrade by one level
                 pass
-  Probe time    probe P2
   Predictions   predict T7 P2 [prereg]   cancel Q4   prereg Q4   unprereg Q4
   Reveal        reveal Q4   hide Q4
   Score order   order Q4 Q5
@@ -183,8 +182,6 @@ def parse(state: GameState, seat: int, line: str) -> BaseModel:
         return a.InstallSensor(seat=seat, probe=_probe(args[0]), parameter=_var(state, args[1], "input"), cited_methods=cited)
     if verb == "pass":
         return a.Pass(seat=seat)
-    if verb == "probe" and len(args) == 1:
-        return a.ClaimProbeTime(seat=seat, probe=_probe(args[0]))
     if verb == "predict" and len(args) in (2, 3):
         prereg = len(args) == 3
         if prereg and args[2].lower() not in ("prereg", "preregister", "preregistered"):

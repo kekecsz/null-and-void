@@ -765,30 +765,31 @@ def _student_check(venus, monkeypatch, software, order, then=None):
     player = _player(provider, software)
     state, _ = apply(state, a.AllocateStaff(seat=0))
     state, _ = apply(state, a.CommitPhase(seat=0))
-    done = []
-    while 1 in state.waiting and len(done) < 6:
+    done, left = [], {}
+    while 1 in state.waiting and state.round == 1 and state.phase.name in ("HIRING", "STUDENT_CHECK") and len(done) < 6:
         action = player.choose(player_view(state, 1), legal_actions(state, 1))
         done.append(action)
-        state, _ = apply(state, action)
-    return state, provider, player, done
+        state, events = apply(state, action)
+        left.update({e.data["task"]: e.data["count"] for e in events if e.kind == "student_leaves" and e.data["seat"] == 1})
+    return left, provider, player, done
 
 
 def test_leaving_students_follow_the_order_given_with_the_allocation_without_a_model_call(venus, monkeypatch, software):
-    state, provider, player, done = _student_check(venus, monkeypatch, software, ["experimentation", "experimentation", "write_up"])
+    left, provider, player, done = _student_check(venus, monkeypatch, software, ["experimentation", "experimentation", "write_up"])
     assert [x.type for x in done] == ["allocate_staff", "commit", "choose_leaving_students", "commit"]
     assert done[2].by_task == {a.Task.EXPERIMENTATION: 1, a.Task.WRITE_UP: 1}  # a task without students left is skipped
     assert len(provider.calls) == 1
     assert player.decisions[2]["reason"].startswith("automatic: the leaving order")
-    assert set(state.researcher(1).staff) == {a.Task.GRANTS}
+    assert left == {"experimentation": 1, "write_up": 1}
 
 
 def test_an_order_that_names_too_few_students_goes_to_the_model_with_a_note(venus, monkeypatch, software):
     choice = {"name": "choose_leaving_students", "arguments": {"by_task": {"grants": 1, "write_up": 1}, "reason": "keep", "commit": True}}
-    state, provider, player, done = _student_check(venus, monkeypatch, software, ["write_up"], then=choice)
+    left, provider, player, done = _student_check(venus, monkeypatch, software, ["write_up"], then=choice)
     assert [x.type for x in done] == ["allocate_staff", "commit", "choose_leaving_students", "commit"]
     assert len(provider.calls) == 2
     assert "leaving_order did not name 2" in provider.calls[1]["items"][-1]["content"]
-    assert set(state.researcher(1).staff) == {a.Task.EXPERIMENTATION}
+    assert left == {"grants": 1, "write_up": 1}
 
 
 def test_the_model_is_told_when_alliance_is_disabled(venus):

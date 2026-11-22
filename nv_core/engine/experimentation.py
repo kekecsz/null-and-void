@@ -1,6 +1,6 @@
 """Experimentation and equipment phase (running experiments, sensors) and Probe time."""
 
-from nv_core.actions import ClaimProbeTime, ExpandLab, InstallSensor, Pass, RunExperiment
+from nv_core.actions import ExpandLab, InstallSensor, Pass, RunExperiment
 from nv_core.engine.context import Ctx, IllegalAction
 from nv_core.state import Card, Experiment, ExperimentCard, Paper, Task
 
@@ -227,51 +227,25 @@ def pass_turn(ctx: Ctx, action: Pass) -> None:
 
 # Probe time ---------------------------------------------------------------------------------
 def start_probe_time(ctx: Ctx) -> None:
+    """Claiming Probe time: the researchers without Probe time, one by one in order of academic credit
+    (turn order breaks ties), take the next unoccupied Probe from the Hot topic's (the Hot topic's
+    own if unoccupied, wrapping round after the last Probe; P1 counts as the Hot topic in the
+    simplified game). Nobody chooses, so the step needs no action."""
     state = ctx.state
     holders = {p.probe_time for p in state.probes if p.probe_time is not None}
     order = state.turn_order()
-    choosers = [seat for seat in order if seat not in holders]
-    choosers.sort(key=lambda seat: (-state.researcher(seat).credit, order.index(seat)))
-    state.queue = choosers
-    _next_probe_time(ctx)
-
-
-def _free_probes(ctx: Ctx) -> list[int]:
-    return [p.index for p in ctx.state.probes if p.probe_time is None]
-
-
-def _next_probe_time(ctx: Ctx) -> None:
-    state = ctx.state
-    state.current = None
-    while state.queue:
-        free = _free_probes(ctx)
-        if not free:
-            state.queue = []
+    claimants = sorted((seat for seat in order if seat not in holders),
+                       key=lambda seat: (-state.researcher(seat).credit, order.index(seat)))
+    start = state.hot_topic or 0  # None: the simplified game, where P1 counts as the Hot topic
+    n = len(state.probes)
+    state.queue, state.current, state.waiting = [], None, []
+    for seat in claimants:
+        probe = next((i % n for i in range(start, start + n) if state.probes[i % n].probe_time is None), None)
+        if probe is None:
             return
-        seat = state.queue[0]
-        if len(free) == 1:
-            _claim(ctx, seat, free[0])
-            continue
-        state.current = seat
-        return
-
-
-def _claim(ctx: Ctx, seat: int, probe: int) -> None:
-    state = ctx.state
-    state.probes[probe].probe_time = seat
-    state.probes[probe].probe_time_from_sensor = False
-    state.queue.remove(seat)
-    ctx.log("probe_time", f"{ctx.name(seat)} takes Probe time on P{probe + 1}", seat=seat, probe=probe)
-
-
-def claim_probe_time(ctx: Ctx, action: ClaimProbeTime) -> None:
-    state = ctx.state
-    if state.current != action.seat:
-        raise IllegalAction("it is not your turn to choose Probe time")
-    if action.probe not in _free_probes(ctx):
-        raise IllegalAction(f"P{action.probe + 1} is not free")
-    _claim(ctx, action.seat, action.probe)
-    _next_probe_time(ctx)
+        state.probes[probe].probe_time = seat
+        state.probes[probe].probe_time_from_sensor = False
+        ctx.log("probe_time", f"{ctx.name(seat)} takes Probe time on P{probe + 1}", seat=seat, probe=probe)
 
 
 def finish_probe_time(ctx: Ctx) -> None:

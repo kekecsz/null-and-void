@@ -8,6 +8,7 @@ import pytest
 from nv_core import actions as a
 from nv_core.engine import IllegalAction, apply
 from nv_core.engine.context import Ctx
+from nv_core.engine.experimentation import start_probe_time
 from nv_core.engine.observation import deal_probes
 from nv_core.state import Phase
 from tests.core.engine_helpers import do, game, settings, tiny_world, to_phase
@@ -20,33 +21,41 @@ def _state_of(card):
 
 
 # Probe time ------------------------------------------------------------------------------
+def _claim(state, hot_topic):
+    state.hot_topic = hot_topic
+    start_probe_time(Ctx(state))
+    return [p.probe_time for p in state.probes]
+
+
 def test_probe_time_ties_in_credit_follow_turn_order():
-    """Probe time: highest academic credit chooses first, with turn order as tiebreaker."""
+    """Claiming Probe time: highest academic credit first, with turn order as tiebreaker; the Probe
+    with the Hot topic first when unoccupied, then the next ones."""
     state = game(n=3)
-    state = to_phase(state, Phase.EXPERIMENTATION, {s: {"experimentation": 1} for s in range(3)})
     for r in state.researchers:
         r.credit = 12
-    expected = state.turn_order()
-    order = []
-    while state.phase in (Phase.EXPERIMENTATION, Phase.PROBE_TIME):
-        if state.phase == Phase.PROBE_TIME:
-            order.append(state.current)
-            free = next(p.index for p in state.probes if p.probe_time is None)
-            state = do(state, a.ClaimProbeTime(seat=state.current, probe=free))
-        else:
-            state = do(state, a.Pass(seat=state.current))
-    assert order == expected
+    first, second, third = state.turn_order()
+    claims = _claim(state, 1)
+    assert claims[1] == first and claims[2] == second and claims[3] == third and claims[0] is None
 
 
-def test_an_occupied_probe_cannot_be_claimed():
-    """Probe time: only one Researcher's marker per Probe."""
-    state = game()
-    state = to_phase(state, Phase.PROBE_TIME, {s: {"experimentation": 1} for s in range(2)})
-    first = state.current
-    state = do(state, a.ClaimProbeTime(seat=first, probe=0))
-    assert state.phase == Phase.PROBE_TIME and state.current != first
-    with pytest.raises(IllegalAction):
-        apply(state, a.ClaimProbeTime(seat=state.current, probe=0))
+def test_probe_time_wraps_round_after_the_last_probe():
+    state = game(n=2)  # three Probes
+    state.researcher(0).credit, state.researcher(1).credit = 10, 20
+    assert _claim(state, 2) == [0, None, 1]
+
+
+def test_in_the_simplified_game_p1_counts_as_the_hot_topic():
+    state = game(n=2, mode="simplified")
+    state.researcher(0).credit, state.researcher(1).credit = 10, 20
+    assert _claim(state, None) == [1, 0, None]
+
+
+def test_more_researchers_than_free_probes_leaves_the_last_without_probe_time():
+    state = game(n=3)  # four Probes
+    for p in state.probes[:3]:
+        p.probe_time, p.probe_time_from_sensor = 2, True
+    state.researcher(0).credit, state.researcher(1).credit = 1, 2
+    assert _claim(state, 0) == [2, 2, 2, 1]  # researcher 0, with less credit, gets none
 
 
 # Recording observations ------------------------------------------------------------------

@@ -99,7 +99,8 @@ def test_fired_postdoc_penalty_and_period_cards():
     deck_before = len(state.period_deck)
     state = do(
         state,
-        a.AllocateStaff(seat=0, fire_postdocs=2, allocation={Task.GRANTS: StaffCount(postdocs=1)}),
+        # Experimentation stops the round there (Probe time needs no decision; Clean-up would add penalties).
+        a.AllocateStaff(seat=0, fire_postdocs=2, allocation={Task.EXPERIMENTATION: StaffCount(postdocs=1)}),
         a.CommitPhase(seat=0),
         a.AllocateStaff(seat=1, allocation={Task.GRANTS: StaffCount(postdocs=3)}),
         a.CommitPhase(seat=1),
@@ -139,7 +140,9 @@ def test_student_task_check_threshold(monkeypatch):
         r.talent_position = 1
     state = do(
         state,
-        a.AllocateStaff(seat=0, hire_students=4, allocation={Task.GRANTS: StaffCount(students=4)}),
+        # The postdoc on Experimentation stops the round there, after the Student task check.
+        a.AllocateStaff(seat=0, hire_postdocs=1, hire_students=4,
+                        allocation={Task.GRANTS: StaffCount(students=4), Task.EXPERIMENTATION: StaffCount(postdocs=1)}),
         a.CommitPhase(seat=0),
         a.AllocateStaff(seat=1, hire_students=2, allocation={Task.GRANTS: StaffCount(students=1), Task.WRITE_UP: StaffCount(students=1)}),
         a.CommitPhase(seat=1),
@@ -226,21 +229,19 @@ def test_sensor_install_upgrade_reward_and_probe_time():
 
 
 def test_probe_time_order_by_credit_and_sensor_holders_skip():
+    """Claiming Probe time: those without Probe time, by academic credit, take the next unoccupied
+    Probe from the Hot topic's, wrapping round; no one is asked."""
     state = game(n=3)
     state = to_phase(state, Phase.EXPERIMENTATION, {s: {"experimentation": 1} for s in range(3)})
     state.researcher(0).credit, state.researcher(1).credit, state.researcher(2).credit = 5, 30, 20
     state.probes[2].probe_time, state.probes[2].probe_time_from_sensor = 2, True
-    order = []
-    while state.phase in (Phase.EXPERIMENTATION, Phase.PROBE_TIME):
-        if state.phase == Phase.PROBE_TIME:
-            order.append(state.current)
-            free = next(p.index for p in state.probes if p.probe_time is None)
-            state = do(state, a.ClaimProbeTime(seat=state.current, probe=free))
-        else:
-            state = do(state, a.Pass(seat=state.current))
-    # Researcher 2 holds Probe time from a sensor; 1 has more credit than 0. With 4 Probes and
-    # 3 free, researcher 1 chooses, then researcher 0 is left two Probes and chooses too.
-    assert order == [1, 0]
+    state.hot_topic = 2  # P3: occupied by researcher 2's sensor
+    claims = []
+    while state.phase == Phase.EXPERIMENTATION:
+        state, events = apply(state, a.Pass(seat=state.current))
+        claims += [(e.data["seat"], e.data["probe"]) for e in events if e.kind == "probe_time"]
+    # Nobody is asked: researcher 1 (most credit) takes P4, the next after P3; researcher 0 wraps round to P1.
+    assert claims == [(1, 3), (0, 0)]
 
 
 @pytest.mark.parametrize("level", [1, 2, 3])

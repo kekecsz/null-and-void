@@ -58,11 +58,7 @@ class ExpandLab(_Action):
     type: Literal["expand_lab"] = "expand_lab"
 
 
-# Probe time
-class ClaimProbeTime(_Action):
-    type: Literal["claim_probe_time"] = "claim_probe_time"
-    probe: int
-
+# Probe time: claimed automatically (Claiming Probe time), no action.
 
 # Observation and prediction phase
 class MakePrediction(_Action):
@@ -194,7 +190,6 @@ Action = Annotated[
         InstallSensor,
         Pass,
         ExpandLab,
-        ClaimProbeTime,
         MakePrediction,
         CancelPrediction,
         SetPreregistered,

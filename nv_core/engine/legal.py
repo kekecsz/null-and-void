@@ -132,13 +132,6 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
             options.append(Option(type="install_sensor", template={"choices": sensors}))
         if not ctx.must_use_staff(r):
             options.append(Option(type="pass", actions=[a.Pass(seat=seat)]))
-    elif phase == Phase.PROBE_TIME and s.current == seat:
-        options.append(
-            Option(
-                type="claim_probe_time",
-                actions=[a.ClaimProbeTime(seat=seat, probe=p.index) for p in s.probes if p.probe_time is None],
-            )
-        )
     elif phase == Phase.PREDICTION and waiting:
         mine = [p for p in s.predictions if p.seat == seat]
         staff = r.allocated(Task.DATA_COLLECTION)

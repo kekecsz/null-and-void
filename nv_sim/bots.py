@@ -95,8 +95,6 @@ class RandomBot:
             return self._queue.pop(0)
 
         # Sequential steps --------------------------------------------------------------
-        if "claim_probe_time" in by_type:
-            return rng.choice(by_type["claim_probe_time"].actions)
         if "run_experiment" in by_type:
             if "expand_lab" in by_type and rng.random() < w.expand_lab:
                 return by_type["expand_lab"].actions[0]

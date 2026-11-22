@@ -39,7 +39,6 @@ DESCRIPTIONS: dict[str, str] = {
     "pass": "Experimentation and equipment phase: stop using experimentation staff this round.",
     "expand_lab": "Experimentation and equipment phase: pay to increase your lab capacity by 1 (once a round; "
     "does not use a staff member or end your turn).",
-    "claim_probe_time": "Probe time: place your marker on a free Probe (0-based index: P1 is 0).",
     "make_predictions": "Formulating predictions and preregistration: ALL your predictions of this step in one "
     "call, as a list; each copies a published theory onto a Probe (0-based index), optionally preregistered. "
     "They are made in the order listed.",

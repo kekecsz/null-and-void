@@ -129,7 +129,6 @@ HANDLERS: dict[type, tuple[Phase | None, Callable]] = {
     a.InstallSensor: (Phase.EXPERIMENTATION, experimentation.install_sensor),
     a.Pass: (Phase.EXPERIMENTATION, experimentation.pass_turn),
     a.ExpandLab: (Phase.EXPERIMENTATION, experimentation.expand_lab),
-    a.ClaimProbeTime: (Phase.PROBE_TIME, experimentation.claim_probe_time),
     a.MakePrediction: (Phase.PREDICTION, observation.make_prediction),
     a.CancelPrediction: (Phase.PREDICTION, observation.cancel_prediction),
     a.SetPreregistered: (Phase.PREDICTION, observation.set_preregistered),

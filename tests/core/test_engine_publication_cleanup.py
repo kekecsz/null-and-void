@@ -327,8 +327,6 @@ def test_replaying_the_action_log_reproduces_the_state(tmp_path):
             seat = state.current if state.current is not None else state.waiting[0]
             if state.phase == Phase.EXPERIMENTATION:
                 action = a.RunExperiment(seat=seat, specified={"IP1": "a"})
-            elif state.phase == Phase.PROBE_TIME:
-                action = a.ClaimProbeTime(seat=seat, probe=next(p.index for p in state.probes if p.probe_time is None))
             elif state.phase == Phase.DEVELOPMENT and not state.pending[seat].development:
                 action = a.DevelopMethod(seat=seat, parameter="IP2")
             else:

@@ -101,9 +101,6 @@ def to_phase(state: GameState, phase: Phase, allocations: dict[int, dict[str, in
                 state = do(state, allocate(state, seat, **allocations.get(seat, {})), a.CommitPhase(seat=seat))
         elif state.phase == Phase.EXPERIMENTATION:
             state = do(state, a.Pass(seat=state.current))
-        elif state.phase == Phase.PROBE_TIME:
-            free = next(p.index for p in state.probes if p.probe_time is None)
-            state = do(state, a.ClaimProbeTime(seat=state.current, probe=free))
         elif state.phase == Phase.PEER_REVIEW:
             seat = state.waiting[0]
             for i, card in enumerate(state.review_cards.get(seat, [])):

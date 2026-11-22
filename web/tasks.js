@@ -507,7 +507,6 @@ function reviewRows(option) {
 function describe(a) {
   const n = (seat) => nameOf(seat);
   switch (a.type) {
-    case "claim_probe_time": return t("Take Probe time on P{probe}", { probe: a.probe + 1 });
     case "reveal_prediction": return a.reveal ? t("Reveal Q{id}", { id: a.prediction }) : t("Keep Q{id} hidden after all", { id: a.prediction });
     case "develop_method": return t("Develop a method for {parameter}", { parameter: a.parameter });
     case "propose_alliance": return t("Propose an alliance to {name}", { name: n(a.partner) });
@@ -670,7 +669,7 @@ const FORMS = {
   withdraw_submission: (o) => manuscriptActionRows(o, t("Withdraw")), archive_records: (o) => archiveForm(o.template),
 };
 const TITLES = {
-  allocate_staff: "Hiring and task allocation", choose_leaving_students: "Student task check", claim_probe_time: "Probe time",
+  allocate_staff: "Hiring and task allocation", choose_leaving_students: "Student task check",
   develop_method: "Develop a method", revise: "Revise a manuscript", archive_records: "Archive records",
   withdraw_submission: "Undo this step's submission or revision", leave_alliance: "Last chance to leave an alliance",
   stay_in_alliance: "Stay in an alliance",

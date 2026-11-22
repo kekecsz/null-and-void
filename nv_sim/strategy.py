@@ -174,8 +174,6 @@ class StrategyBot:
                 if self._queue:
                     return self._queue.pop(0)
 
-        if "claim_probe_time" in by_type:
-            return self._probe_time(view, by_type["claim_probe_time"].actions)
         if "run_experiment" in by_type:
             if "expand_lab" in by_type and self._expand_lab(view):
                 return by_type["expand_lab"].actions[0]
@@ -641,19 +639,6 @@ class StrategyBot:
         return self.rng.choice([spec for spec, score in zip(specs, scores) if score == best])
 
     # Probe time -------------------------------------------------------------------------------
-    def _probe_time(self, view, actions: list[a.ClaimProbeTime]) -> BaseModel:
-        probes = {p["index"]: p for p in view["probes"]}
-        target = self._target(view) if self.motive == "selfish" else None
-
-        def score(x):
-            p = probes[x.probe]
-            if target:  # rows the theory needs that will be blank: a record is unlikely to mismatch
-                return (sum(1 for v in target[0] if v not in p["specialty"] and v not in p["sensors"]), p["hot_topic"])
-            return (len(p["specialty"]) + len(p["sensors"]), p["hot_topic"])  # the most visible slots
-
-        best = max(score(x) for x in actions)
-        return self.rng.choice([x for x in actions if score(x) == best])
-
     # Predictions --------------------------------------------------------------------------------
     def _predictions(self, view, by_type) -> list[BaseModel]:
         """The plan, cut to the number of predictions allowed (the first ones are the most wanted)."""

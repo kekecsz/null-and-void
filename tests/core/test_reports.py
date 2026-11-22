@@ -37,7 +37,7 @@ def test_hiring_report_after_the_student_task_check_with_staff_and_credit():
         r.postdocs, r.money = 2, 10 * S.cost_of_postdoc
     state = do(
         state,
-        a.AllocateStaff(seat=0, fire_postdocs=1, allocation={Task.GRANTS: StaffCount(postdocs=1)}),
+        a.AllocateStaff(seat=0, fire_postdocs=1, allocation={Task.EXPERIMENTATION: StaffCount(postdocs=1)}),  # stops the round there
         a.CommitPhase(seat=0),
         a.AllocateStaff(seat=1, allocation={Task.GRANTS: StaffCount(postdocs=2)}),
         a.CommitPhase(seat=1),
