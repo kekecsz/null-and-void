@@ -250,7 +250,7 @@ function probeStrip(p, pastRound, extra) {
   });
 }
 function renderGrid() {
-  fill($("grid"), view().probes.map(probeStrip));
+  fill($("grid"), view().probes.map((p) => probeStrip(p)));  // not map(probeStrip): its index would read as pastRound
 }
 
 // Records and unpublished work -----------------------------------------------------------------------

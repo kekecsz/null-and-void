@@ -36,6 +36,7 @@ function redraw() {
   renderGrid();
   renderRecords();
   renderIdeas();
+  renderLiterature();  // its papers' record boxes fold open and closed
   renderPortal();
   refreshHighlights();
 }
