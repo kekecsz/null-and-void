@@ -2,10 +2,14 @@
 needs a browser, so these tests check what comes before: every picture has a scene, and the bot
 game has every situation."""
 
+import pytest
+
 from nv_core.markdown_text import read_markdown
 from nv_core.paths import RULEBOOK
 from nv_rulebook.illustrations import SCENES, add_sensors, fill_portal, find_situations, near_nobel_and_retraction
 from nv_rulebook.pdf import IMAGES, blocks
+
+pytestmark = pytest.mark.pdf  # the rulebook's screenshots: checked with the PDF (pytest -m pdf)
 
 RULEBOOK_PICTURES = [item for kind, item in blocks(read_markdown(RULEBOOK)) if kind == "figure"]
 

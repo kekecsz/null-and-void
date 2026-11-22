@@ -310,6 +310,8 @@ Figures and illustrations: a `[Figure: <file>]` line in the rulebook (a picture 
 
 The round overview page is drawn from this table (its phases, who decides, staff at work and page), followed by the example theory and the contents (numbered section titles with their pages). The phases on the cover, in this table and in the contents are links to their sections. A heading that is not a main heading of the rulebook stops the build.
 
+The PDF is built, and its screenshots retaken (`nv-rulebook-illustrations`), only when someone wants a new edition, not with every change of the rules or the web client. Its tests (layout, figure placement, the pictures and their scenes) carry the pytest marker `pdf` and are left out of the usual run: `pytest -m pdf` runs them, `pytest -m ""` runs everything. Filling in the rulebook (`nv_rulebook.fill`) stays in the usual run, because the AI players read the filled-in rulebook (8.1).
+
 | Rulebook heading | Short name | Who decides | Staff at work |
 | --- | --- | --- | --- |
 | Hiring and task allocation phase | Hiring | Everyone, in secret | None: you hire and assign |

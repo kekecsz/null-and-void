@@ -139,6 +139,7 @@ def test_character_the_fonts_cannot_draw_is_refused():
         check_printable(f"private use {chr(0xE000)} here")
 
 
+@pytest.mark.pdf
 def test_pdf_is_written(tmp_path):
     out = make_pdf(tmp_path / "sub" / "rulebook.pdf")
     assert out.read_bytes().startswith(b"%PDF")
@@ -188,6 +189,7 @@ def test_a_subheading_loses_its_colon():
     assert _structured("## Failed predictions: ") == [("h2", "Failed predictions")]
 
 
+@pytest.mark.pdf
 def test_round_overview_names_main_headings_of_the_rulebook():
     headings = {c for k, c in blocks(read_markdown(RULEBOOK)) if k == "h1"}
     phases = round_overview()
@@ -231,6 +233,7 @@ def _texts(story: list) -> list[str]:
     return found
 
 
+@pytest.mark.pdf
 def test_only_figures_are_referred_to_and_each_kind_is_numbered_on_its_own():
     from nv_rulebook.pdf import FigureAnchor
 
@@ -244,12 +247,14 @@ def test_only_figures_are_referred_to_and_each_kind_is_numbered_on_its_own():
     assert labels[0] == "Illustration 1" and f"Figure {figures + 1}" in labels
 
 
+@pytest.mark.pdf
 def test_contents_and_round_overview_link_to_the_sections():
     texts = _texts(_story(read_markdown(RULEBOOK)))
     assert any(t.startswith('<a href="#section-victory">1. Victory</a>') for t in texts)
     assert not any(t == "Section" for t in texts)
 
 
+@pytest.mark.pdf
 def test_every_picture_of_the_rulebook_is_in_web_images():
     """A missing picture would stop the PDF build; nv-rulebook-illustrations makes the screenshots."""
     names = [item for kind, item in blocks(read_markdown(RULEBOOK)) if kind in ("figure", "illustration")]
@@ -257,6 +262,7 @@ def test_every_picture_of_the_rulebook_is_in_web_images():
     assert [n for n in names if not (IMAGES / n).is_file()] == []
 
 
+@pytest.mark.pdf
 def test_a_missing_illustration_stops_the_build(tmp_path):
     rulebook = tmp_path / "rules.md"
     text = read_markdown(RULEBOOK).replace("# Backstory", "[Illustration: no_such_picture.png]\n\n# Backstory", 1)
@@ -265,6 +271,7 @@ def test_a_missing_illustration_stops_the_build(tmp_path):
         make_pdf(tmp_path / "out.pdf", rulebook)
 
 
+@pytest.mark.pdf
 def test_every_figure_is_printed_on_a_page_with_the_paragraph_that_refers_to_it():
     import io
 

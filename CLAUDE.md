@@ -35,8 +35,9 @@ Only the rulebook is an export; the other documents are maintained here and may 
 
 ```sh
 py -3.14 -m venv .venv && .venv/Scripts/python -m pip install -e ".[dev]"   # once
-.venv/Scripts/python -m pytest                                              # all tests
+.venv/Scripts/python -m pytest                                              # all tests except the rulebook PDF ones
 .venv/Scripts/python -m pytest tests/test_consistency.py                    # document consistency check
+.venv/Scripts/python -m pytest -m pdf                                       # rulebook PDF tests (slow; skipped by default)
 git config core.hooksPath .githooks                                         # once: run the check on every commit
 ```
 

@@ -36,4 +36,7 @@ include = ["nv_core*", "nv_world*", "nv_server*", "nv_ai*", "nv_sim*", "nv_ruleb
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+# The rulebook PDF (layout, figures, screenshot scenes) is checked only when asked for, as it is slow
+# and changes with every rulebook export: pytest -m pdf (only those) or pytest -m "" (everything).
+addopts = "-ra -m 'not pdf'"
+markers = ["pdf: builds or lays out the rulebook PDF, or checks its pictures (run with -m pdf)"]
