@@ -728,8 +728,10 @@ def wanted_page(doc: _Issue, placement: Placement, n: int) -> tuple[int, int]:
 
 
 def misplaced(doc: _Issue, placement: Placement) -> set[int]:
-    """The figures not on a page they may go on (wanted_page)."""
-    return {n for n in doc.anchor_pages if not wanted_page(doc, placement, n)[0] <= placement.plan.get(n, 0) <= wanted_page(doc, placement, n)[1]}
+    """The figures not on a page they may go on (wanted_page), or not printed at all (planned for
+    the page after the last one, e.g. the last figure "on the next page" when the text ends first)."""
+    wrong = {n for n in doc.anchor_pages if not wanted_page(doc, placement, n)[0] <= placement.plan.get(n, 0) <= wanted_page(doc, placement, n)[1]}
+    return wrong | (set(doc.anchor_pages) - set(doc.printed))
 
 
 def place_figures(content: Content) -> tuple[Placement, dict[str, int]]:

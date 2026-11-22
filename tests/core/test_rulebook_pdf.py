@@ -269,8 +269,9 @@ def test_every_figure_is_printed_on_a_page_with_the_paragraph_that_refers_to_it(
     import io
 
     from nv_rulebook.fill import fill_rulebook
-    from nv_rulebook.pdf import MIN_FIGURE_SCALE, lay_out, misplaced, place_figures, read_content
+    from nv_rulebook.pdf import MIN_FIGURE_SCALE, _register_fonts, lay_out, misplaced, place_figures, read_content
 
+    _register_fonts()  # as make_pdf does: the test must not depend on an earlier one having built a PDF
     settings = load_settings().model_dump()
     content = read_content(fill_rulebook(read_markdown(RULEBOOK), settings), settings)
     placement, pages = place_figures(content)
