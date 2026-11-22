@@ -8,17 +8,6 @@ Each entry gives the document and section, the exact text, the possible readings
 
 ---
 
-## Rule changes of 2026-11-12: open points
-
-### R4. What is one record, for the Records capacity? (answered; the rulebook text is still to be clarified)
-- **Where:** Recording experimental findings; Recording observations; Supporting observational and experimental records; Clean-up phase.
-- **Text:** "New records always enter at the first record position, and push older records one position higher." and "each card can be used only once"; experiment records "can be mixed across cards involved in several experiments".
-- **Zoltan's answers (2026-11-13):** (a) one slip (an experiment's cards, or one Probe observation) takes one position; (b) when a submission uses only some cards of an experiment, the slip keeps its position unless it becomes invalid (no longer at least one input parameter card and one world outcome card), in which case it is discarded; (c) when a record leaves, the older ones move down to close the gap.
-- **For the rulebook:** these three points, in Recording experimental findings, Supporting observational and experimental records and the Clean-up phase.
-- **(b) replaced (Zoltan, 2026-11-22; now in the rulebook, Supporting observational and experimental records):** mixing a supporting record swaps cards of the same parameter position between experiment records, so the slips stay complete. The software does the swap itself: the slip that gave most cards (ties: the experiment run first) hands each other slip its card of every row it gave; a slip left without cards leaves. Mixed slips are named by their experiments in order of how many cards come from each (ties: run first; then a name not used yet), and keep the position of their first one. An incomplete slip, and the discarding below, remain only for games saved before.
-- **When an invalid slip is discarded (confirmed by Zoltan, 2026-11-13):** at Clean-up, before the Records capacity is applied, so it never pushes a valid record out. Until then its remaining cards can still go into a mixed experiment record. The engine does this.
-- **For the rulebook, also:** this timing, in the Clean-up phase.
-
 ## Unpaid postdocs in the simplified game
 
 - **Where:** Clean-up phase.

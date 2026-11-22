@@ -1,8 +1,8 @@
 """Rulebook "Recording experimental findings", "Recording observations", "Archiving records",
 "Supporting observational and experimental records" and "Clean-up phase": the Records area with
-its record positions and [records_capacity], and the archive. Open question R4 (one slip, one
-position); mixing a supporting record swaps cards so the slips stay complete, and a slip left
-incomplete (only in games saved before that) is discarded at Clean-up.
+its record positions and [records_capacity], and the archive. One slip takes one position; mixing a
+supporting record swaps cards so the slips stay complete, and a slip left incomplete (only in games
+saved before that) is discarded at Clean-up (specification 5.5).
 
 The tiny world (tests/core/engine_helpers.py) has inputs IP1, IP2, IP3 and one outcome WO1.
 """
@@ -67,7 +67,7 @@ def test_cleanup_discards_records_beyond_the_capacity():
 
 
 def test_a_used_record_closes_the_gap():
-    """R4: when a record leaves (here: used in a submission), the older records move down a position."""
+    """Recording experimental findings: when a record leaves (here: used in a submission), the older records move down a position."""
     state = _submission()
     r = state.researcher(0)
     before = positions(r)
@@ -147,7 +147,7 @@ def test_withdrawing_a_mixed_submission_puts_every_card_back():
 
 
 def test_an_invalid_slip_is_discarded_at_cleanup_and_does_not_count():
-    """R4: a slip without an input parameter or a world outcome card is discarded at Clean-up, and it
+    """Games saved before mixing swapped cards: a slip without an input parameter or a world outcome card is discarded at Clean-up, and it
     does not push a valid record out of the Records area."""
     state = game()
     r = state.researcher(0)

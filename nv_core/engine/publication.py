@@ -85,7 +85,7 @@ def build_records(ctx: Ctx, r: Researcher, specs: list) -> list[SupportRecord]:
 
 def _remove_records(r: Researcher, specs: list) -> RecordArea:
     """Take the records' cards out of the Records area; return what was taken. A slip keeps its
-    record position while it holds cards (Records area; open question R4)."""
+    record position while it holds cards (Recording experimental findings; a slip left without cards leaves)."""
     taken = RecordArea()
     area = r.records
     for spec in specs:

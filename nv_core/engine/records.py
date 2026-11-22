@@ -25,7 +25,7 @@ def positions(r: Researcher) -> list[int]:
 
 def valid(ctx: Ctx, r: Researcher, slip: int) -> bool:
     """A slip stays valid while it holds at least one input parameter and one world outcome card
-    (open question R4: an invalid slip is discarded at Clean-up)."""
+    (only in games saved before mixing swapped cards: an invalid slip is discarded at Clean-up, specification 5.5)."""
     if any(o.id == slip for o in r.records.observations):
         return True
     variables = {c.card.var for c in r.records.cards if c.on == slip}
