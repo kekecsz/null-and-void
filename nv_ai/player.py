@@ -9,10 +9,11 @@ from pydantic import BaseModel, ValidationError
 
 from nv_ai.config import SoftwareSettings
 from nv_ai.costs import Ledger, Usage, cost
-from nv_ai.prompt import PREDICTION, PREDICTIONS, decision_message, fit_log, instructions, message_text, tool_definitions
+from nv_ai.prompt import LEAVING_ORDER, PREDICTION, PREDICTIONS, decision_message, fit_log, instructions, message_text, tool_definitions
 from nv_ai.provider import Provider, Reply
 from nv_core.actions import ACTION_ADAPTER
 from nv_core.engine import Option
+from nv_core.state import Task
 from nv_sim.bots import RandomBot
 
 MIN_OUTPUT_TOKENS = 2_000  # below this a reply (with reasoning) is pointless: fall back instead
@@ -76,6 +77,7 @@ class AIPlayer:
         self._commit_next = False  # the model's last choice asked to commit right after it
         self._automatic = False  # the last action was taken without a model call
         self._automatic_refused = ""  # why it was refused, told to the model at its next decision
+        self._leaving_order: tuple[int, list[str]] | None = None  # (round, tasks) given with the staff allocation
 
     # ------------------------------------------------------------------------------------
     def refused(self, action: BaseModel, reason: str) -> None:
@@ -156,7 +158,7 @@ class AIPlayer:
             self._api_errors = 0
             self._attempts += 1
             self._account(reply)
-            actions, problem = self._actions(reply, view["seat"])
+            actions, problem = self._actions(reply, view["seat"], view["round"])
             self._items += reply.output_items
             if actions:
                 self._calls, self._done, self._queue = reply.calls, 0, actions
@@ -180,14 +182,18 @@ class AIPlayer:
 
     def _without_a_call(self, view: dict[str, Any], options: list[Option]) -> BaseModel | None:
         """Actions that need no model call (specification 8.1): the only legal action is commit or
-        pass, or the model's last choice asked to commit right after it."""
+        pass, the model's last choice asked to commit right after it, or the students who leave
+        follow the leaving order the model gave with its staff allocation (then it commits too)."""
         by_type = {o.type: o for o in options}
-        action, why = None, ""
+        action, why, commit = None, "", False
         if len(options) == 1 and options[0].type in ("commit", "pass") and len(options[0].actions) == 1:
             action, why = options[0].actions[0], "the only legal action"
         elif self._commit_next and "commit" in by_type:
             action, why = by_type["commit"].actions[0], "asked for with its last choice"
-        self._commit_next = False
+        elif (leaving := self._leaving_choice(view, by_type.get("choose_leaving_students"))) is not None:
+            action, commit, order = leaving
+            why = f"the leaving order given with its staff allocation ({', '.join(order)})"
+        self._commit_next = commit
         if action is None:
             return None
         self._automatic = True
@@ -195,6 +201,33 @@ class AIPlayer:
         self._reason = f"automatic: {why}"
         self._record(action=action, reply=None)
         return action
+
+    def _leaving_choice(self, view: dict[str, Any], option: Option | None) -> tuple[BaseModel, bool, list[str]] | None:
+        """The students who leave, taken from the leaving order of this round's staff allocation
+        (each entry one student, skipping tasks with no student left); None when there is no such
+        order or it names too few students. The order is used once: if the engine refuses the
+        choice, or the model changes it, the model decides."""
+        if option is None or option.template is None or self._leaving_order is None:
+            return None
+        given_round, order = self._leaving_order
+        if given_round != view["round"]:
+            return None
+        left = dict(option.template["students_by_task"])
+        count = option.template["count"]
+        by_task: dict[str, int] = {}
+        for task in order:
+            if sum(by_task.values()) == count:
+                break
+            if left.get(task, 0) > 0:
+                left[task] -= 1
+                by_task[task] = by_task.get(task, 0) + 1
+        self._leaving_order = None
+        if sum(by_task.values()) != count:
+            self._automatic_refused = (f"Your {LEAVING_ORDER} did not name {count} of the students you have on tasks: "
+                                       "choose which students leave.")
+            return None
+        action = ACTION_ADAPTER.validate_python({"type": "choose_leaving_students", "seat": view["seat"], "by_task": by_task})
+        return action, True, order
 
     def _new_decision(self, view: dict[str, Any], options: list[Option]) -> None:
         # ai_max_input_tokens (specification 8.4): the oldest rounds of the log are left out first
@@ -227,13 +260,14 @@ class AIPlayer:
         self._decision_usage = self._decision_usage + reply.usage
         self.ledger.add(self.game, self.name, self.provider.model, reply.usage, amount)
 
-    def _actions(self, reply: Reply, seat: int) -> tuple[list[tuple[BaseModel, bool, str]], str]:
+    def _actions(self, reply: Reply, seat: int, round_: int) -> tuple[list[tuple[BaseModel, bool, str]], str]:
         """The reply's tool calls as actions, in order, each with its commit flag and reason; none
         when one of them does not fit (then nothing is carried out)."""
         if not reply.calls:
             why = f" (the reply stopped early: {reply.incomplete})" if reply.incomplete else ""
             return [], f"No tool was called{why}."
         actions, notes = [], None
+        allocated, leaving = False, None
         for call in reply.calls:
             if call.arguments is None:
                 return [], f"The arguments of {call.name} were not valid JSON"
@@ -242,6 +276,11 @@ class AIPlayer:
             if isinstance(given := data.pop("notes", None), str):
                 notes = given
             commit = data.pop("commit", None) is True
+            if call.name == "allocate_staff":  # each allocation replaces the leaving order (or drops it)
+                order = data.pop(LEAVING_ORDER, None)
+                if order is not None and (not isinstance(order, list) or any(x not in set(Task) for x in order)):
+                    return [], f"{LEAVING_ORDER} must be a list of task names ({', '.join(t.value for t in Task)})"
+                allocated, leaving = True, ((round_, [str(x) for x in order]) if order else None)
             if call.name == PREDICTIONS:  # a list of predictions, made in order
                 items = data.get("predictions")
                 if not isinstance(items, list) or not items or not all(isinstance(x, dict) for x in items):
@@ -258,6 +297,8 @@ class AIPlayer:
                 actions.append((action, commit and n == len(parts), reason))
         if notes is not None:
             self.notes = notes[: self.software.ai_notes_max_chars]
+        if allocated:
+            self._leaving_order = leaving
         return actions, ""
 
     def _fall_back(self, view: dict[str, Any], options: list[Option], why: str) -> BaseModel:

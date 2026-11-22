@@ -18,6 +18,7 @@ from nv_core import actions as a
 from nv_core.engine import Option
 from nv_core.markdown_text import read_markdown
 from nv_core.paths import RULEBOOK
+from nv_core.state import Task
 from nv_core.text import render_text
 
 # Rulebook sections a player does not need (specification 8.1): the backstory (the scenario
@@ -174,6 +175,7 @@ def _inline_refs(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 PREDICTION, PREDICTIONS = "make_prediction", "make_predictions"
+ALLOCATE, LEAVING_ORDER = "allocate_staff", "leaving_order"
 
 
 def tool_definitions(notes_max: int) -> list[dict[str, Any]]:
@@ -191,6 +193,15 @@ def tool_definitions(notes_max: int) -> list[dict[str, Any]]:
             properties = {"predictions": {"type": "array", "minItems": 1, "items": {
                 "type": "object", "properties": properties, "required": required, "additionalProperties": False}}}
             required = ["predictions"]
+        if name == ALLOCATE:  # the Student task check answered in advance (specification 8.1)
+            properties[LEAVING_ORDER] = {
+                "type": "array",
+                "items": {"type": "string", "enum": [t.value for t in Task]},
+                "description": "Optional (normal game): if the Student task check makes some of your students "
+                "leave, they leave from these tasks in this order, one entry per student (a task may appear "
+                "several times). You are then not asked in that phase; you are asked if the list does not "
+                "settle it.",
+            }
         properties["reason"] = {"type": "string", "description": "One short sentence: why this action."}
         properties["notes"] = {
             "type": "string",

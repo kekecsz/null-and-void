@@ -743,3 +743,49 @@ def test_an_empty_prediction_list_is_sent_back(software):
     player.choose(player_view(state, 0), legal_actions(state, 0))
     outputs = [i["output"] for i in provider.calls[1]["items"] if isinstance(i, dict) and i.get("type") == "function_call_output"]
     assert outputs and "non-empty list" in outputs[0]
+
+
+# The Student task check answered with the staff allocation (specification 8.1) ---------------------
+def test_the_allocation_tool_takes_an_optional_leaving_order_of_task_names():
+    tool = next(t for t in tool_definitions(100) if t["name"] == "allocate_staff")
+    order = tool["parameters"]["properties"]["leaving_order"]
+    assert order["type"] == "array" and set(order["items"]["enum"]) == {t.value for t in a.Task}
+    assert "leaving_order" not in tool["parameters"]["required"]
+
+
+def _student_check(venus, monkeypatch, software, order, then=None):
+    """Seat 1 (AI) hires 3 students on three tasks with ``order``; two of them leave."""
+    monkeypatch.setattr("nv_core.rng.Rng.dice", lambda self, stream, count, sides=6: [0, 0] + [6] * (count - 2))
+    world, settings = venus
+    state = new_game(world, settings, 1, ["a", "b"])
+    allocation = {"grants": {"students": 1}, "write_up": {"students": 1}, "experimentation": {"students": 1}}
+    reply = {"name": "allocate_staff", "arguments": {"hire_students": 3, "allocation": allocation, "leaving_order": order,
+                                                     "reason": "plan", "commit": True}}
+    provider = FakeProvider([reply] + ([then] if then else []))
+    player = _player(provider, software)
+    state, _ = apply(state, a.AllocateStaff(seat=0))
+    state, _ = apply(state, a.CommitPhase(seat=0))
+    done = []
+    while 1 in state.waiting and len(done) < 6:
+        action = player.choose(player_view(state, 1), legal_actions(state, 1))
+        done.append(action)
+        state, _ = apply(state, action)
+    return state, provider, player, done
+
+
+def test_leaving_students_follow_the_order_given_with_the_allocation_without_a_model_call(venus, monkeypatch, software):
+    state, provider, player, done = _student_check(venus, monkeypatch, software, ["experimentation", "experimentation", "write_up"])
+    assert [x.type for x in done] == ["allocate_staff", "commit", "choose_leaving_students", "commit"]
+    assert done[2].by_task == {a.Task.EXPERIMENTATION: 1, a.Task.WRITE_UP: 1}  # a task without students left is skipped
+    assert len(provider.calls) == 1
+    assert player.decisions[2]["reason"].startswith("automatic: the leaving order")
+    assert set(state.researcher(1).staff) == {a.Task.GRANTS}
+
+
+def test_an_order_that_names_too_few_students_goes_to_the_model_with_a_note(venus, monkeypatch, software):
+    choice = {"name": "choose_leaving_students", "arguments": {"by_task": {"grants": 1, "write_up": 1}, "reason": "keep", "commit": True}}
+    state, provider, player, done = _student_check(venus, monkeypatch, software, ["write_up"], then=choice)
+    assert [x.type for x in done] == ["allocate_staff", "commit", "choose_leaving_students", "commit"]
+    assert len(provider.calls) == 2
+    assert "leaving_order did not name 2" in provider.calls[1]["items"][-1]["content"]
+    assert set(state.researcher(1).staff) == {a.Task.EXPERIMENTATION}
