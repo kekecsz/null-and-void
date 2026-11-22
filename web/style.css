@@ -172,6 +172,7 @@ body.tiles-compact { --head: 92px; --cell: 122px; --tile: 21px; }
 .ph { border: 1.5px dashed var(--blank); border-radius: 9px; display: flex; align-items: center; justify-content: center; color: var(--muted); }
 .n { font-size: 10.5px; line-height: 1.05; text-align: center; overflow-wrap: anywhere; }
 .t.empty .n { color: var(--muted); font-style: italic; }
+.t.method-slot .ph { border: 2px solid var(--ink); color: var(--ink); font-weight: 700; }
 .tiles-compact .t { flex-direction: row; gap: 4px; height: 25px; border-radius: 4px; background: var(--c, #e8e8e2); color: var(--ct, var(--ink)); padding: 0 5px 0 2px; justify-content: flex-start; }
 .tiles-compact .t .n { text-align: left; font-size: 11.5px; font-weight: 600; }
 .tiles-compact .t.empty { background: transparent; border: 1px dashed var(--blank); padding-left: 6px; }

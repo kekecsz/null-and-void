@@ -318,18 +318,49 @@ function renderIdeas() {
 const ownFirst = (a, b) => (a.author === msg.you ? 0 : 1) - (b.author === msg.you ? 0 : 1);
 const closestToNobel = (a, b) => ownFirst(a, b) || b.nobel - a.nobel || a.id - b.id;
 
-function theoryStrip(p, tail) {
-  const v = view();
-  return strip({ key: `T${p.id}`, head: `T${p.id}`, sub: authorLabel(p), slots: ideaSlots(p), tail: tail || [
+function theoryTail(p) {
+  return [
     chip(p.author), info(`${t("tier {n}", { n: p.tier })}${p.open_access ? ` ${t("(open access)")}` : ""}`),
-    info(t("Nobel {n}/{max}", { n: p.nobel, max: p.nobel_threshold })), info(t("retraction {n}/{max}", { n: p.retraction, max: v.retraction_threshold })),
+    info(t("Nobel {n}/{max}", { n: p.nobel, max: p.nobel_threshold })), info(t("retraction {n}/{max}", { n: p.retraction, max: view().retraction_threshold })),
     p.patents.length ? info(t("patent: {names}", { names: p.patents.map(nameOf).join(", ") })) : null,
     p.fresh ? info(t("fresh out of print")) : null,
-  ] });
+  ];
+}
+function theoryStrip(p, tail) {
+  return strip({ key: `T${p.id}`, head: `T${p.id}`, sub: authorLabel(p), slots: ideaSlots(p), tail: tail || theoryTail(p) });
+}
+// A published paper's supporting records stay with it (Supporting observational and experimental
+// records): its box folds open to show them, labelled by where they came from for the author (O12,
+// E9 + E11) and by their open data id (OD5) for others; a paper whose records only its author sees
+// shows their number.
+function paperRecords(p) {
+  return (p.record_cards || []).map((r, n) => ({ key: `${p.kind === "theory" ? "T" : "M"}${p.id}/${n}`,
+    head: r.label || (r.kind === "observation" ? t("Observation") : t("Experiment")),
+    sub: r.kind === "observation" ? t("observation record") : t("experiment record"), slots: r.cards }));
+}
+function paperBox(p, top) {
+  const hidden = p.records && !p.record_cards ? info(t("{n} supporting record(s), seen by the author only", { n: p.records })) : null;
+  return boxView({ id: `lit${p.id}`, top: { ...top, tail: [...top.tail, hidden] }, records: paperRecords(p) });
+}
+// A method's slip: no world states, only its input parameter, in that parameter's column.
+function methodStrip(m) {
+  const variable = view().variables.find((x) => x.id === m.parameter);
+  return {
+    key: `M${m.id}`, head: `M${m.id}`, sub: authorLabel(m),
+    cellFor: (x) => cell(x.id === m.parameter ? h("div", { class: "t method-slot", title: t("method for {parameter}", { parameter: m.parameter }) },
+      h("div", { class: "ph" }, m.parameter), h("span", { class: "n" }, variable ? variable.name : m.parameter)) : null),
+    tail: [chip(m.author), info(`${t("tier {n}", { n: m.tier })}${m.open_access ? ` ${t("(open access)")}` : ""}`),
+      m.fresh ? info(t("fresh out of print")) : null],
+  };
 }
 function renderLiterature() {
-  const theories = view().published.filter((p) => p.kind === "theory").sort(closestToNobel);
-  fill($("literature"), theories.length ? theories.map((p) => theoryStrip(p)) : h("p", { class: "muted" }, t("No theory published yet.")));
+  const published = view().published;
+  const theories = published.filter((p) => p.kind === "theory").sort(closestToNobel);
+  const methods = published.filter((p) => p.kind === "method").sort((a, b) => ownFirst(a, b) || a.id - b.id);
+  const theoryTop = (p) => ({ key: `T${p.id}`, head: `T${p.id}`, sub: authorLabel(p), slots: ideaSlots(p), tail: theoryTail(p) });
+  fill($("literature"),
+    recordArea([], t("Theories"), theories.length ? theories.map((p) => paperBox(p, theoryTop(p))) : h("p", { class: "muted" }, t("No theory published yet."))),
+    recordArea([], t("Methods"), methods.length ? methods.map((m) => paperBox(m, methodStrip(m))) : h("p", { class: "muted" }, t("No method published yet."))));
 }
 
 // Submission Portal ------------------------------------------------------------------------------------
