@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.22. 1:52
+Last updated: 2026.11.22. 11:28
 
 \[Front page goes here\]
 
@@ -116,7 +116,7 @@ In the simplified game, researchers cannot hire students.
 
 Each research staff member is allocated to one of the following tasks during the task allocation phase:
 
-- Experimentation: running experiments and developing new equipment  
+- Experimentation and equipment: running experiments and developing new equipment  
 - Data collection: collecting data and making predictions about the world  
 - Development: developing theories and methods
 
@@ -128,7 +128,7 @@ At the beginning of the Hiring phase, researchers can also hire as many students
 
 Each research staff member is allocated to one of the following tasks during the task allocation phase:
 
-- Experimentation: running experiments and developing new equipment  
+- Experimentation and equipment: running experiments and developing new equipment  
 - Data collection: collecting data and making predictions about the world  
 - Development (postdoc only): developing theories and methods  
 - Write-up: writing up research papers  
@@ -140,7 +140,7 @@ Each research staff member is allocated to one of the following tasks during the
 
 Both game modes:
 
-The number of staff members that can be allocated to the tasks is unlimited, except for Experimentation, where the allocation is capped at the Researcher’s lab capacity, and Talent development (normal game only), where only a single staff member can be allocated to.
+The number of staff members that can be allocated to the tasks is unlimited, except for Experimentation and equipment, where the allocation is capped at the Researcher’s lab capacity, and Talent development (normal game only), where only a single staff member can be allocated to.
 
 Hiring and task allocation is resolved parallel across researchers in secret.
 
@@ -164,7 +164,7 @@ In general, whenever a task is resolved by a staff member, it is removed from th
 
 # Experimentation and equipment phase
 
-For each staff member allocated to Experimentation, the researcher can choose one of the following actions:
+For each staff member allocated to Experimentation and equipment, the researcher can choose one of the following actions:
 
 - run one experiment in their lab  
 - install or upgrade a sensor on a Probe
@@ -173,11 +173,11 @@ Experimentation and equipment phase is completed sequentially. Each researcher, 
 
 Experimentation and equipment development actions often require citation of Methods.
 
-Lab capacity determines how many staff members can be allocated to Experimentation. 
+Lab capacity determines how many staff members can be allocated to Experimentation and equipment. 
 
 Normal game: 
 
-Although space is limited on the research station, given enough funds and time, Lab capacity can be expanded. A player who has at least one staff member allocated to experimentation may any time during the Experimentation and equipment phase choose to spend money to increase their Lab capacity by 1 (and only 1 per round), up to a maximum of \[starting\_lab\_capacity\]+3. The cost increases with the lab size:
+Although space is limited on the research station, given enough funds and time, Lab capacity can be expanded. A player who has at least one staff member allocated to Experimentation and equipment may any time during this phase choose to spend money to increase their Lab capacity by 1 (and only 1 per round), up to a maximum of \[starting\_lab\_capacity\]+3. The cost increases with the lab size:
 
 lab capacity \[starting\_lab\_capacity\]+1: \[bonus\_lab\_capacity\_1\]
 
@@ -233,9 +233,9 @@ During the Crisis period, sensor installation and upgrades are no longer allowed
 
 # Probe time
 
-Researchers can get privileged access to data from a Probe. This is referred to a researcher having “Probe time” on a given Probe for that round. Probe time on a Probe allows the researcher to record that observation (see predictions) and later to support their scientific theories during the publication process (see journal tiers). Probe time is marked by putting a marker of the Researcher’s color next to the Probe on the World Grid. Only one Researcher’s marker can claim Probe time for each Probe. If the Probe time marker slot is already occupied (for example due to a Researcher installing a Sensor), it cannot be claimed by others.
+Researchers can get privileged access to data from a Probe. This is referred to a researcher having “Probe time” on a given Probe for that round. Probe time on a Probe allows the researcher to record that observation (see predictions) and later to support their scientific theories during the publication process (see journal tiers). Probe time is claimed by putting a marker of the Researcher’s color next to the Probe on the World Grid. Only one Researcher’s marker can claim Probe time for each Probe. If the Probe time marker slot is already occupied (for example due to a Researcher installing a Sensor), it cannot be claimed by others.
 
-Those researchers who do not have Probe time yet on any of the Probes place their marker on one of the Probes in order of current academic credit. The researcher with the highest academic credit chooses first, with turn order as tiebreaker. (Note that leftover probes cannot be occupied by players who got Probe time by installing or upgrading sensors, but a researcher can have Probe time on several Probes at the same time if they install or upgrade sensors on multiple Probes.) 
+Those researchers who do not have Probe time yet on any of the Probes, one-by-one in order of their current academic credit, claim Probe time on the closest unoccupied Probe to the Probe with the Hot topic marker. If the Probe with the Hot topic is unoccupied, that counts as closest. The researcher with the highest academic credit goes first, with turn order as tiebreaker. (Note that leftover probes cannot be occupied by players who got Probe time by installing or upgrading sensors, but a researcher can have Probe time on several Probes at the same time if they install or upgrade sensors on multiple Probes.) 
 
 # Observation and prediction phase
 
@@ -442,13 +442,11 @@ Theories and Methods need to be submitted to one of the journal tiers, and once 
 
 If the journal tier requires observational or experimental support for the theory, recorded observations or experimental findings need to be included in the submission as well. The supporting records must be taken from the Records area. Each supporting record takes one card per slot from the player's pool (each card can be used only once). The supporting records must not have any mismatching elements (input parameters or world outcomes) with the theory they support. (A blank card never mismatches.) 
 
-Submissions can include supporting records that are not necessary for the journal tier (this may be useful to make a submission stack look like it is going for a high tier journal). Note that method submissions can have any supporting record attached. These records are submitted as part of the manuscript submission, and they travel as part of the card stack of the manuscript during the peer review and article processing. Once the theory or method is published, the supporting records are discarded. Submissions to a journal without peer review cannot include supporting records.
+Submissions can include supporting records that are not necessary for the journal tier (this may be useful to make a submission stack look like it is going for a high tier journal). Note that method submissions can have any supporting record attached. These records are submitted as part of the manuscript submission, and they travel as part of the card stack of the manuscript during the peer review and article processing. Records submitted as evidence supporting a theory stay with the theory or method even after publication. For open access publications, this is public information, while for non-open access, only the person who authored the publication is able to access these records. Submissions to a journal without peer review cannot include supporting records.
 
 Note, that at no time do other researchers see the cards involved in experiments of the researcher, this means that the experiment records supporting the manuscript can be mixed across cards involved in several experiments. (Although researchers must put together valid experiments, and only those cards can be used to support a publication which were part of experiments at one point.)
 
 (Designer’s note: the experimentation and data collection process is almost always hidden, allowing for questionable research practices, data falsification, and fabrication. The game is supposed to show that pressures on the field may drive an otherwise honest researcher to utilize questionable means to achieve goals. The game is also supposed to demonstrate that even if the individual researchers might get short term gains from these practices, the field, and society as a whole loses.)
-
-Supporting observation records are taken as is, containing exactly what was visible on the Probe, including blanks and noisy sensor readings.
 
 \[Figure: example\_tier2\_submission\_with\_supporting\_records.png\]
 
