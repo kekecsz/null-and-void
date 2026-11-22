@@ -308,7 +308,9 @@ const TASK_WHEN = {
 };
 const TASK_ORDER = ["experimentation", "data_collection", "development", "write_up", "peer_review", "talent_development", "grants"];
 const taskOrder = (task) => (TASK_ORDER.includes(task) ? TASK_ORDER.indexOf(task) : TASK_ORDER.length);
-const tTask = (task) => t(task.replace("_", " "));      // a staff task's name, translated
+// A staff task's name, translated. The engine's "experimentation" is the rulebook's Experimentation and equipment task.
+const TASK_NAMES = { experimentation: "experimentation and equipment" };
+const tTask = (task) => t(TASK_NAMES[task] || task.replace("_", " "));
 // A staff task's name with, on hover, what the task does (docs/task_actions.yaml, sent in the view).
 function taskName(task) {
   const actions = ((view() && view().reference && view().reference.task_actions) || {})[task];

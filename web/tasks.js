@@ -638,7 +638,7 @@ function allocateForm(tpl) {
     allocationTable,
     publicationsDue(),
     h("div", { class: "small muted" }, (noStudents ? t("Every staff member needs a task") : t("Every staff member needs a task; Development and Talent development take postdocs only; at most one on Talent development"))
-      + (caps.experimentation !== undefined ? `; ${t("at most {n} on Experimentation (your lab capacity).", { n: caps.experimentation })}` : ".")),
+      + (caps.experimentation !== undefined ? `; ${t("at most {n} on Experimentation and equipment (your lab capacity).", { n: caps.experimentation })}` : ".")),
     button,
   ];
 }

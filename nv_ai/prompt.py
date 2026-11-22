@@ -29,7 +29,8 @@ LEFT_OUT_SECTIONS = ("Backstory", "Scenario setup rules")
 # One line per action type: what it does and where the rulebook explains it.
 DESCRIPTIONS: dict[str, str] = {
     "allocate_staff": "Hiring and task allocation phase: hire/fire postdocs, hire students, and give every staff "
-    "member a task. Replaces your earlier choice until you commit.",
+    "member a task (the task experimentation is the rulebook's Experimentation and equipment task). Replaces your "
+    "earlier choice until you commit.",
     "choose_leaving_students": "Student task check phase: choose which tasks the leaving students come from.",
     "run_experiment": "Running experiments: specify input parameter states (free ones plus one per cited method, "
     "which must specify the method's own parameter).",
