@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.22. 20:15
+Last updated: 2026.11.22. 1:52
 
 \[Front page goes here\]
 
@@ -16,7 +16,7 @@ The players can form theories about the rules of the world. They can observe the
 
 The world itself is not idle. There is a crisis brewing below the surface, and the researchers are on the clock to discover the rules of the world to be able to avert or handle that crisis.
 
-The researchers compete with each other and can achieve individual victory as well as allied victory with others. However, if the crisis hits and it is not contained, everyone loses. Since the crisis can only be contained by learning the rules of the world, there is some incentive to cooperate.
+The researchers compete with each other and can achieve individual victory as well as joint or allied victory (optional) in some cases. However, if the crisis hits and it is not contained, everyone loses. Since the crisis can only be contained by learning the rules of the world, there is some incentive to cooperate.
 
 # Victory
 
@@ -628,9 +628,11 @@ The First researcher token moves to the next player counterclockwise.
 
 \[Figure: example\_cleanup\_report.png\]
 
-# Alliance (normal game only)
+# Alliance (Optional, Normal game only)
 
-A formal alliance can be formed at any time before the Crisis card is revealed. A formal alliance between two researchers means that if one of the researchers would win the game due to any game rule, the other player would also win. The formal alliance needs to be publicly announced and accepted by all players in the alliance. Alliances can be broken at any time unilaterally until the Warning shot card is revealed. At the time the Warning shot card is revealed, a “last chance to leave” stage is triggered, where players get a last chance to leave a formal alliance. This is decided secretly (behind the lab shields) in parallel by researchers by setting aside the alliance tokens that the player wants to leave. Once everyone is done, decisions are revealed at the same time for every player. Once this stage is over (everyone who wants leaves or passes), alliances are unbreakable.
+Alliance is an optional rule. The players need to agree before starting the game whether they play with alliance enabled or not (if this was not discussed before the game, by default, it is not allowed). If alliance is enabled, a formal alliance can be formed at any time before the Crisis card is revealed. 
+
+A formal alliance between two researchers means that if one of the researchers would win the game due to any game rule, the other player would also win. The formal alliance needs to be publicly announced and accepted by all players in the alliance. Alliances can be broken at any time unilaterally until the Warning shot card is revealed. At the time the Warning shot card is revealed, a “last chance to leave” stage is triggered, where players get a last chance to leave a formal alliance. This is decided secretly (behind the lab shields) in parallel by researchers by setting aside the alliance tokens that the player wants to leave. Once everyone is done, decisions are revealed at the same time for every player. Once this stage is over (everyone who wants leaves or passes), alliances are unbreakable.
 
 A player can be in a pairwise alliance with any number of other players. Alliance victory is not transitional; it only applies to the direct allies of the primary victor.
 
