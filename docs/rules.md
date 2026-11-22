@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.22. 11:28
+Last updated: 2026.11.22. 12:30
 
 \[Front page goes here\]
 
@@ -233,9 +233,17 @@ During the Crisis period, sensor installation and upgrades are no longer allowed
 
 # Probe time
 
+## Hot topic (normal game only)
+
+Each round, one of the Probes is designated as a Hot topic, marked by the hot topic counter. This resembles the constantly shifting interest and hype in the scientific community.
+
+## Claiming Probe time
+
 Researchers can get privileged access to data from a Probe. This is referred to a researcher having “Probe time” on a given Probe for that round. Probe time on a Probe allows the researcher to record that observation (see predictions) and later to support their scientific theories during the publication process (see journal tiers). Probe time is claimed by putting a marker of the Researcher’s color next to the Probe on the World Grid. Only one Researcher’s marker can claim Probe time for each Probe. If the Probe time marker slot is already occupied (for example due to a Researcher installing a Sensor), it cannot be claimed by others.
 
-Those researchers who do not have Probe time yet on any of the Probes, one-by-one in order of their current academic credit, claim Probe time on the closest unoccupied Probe to the Probe with the Hot topic marker. If the Probe with the Hot topic is unoccupied, that counts as closest. The researcher with the highest academic credit goes first, with turn order as tiebreaker. (Note that leftover probes cannot be occupied by players who got Probe time by installing or upgrading sensors, but a researcher can have Probe time on several Probes at the same time if they install or upgrade sensors on multiple Probes.) 
+Those researchers who do not have Probe time yet on any of the Probes, one-by-one in order of their current academic credit, claim Probe time on the next unoccupied Probe to the Probe with the Hot topic marker. If the Probe with the Hot topic is unoccupied, that counts as next. When reaching the last Probe, next is the first Probe. The researcher with the highest academic credit goes first, with turn order as tiebreaker. (Note that leftover probes cannot be occupied by players who got Probe time by installing or upgrading sensors, but a researcher can have Probe time on several Probes at the same time if they install or upgrade sensors on multiple Probes. It is possible that no Probes are left unoccupied before a Researcher can get Probe time. In this case they cannot claim Probe time that round.)
+
+In the Simplified game, for determining Probe time claims, P1 counts as being the Hot topic Probe.
 
 # Observation and prediction phase
 
@@ -264,10 +272,6 @@ During the Crisis period, Probes show the true states (see probes in crisis).
 ## Revealing world outcomes
 
 World outcomes remain hidden until predictions are finalized (see below).
-
-## Hot topic (normal game only)
-
-Each round, one of the Probes is designated as a Hot topic, marked by the hot topic counter. This resembles the constantly shifting interest and hype in the scientific community.
 
 ## Probes in Crisis
 
