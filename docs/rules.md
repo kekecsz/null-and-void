@@ -211,7 +211,7 @@ The world outcome is determined and revealed to the researcher immediately after
 
 Following the experiments, researchers place the cards from the experiments in the Records area on the player mat. Records can later be used to form experiment record stacks that will support  manuscript submissions. 
 
-New records always enter at the first record position, and push older records one position higher. (Older records in positions beyond the Records capacity of \[records\_capacity\] will be discarded during Clean-up).
+One record slip (an experiment, or a Probe observation) takes one position. New records always enter at the first record position, and push older records one position higher. (Older records in positions beyond the Records capacity of \[records\_capacity\] will be discarded during Clean-up). When a record leaves the Records area (e.g. due to being attached to a submission as supporting evidence), the older ones (if any) move down to close the gap.
 
 \[Figure: records\_are\_with\_example\_experiment\_slips.png\]
 
