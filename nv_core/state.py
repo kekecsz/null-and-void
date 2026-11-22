@@ -94,15 +94,26 @@ class Observation(_Model):
 
 
 class ExperimentCard(_Model):
-    """One card of an experiment in the Records area; ``experiment`` is the experiment's id."""
+    """One card of an experiment in the Records area; ``experiment`` is the experiment it came from,
+    ``slip`` the record slip it is on now (None: its experiment's own slip). Cards move to another
+    slip when a mixed supporting record is taken (Supporting observational and experimental records)."""
 
     experiment: int
     card: Card
+    slip: int | None = None
+
+    @property
+    def on(self) -> int:
+        """The record slip the card is on."""
+        return self.experiment if self.slip is None else self.slip
 
 
 class RecordArea(_Model):
     observations: list[Observation] = []
     cards: list[ExperimentCard] = []
+    # Experiment slips holding cards of several experiments: slip -> its name, the experiments in
+    # order (E21 + E20 is [21, 20]). A slip of one experiment has no entry.
+    names: dict[int, list[int]] = {}
 
 
 def _merged_areas(*areas: Any) -> dict[str, list]:
@@ -281,6 +292,8 @@ class SubmissionUndo(_Model):
     cost: int = 0  # submission fee and APC paid
     index: int = 0  # where the development stack was among the researcher's ideas
     taken: RecordArea = Field(default_factory=RecordArea)  # the supporting records, from the Records area
+    moves: list[tuple[int, str, int | None]] = []  # cards swapped to another slip: (experiment, row, slip before)
+    names: dict[int, list[int]] | None = None  # the Records area's slip names before the submission
     before: Manuscript | None = None  # revisions: the manuscript as it was in the Revise area
 
     @model_validator(mode="before")

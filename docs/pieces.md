@@ -18,7 +18,7 @@ The game uses the pieces below. The computer version uses the same pieces in vir
 
 ## Decks and discard piles
 
-- If the Probe deck runs out, rebuild it from the discarded Probe stacks, matching the cards of each stack again, and shuffle. Input Parameter Deck cards go to that deck's discard pile when they are thrown away: the Noise cards not shown, at the end of the Observation and prediction phase; Probe readings that nobody records; and records discarded from the Records area. Cards held in records or manuscripts stay there. When a theory or method is published, its supporting records stay with it; each of their cards that came from a deck (an Input Parameter Deck or the Probe deck) is swapped for the State Card of the same state from the general supply, and goes to its discard pile, so the decks keep their proportions and Probe stacks can be matched again. When an Input Parameter Deck runs out, shuffle its discard pile to make a new deck.
+- If the Probe deck runs out, rebuild it from the discarded Probe stacks, matching the cards of each stack again, and shuffle. Input Parameter Deck cards go to that deck's discard pile when they are thrown away: the Noise cards not shown, at the end of the Observation and prediction phase; Probe readings that nobody records; and records discarded from the Records area. Cards held in records or manuscripts stay there. Supporting records stay with the paper once it is published (see the rulebook for their deck cards). When an Input Parameter Deck runs out, shuffle its discard pile to make a new deck.
 
 ## Game timing and the Crisis
 

@@ -475,9 +475,16 @@ function recordRow(spec) {  // a record as an action names it
     const found = experiments.find((x) => x.id === e);
     if (found) slots[variable] = found.cards[variable];
   }
-  const ids = [...new Set(spec.cards.map(([e]) => e))];
-  const head = `E${ids.join("+")}`;
-  return { key: `${lab.seat}/${head}`, head, sub: ids.length > 1 ? t("cards of different experiments") : t("experiment"), slots };
+  // Cards are named by their record slip. Taken from several slips, the record is fabricated: said in
+  // red here, while it is being put together. Once taken, it (and the slips it leaves complete) only
+  // carries its mixed name, as E20 + E21 (Supporting observational and experimental records).
+  const counts = {};
+  for (const [e] of spec.cards) counts[e] = (counts[e] || 0) + 1;
+  const ids = Object.keys(counts).map(Number).sort((a, b) => counts[b] - counts[a] || a - b);
+  const one = ids.length === 1 ? experiments.find((x) => x.id === ids[0]) : null;
+  const head = one && one.name ? one.name : ids.map((e) => `E${e}`).join(" + ");
+  return { key: `${lab.seat}/${head}`, head, slots,
+    sub: ids.length > 1 ? h("span", { class: "fabricated" }, t("fabricated from multiple records")) : t("experiment") };
 }
 
 function chargeControl(box, tpl) {  // offered only when the fee and the charge together fit the money that may be spent

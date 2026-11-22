@@ -1,9 +1,11 @@
 """Publication: Submission, Supporting records, Revisions, Peer review and Article processing."""
 
+import itertools
+
 from nv_core.actions import ExperimentRecord, ObservationRecord, ReviewVote, Revise, Submit, WithdrawSubmission
 from nv_core.engine.context import Ctx, IllegalAction
 from nv_core.engine.observation import mismatch
-from nv_core.state import Card, Idea, Manuscript, RecordArea, Researcher, ReviewLog, SubmissionUndo, SupportRecord, Task
+from nv_core.state import Card, ExperimentCard, Idea, Manuscript, RecordArea, Researcher, ReviewLog, SubmissionUndo, SupportRecord, Task
 
 
 # Submission ----------------------------------------------------------------------------------
@@ -57,17 +59,19 @@ def build_records(ctx: Ctx, r: Researcher, specs: list) -> list[SupportRecord]:
         if sorted(var for _, var in spec.cards) != sorted(variables):
             raise IllegalAction(f"record {number}: an experiment record has exactly one card per row")
         cards: list[Card] = []
-        for experiment, var in spec.cards:
-            if (experiment, var) in used_cards:
-                raise IllegalAction(f"record {number}: card E{experiment}:{var} is used twice")
-            used_cards.add((experiment, var))
-            match = next((i.card for i in r.records.cards if i.experiment == experiment and i.card.var == var), None)
+        origins: list[int] = []  # the experiment each card came from
+        for slip, var in spec.cards:
+            if (slip, var) in used_cards:
+                raise IllegalAction(f"record {number}: card E{slip}:{var} is used twice")
+            used_cards.add((slip, var))
+            match = next((i for i in r.records.cards if i.on == slip and i.card.var == var), None)
             if match is None:
-                raise IllegalAction(f"record {number}: you have no card E{experiment}:{var}")
-            cards.append(match)
+                raise IllegalAction(f"record {number}: you have no card E{slip}:{var}")
+            cards.append(match.card)
+            origins.append(match.experiment)
         order = {v: i for i, v in enumerate(variables)}
         cards.sort(key=lambda c: order[c.var])
-        experiments = sorted({e for e, _ in spec.cards})
+        experiments = slip_name({e: origins.count(e) for e in origins})  # named again when taken (submit)
         records.append(
             SupportRecord(
                 kind="experiment",
@@ -90,14 +94,76 @@ def _remove_records(r: Researcher, specs: list) -> RecordArea:
             area.observations = [o for o in area.observations if o.id != spec.observation]
         else:
             cards = set(spec.cards)
-            taken.cards += [c for c in area.cards if (c.experiment, c.card.var) in cards]
-            area.cards = [c for c in area.cards if (c.experiment, c.card.var) not in cards]
+            taken.cards += [c for c in area.cards if (c.on, c.card.var) in cards]
+            area.cards = [c for c in area.cards if (c.on, c.card.var) not in cards]
     return taken
 
 
-def _return_records(ctx: Ctx, r: Researcher, taken: RecordArea) -> None:
+def slip_name(counts: dict[int, int], used: set[tuple[int, ...]] = frozenset()) -> list[int]:
+    """The name of a record holding cards of several experiments (E21 + E20): the experiments by how
+    many of its cards come from each, ties by the experiment run first, then the order whose name is
+    not used yet (Supporting observational and experimental records)."""
+    base = sorted(counts, key=lambda e: (-counts[e], e))
+    if tuple(base) not in used:
+        return base
+    for order in itertools.permutations(base):
+        if all(counts[a] >= counts[b] for a, b in zip(order, order[1:])) and order not in used:
+            return list(order)
+    return base
+
+
+def _used_names(state, r: Researcher) -> set[tuple[int, ...]]:
+    """The names of everything of the researcher's that holds cards of several experiments."""
+    used = {tuple(name) for name in r.records.names.values()}
+    records = [rec for m in state.manuscripts if m.author == r.seat for rec in m.records]
+    records += [rec for p in state.published if p.author == r.seat for rec in p.records]
+    return used | {tuple(rec.experiments) for rec in records if len(rec.experiments) > 1}
+
+
+def _complete_slips(ctx: Ctx, r: Researcher, taken: list[ExperimentCard], record: SupportRecord,
+                    undo: SubmissionUndo) -> None:
+    """A supporting record mixing several experiments: the slips it took cards from stay complete
+    (Supporting observational and experimental records: swapping cards for the same parameter
+    position). The slip that gave the most cards (ties: the experiment run first) hands each of the
+    others its own card of every row they gave; a slip left without cards leaves the Records area.
+    Then the record and every slip holding cards of several experiments get their names."""
+    area = r.records
+    given: dict[int, list[str]] = {}
+    for item in taken:
+        given.setdefault(item.on, []).append(item.card.var)
+    main = min(given, key=lambda slip: (-len(given[slip]), slip))
+    record.experiments = slip_name({e: sum(1 for i in taken if i.experiment == e) for e in {i.experiment for i in taken}},
+                                   _used_names(ctx.state, r))
+    for slip in sorted(given):
+        if slip == main:
+            continue
+        for var in given[slip]:
+            index = next((n for n, i in enumerate(area.cards) if i.on == main and i.card.var == var), None)
+            if index is None:  # the main slip lacks that row (a slip left incomplete in a game saved earlier)
+                continue
+            item = area.cards[index]
+            undo.moves.append((item.experiment, var, item.slip))
+            area.cards[index] = item.model_copy(update={"slip": slip})
+    for slip in {i.on for i in area.cards} & (set(given) | {main}):
+        origins = [i.experiment for i in area.cards if i.on == slip]
+        if len(set(origins)) > 1:
+            used = (_used_names(ctx.state, r) | {tuple(record.experiments)}) - {tuple(area.names.get(slip, []))}
+            area.names[slip] = slip_name({e: origins.count(e) for e in set(origins)}, used)
+        else:
+            area.names.pop(slip, None)
+    for slip in set(area.names) - {i.on for i in area.cards}:
+        area.names.pop(slip)
+
+
+def _return_records(ctx: Ctx, r: Researcher, taken: RecordArea, undo: SubmissionUndo | None = None) -> None:
     order = {v.id: i for i, v in enumerate(ctx.world.variables)}
     area = r.records
+    if undo is not None:  # the cards swapped to other slips go back first, and the slips get their old names
+        for experiment, var, slip in undo.moves:
+            index = next(n for n, i in enumerate(area.cards) if i.experiment == experiment and i.card.var == var)
+            area.cards[index] = area.cards[index].model_copy(update={"slip": slip})
+        if undo.names is not None:
+            area.names = dict(undo.names)
     area.observations = sorted(area.observations + taken.observations, key=lambda o: o.id)
     area.cards = sorted(area.cards + taken.cards, key=lambda c: (c.experiment, order[c.card.var]))
 
@@ -154,8 +220,15 @@ def submit(ctx: Ctx, action: Submit) -> None:
     index = r.ideas.index(idea)
     r.money -= cost
     r.ideas.remove(idea)
+    names = dict(r.records.names)
     taken = _remove_records(r, action.records)
-    state.pending[seat].submissions.append(SubmissionUndo(manuscript=idea.id, cost=cost, index=index, taken=taken))
+    undo = SubmissionUndo(manuscript=idea.id, cost=cost, index=index, taken=taken, names=names)
+    for spec, record in zip(action.records, records):
+        if isinstance(spec, ExperimentRecord):
+            cards = [i for i in taken.cards if (i.on, i.card.var) in set(spec.cards)]
+            if len({i.experiment for i in cards}) > 1:
+                _complete_slips(ctx, r, cards, record, undo)
+    state.pending[seat].submissions.append(undo)
     r.used[Task.WRITE_UP] = r.used.get(Task.WRITE_UP, 0) + 1
     manuscript = Manuscript(
         idea=idea,
@@ -225,7 +298,7 @@ def withdraw_submission(ctx: Ctx, action: WithdrawSubmission) -> None:
         manuscript = state.manuscripts.pop(index)
         r.money += undo.cost
         r.ideas.insert(undo.index, manuscript.idea)
-        _return_records(ctx, r, undo.taken)
+        _return_records(ctx, r, undo.taken, undo)
         what = "submission"
     pending.submissions.remove(undo)
     r.used[Task.WRITE_UP] -= 1
@@ -251,15 +324,15 @@ def supporting_records(ctx: Ctx, r: Researcher, idea: Idea) -> tuple[list[Observ
         for var in variables
     }
     whole = sorted(
-        (e for e in {c.experiment for c in area.cards} if all(any(c.experiment == e for c in fitting[var]) for var in variables)),
+        (e for e in {c.on for c in area.cards} if all(any(c.on == e for c in fitting[var]) for var in variables)),
         # the oldest first: they are the first to leave the Records area at Clean-up
     )
     for e in whole:
         experiments.append(ExperimentRecord(cards=[(e, var) for var in variables]))
         for var in variables:
-            fitting[var] = [c for c in fitting[var] if c.experiment != e]
+            fitting[var] = [c for c in fitting[var] if c.on != e]
     while all(fitting[var] for var in variables):
-        experiments.append(ExperimentRecord(cards=[(fitting[var].pop(0).experiment, var) for var in variables]))
+        experiments.append(ExperimentRecord(cards=[(fitting[var].pop(0).on, var) for var in variables]))
     return observations, experiments
 
 

@@ -29,14 +29,17 @@ def _cards(cards: list[Card]) -> dict[str, str | None]:
 
 
 def _area(area: RecordArea) -> dict[str, Any]:
+    """Experiment slips by their id; one holding cards of several experiments has a name (E21 + E20),
+    which is all that tells it apart (Supporting observational and experimental records)."""
     experiments: dict[int, dict[str, str | None]] = {}
     for item in area.cards:
-        experiments.setdefault(item.experiment, {})[item.card.var] = item.card.state
+        experiments.setdefault(item.on, {})[item.card.var] = item.card.state
+    name = lambda slip: " + ".join(f"E{e}" for e in area.names[slip]) if slip in area.names else None
     return {
         "observations": [
             {"id": o.id, "probe": o.probe, "round": o.round, "cards": _cards(o.cards)} for o in area.observations
         ],
-        "experiments": [{"id": e, "cards": cards} for e, cards in sorted(experiments.items())],
+        "experiments": [{"id": e, "name": name(e), "cards": cards} for e, cards in sorted(experiments.items())],
     }
 
 

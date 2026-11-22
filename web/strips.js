@@ -78,7 +78,8 @@ function strip(o) {
     o.text ? h("div", { class: "row-text" }, o.text) : [inputVars().map(draw), h("div", { class: "arrow" }, "\u2192"), outcomeVars().map(draw)],
     h("div", { class: "tail" }, o.tail));
   if (selectable) {
-    node.stripInfo = { id: key, slots: o.slots, label: o.head, sub: `${o.sub || ""}${o.subStrong || ""}` };
+    const words = (x) => (x && typeof x === "object" ? x.textContent : x || "");  // sub may be an element (e.g. red text)
+    node.stripInfo = { id: key, slots: o.slots, label: o.head, sub: `${words(o.sub)}${words(o.subStrong)}` };
     const select = () => { selected = selected && selected.id === key ? null : node.stripInfo; refreshHighlights(); };
     node.onclick = (e) => { if (!e.target.closest(CONTROLS)) select(); };
     node.onkeydown = (e) => { if (e.key === "Enter" && e.target === node) select(); };
@@ -263,7 +264,7 @@ function labRecords(lab) {
   };
   const all = [
     ...lab.records.observations.map((o) => ({ id: o.id, kind: "observation", head: `O${o.id}`, sub: t("P{probe}, round {round}", { probe: o.probe + 1, round: o.round }), slots: o.cards, position: o.position })),
-    ...lab.records.experiments.map((e) => ({ id: e.id, kind: "experiment", head: `E${e.id}`, sub: `${t("experiment")}${specified(e.id)}`, slots: e.cards, position: e.position })),
+    ...lab.records.experiments.map((e) => ({ id: e.id, kind: "experiment", head: e.name || `E${e.id}`, sub: `${t("experiment")}${e.name ? "" : specified(e.id)}`, slots: e.cards, position: e.position })),
   ];
   const placed = all.filter((r) => r.position !== null).sort((a, b) => a.position - b.position);
   const archived = all.filter((r) => r.position === null).sort((a, b) => b.id - a.id);

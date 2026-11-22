@@ -52,7 +52,8 @@ DESCRIPTIONS: dict[str, str] = {
     "replaces your earlier list ([] for none). Each started group of max_archive_per_staff_member records uses "
     "one development staff member.",
     "submit": "Submission: submit a development stack to a journal tier with supporting records "
-    "(observation records by id, experiment records as [experiment id, row id] cards, one per row).",
+    "(observation records by id, experiment records as [record id, row id] cards, one per row; a record "
+    "named E21 + E20 has the id 21).",
     "revise": "Revisions: move your manuscript from the Revise area to the Accept area.",
     "withdraw_submission": "Submission: take back a submission or revision you made in this step "
     "(refunds the fee, returns the records and the staff member).",

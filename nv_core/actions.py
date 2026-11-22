@@ -118,7 +118,8 @@ class ObservationRecord(BaseModel):
 
 
 class ExperimentRecord(BaseModel):
-    """One card per row, each named by (experiment id, row id), all from one record area."""
+    """One card per row, each named by (record slip id, row id), all from one record area. A slip's id
+    is its experiment's (E9 is 9); a slip mixing several experiments goes by its first one (E21 + E20 is 21)."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
     kind: Literal["experiment"] = "experiment"

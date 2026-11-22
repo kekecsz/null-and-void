@@ -379,7 +379,7 @@ I18N.add("hu", "Magyar", {
   "Choice {n}": "{n}. választás",
   "Drop": "Elvetés",
   "Develop a method for {parameter}": "Módszer fejlesztése ehhez: {parameter}",
-  "cards of different experiments": "különböző kísérletek lapjai",
+  "fabricated from multiple records": "több feljegyzésből összeállítva (hamisított)",
   "published: +{n} AC": "publikálva: +{n} TK",
   "(+{n} with open access)": "(+{n} nyílt hozzáféréssel)",
   "fee {fee}; you can spend {n}": "díj {fee}; elkölthetsz {n}",

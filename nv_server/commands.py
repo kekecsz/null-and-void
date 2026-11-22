@@ -42,7 +42,7 @@ O12 observation, E9 experiment, Q4 prediction; state names with _ for spaces, pr
   Development   theory IP1=fat_blue IP2=smooth -> WO1=fat_blue
                 method IP3      undo 2   (drop your 2nd choice of this phase)
   Publication   submit D5 tier 2 [records O12 E9 E10:IP1,IP2/E11:IP3,IP4,WO1,WO2] [apc]
-                (a mixed experiment record lists experiment:rows parts joined by /)
+                (a mixed experiment record lists record:rows parts joined by /; E21 + E20 is E21)
                 revise D4     withdraw D5   (take back this step's submission or revision)
   Peer review   vote 1 accept      (your 1st peer review card)
   Alliances     ally NAME   accept-ally NAME   leave-ally NAME   (any time the rules allow)

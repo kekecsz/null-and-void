@@ -1,8 +1,8 @@
 """Rulebook "Recording experimental findings", "Recording observations", "Archiving records",
 "Supporting observational and experimental records" and "Clean-up phase": the Records area with
 its record positions and [records_capacity], and the archive. Open question R4 (one slip, one
-position; a slip that lost its input or world outcome cards is discarded) is followed as the
-engine reads it now.
+position); mixing a supporting record swaps cards so the slips stay complete, and a slip left
+incomplete (only in games saved before that) is discarded at Clean-up.
 
 The tiny world (tests/core/engine_helpers.py) has inputs IP1, IP2, IP3 and one outcome WO1.
 """
@@ -76,17 +76,74 @@ def test_a_used_record_closes_the_gap():
     assert positions(state.researcher(0)) == [slip for slip in before if slip != used]
 
 
-def test_a_partly_used_experiment_keeps_its_position():
-    """R4: a slip keeps its position while it has cards; one left without a world outcome card (801
-    here) is discarded at Clean-up (the engine's reading), one that still has both (803) stays."""
+def _slip(r, slip):
+    """The cards on a record slip, by row: (the experiment each came from, its state)."""
+    return {c.card.var: (c.experiment, c.card.state) for c in r.records.cards if c.on == slip}
+
+
+def test_a_mixed_record_leaves_the_slips_it_took_from_complete():
+    """Supporting observational and experimental records: mixing cards of several experiments, the
+    researcher swaps cards of the same parameter position between experiment records. The slip that
+    gave most cards hands its card of every row the other gave; a slip left without cards leaves."""
     state = _submission()
     mixed = a.ExperimentRecord(cards=[(801, "IP1"), (801, "IP2"), (803, "IP3"), (801, "WO1")])
     before = positions(state.researcher(0))
     state = do(state, a.Submit(seat=0, manuscript=901, tier=1, records=[mixed]))
     r = state.researcher(0)
-    assert positions(r) == before
+    assert positions(r) == [slip for slip in before if slip != 801]  # 803 keeps its place
+    assert _slip(r, 803) == {"IP1": (803, "a"), "IP2": (803, "x"), "IP3": (801, "p"), "WO1": (803, "up")}
+    assert r.records.names == {803: [803, 801]}  # most of its cards are 803's
+    record = state.manuscript(901).records[0]
+    assert record.experiments == [801, 803] and record.fabricated
     _cleanup(state)
-    assert 803 in positions(r) and 801 not in positions(r)
+    assert 803 in positions(r)
+
+
+def test_mixed_names_are_ordered_by_cards_then_age_and_never_repeat():
+    """Ties go to the experiment run first, then to a name not used yet: with three cards from each,
+    the record is E801 + E803 and the slip left E803 + E801."""
+    state = _submission()  # tiny world: IP1, IP2, IP3, WO1 (four rows)
+    mixed = a.ExperimentRecord(cards=[(801, "IP1"), (801, "IP2"), (803, "IP3"), (803, "WO1")])
+    state = do(state, a.Submit(seat=0, manuscript=901, tier=1, records=[mixed]))
+    r = state.researcher(0)
+    assert state.manuscript(901).records[0].experiments == [801, 803]
+    assert r.records.names == {803: [803, 801]}
+    assert 801 not in positions(r)
+
+
+def test_three_experiments_leave_two_complete_slips():
+    state = _submission()
+    mixed = a.ExperimentRecord(cards=[(801, "IP1"), (801, "IP2"), (803, "IP3"), (802, "WO1")])
+    state = do(state, a.Submit(seat=0, manuscript=901, tier=1, records=[mixed]))
+    r = state.researcher(0)
+    assert state.manuscript(901).records[0].experiments == [801, 802, 803]
+    assert _slip(r, 803)["IP3"] == (801, "p") and _slip(r, 802)["WO1"] == (801, "up")
+    assert r.records.names == {802: [802, 801], 803: [803, 801]}
+    assert 801 not in positions(r)
+
+
+def test_a_mixed_slip_is_used_by_its_id_and_counts_as_fabricated():
+    state = _submission()
+    mixed = a.ExperimentRecord(cards=[(801, "IP1"), (801, "IP2"), (803, "IP3"), (801, "WO1")])
+    state = do(state, a.Submit(seat=0, manuscript=901, tier=1, records=[mixed]))
+    view = player_view(state, 0)["lab"]["records"]["experiments"]
+    assert next(e for e in view if e["id"] == 803)["name"] == "E803 + E801"
+    state.researcher(0).ideas.append(Idea(id=904, kind="theory", inputs={"IP1": "a", "IP2": "x"}, outcomes={"WO1": "up"}))
+    state = do(state, a.Submit(seat=0, manuscript=904, tier=1, records=[_exp_record(803)]))
+    record = state.manuscript(904).records[0]
+    assert record.fabricated and record.experiments == [803, 801]
+    assert 803 not in positions(state.researcher(0)) and state.researcher(0).records.names == {}
+
+
+def test_withdrawing_a_mixed_submission_puts_every_card_back():
+    state = _submission()
+    r = state.researcher(0)
+    before = (sorted((c.experiment, c.card.var, c.on) for c in r.records.cards), dict(r.records.names), positions(r))
+    mixed = a.ExperimentRecord(cards=[(801, "IP1"), (801, "IP2"), (803, "IP3"), (801, "WO1")])
+    state = do(state, a.Submit(seat=0, manuscript=901, tier=1, records=[mixed]),
+               a.WithdrawSubmission(seat=0, manuscript=901))
+    r = state.researcher(0)
+    assert (sorted((c.experiment, c.card.var, c.on) for c in r.records.cards), dict(r.records.names), positions(r)) == before
 
 
 def test_an_invalid_slip_is_discarded_at_cleanup_and_does_not_count():

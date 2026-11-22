@@ -227,7 +227,8 @@ def _lab_lines(lab: dict[str, Any], name) -> list[str]:
         else:
             beyond = capacity is not None and slip["position"] > capacity
             place = f"Record {slip['position']}{' (beyond the capacity)' if beyond else ''}"
-        lines.append(f"  {place} {letter}{slip['id']}{where}: {_values(slip['cards'])}")
+        label = slip.get("name") or f"{letter}{slip['id']}"  # a slip mixing experiments: E21 + E20 (used as E21)
+        lines.append(f"  {place} {label}{where}: {_values(slip['cards'])}")
     pending = lab["pending"]
     if pending["development"]:
         lines.append("  Chosen this phase: " + "; ".join(f"{n + 1}. {idea_text(i)}" for n, i in enumerate(pending["development"])))
