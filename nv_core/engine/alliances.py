@@ -11,11 +11,17 @@ def _partner(ctx: Ctx, seat: int, partner: int) -> list[int]:
     return sorted((seat, partner))
 
 
+def _check_enabled(ctx: Ctx) -> None:
+    if ctx.settings.simplified:
+        raise IllegalAction("there are no alliances in the simplified game")
+    if not ctx.settings.alliances_enabled:
+        raise IllegalAction("Alliance is disabled in this game")
+
+
 def propose(ctx: Ctx, action: ProposeAlliance) -> None:
     state = ctx.state
     pair = _partner(ctx, action.seat, action.partner)
-    if ctx.settings.simplified:
-        raise IllegalAction("there are no alliances in the simplified game")
+    _check_enabled(ctx)
     if state.crisis_revealed:
         raise IllegalAction("alliances can only be formed before the Crisis card is revealed")
     if pair in state.alliances:
@@ -32,6 +38,7 @@ def propose(ctx: Ctx, action: ProposeAlliance) -> None:
 def accept(ctx: Ctx, action: AcceptAlliance) -> None:
     state = ctx.state
     pair = _partner(ctx, action.seat, action.partner)
+    _check_enabled(ctx)
     if state.crisis_revealed:
         raise IllegalAction("alliances can only be formed before the Crisis card is revealed")
     if [action.partner, action.seat] not in state.proposals:

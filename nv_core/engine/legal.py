@@ -277,7 +277,7 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
         options.append(Option(type="commit", actions=[a.CommitPhase(seat=seat)]))
 
     # Alliance actions, any time the rulebook allows
-    if phase != Phase.LAST_CHANCE and not ctx.settings.simplified:  # Alliance (normal game only)
+    if phase != Phase.LAST_CHANCE and ctx.settings.alliances_enabled:  # Alliance (optional, normal game only)
         alliance: list = []
         for other in range(s.n_players):
             if other == seat:

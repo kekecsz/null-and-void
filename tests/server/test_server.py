@@ -128,6 +128,17 @@ def test_the_host_chooses_the_game_mode(db):
         assert bad.status_code == 422
 
 
+def test_alliance_is_off_unless_the_host_enables_it_in_a_normal_game(db):
+    """Rulebook "Alliance (Optional, Normal game only)"; specification 6.3: a checkbox enables it."""
+    with TestClient(create_app(db=db)) as client:
+        seats = [{"kind": "human"}, {"kind": "selfish"}]
+        plain, _ = _create(client, seats)
+        allied, _ = _create(client, seats, alliances=True)
+        simple, _ = _create(client, seats, alliances=True, mode="simplified")
+        storage = client.app.state.manager.storage
+        assert [storage.get_meta(g)["settings"]["alliances"] for g in (plain, allied, simple)] == [False, True, False]
+
+
 def test_joining_needs_the_password_a_free_seat_and_a_nickname(db):
     with TestClient(create_app(db=db)) as client:
         game, host = _create(client, [{"kind": "human"}, {"kind": "human"}, {"kind": "selfish"}], join_password="secret")

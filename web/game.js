@@ -383,6 +383,10 @@ function renderTracks() {
 
 function renderAlliances() {
   const v = view();
+  if (v.alliances_enabled === false) {  // Alliance is an optional rule (an older game without the flag had it)
+    fill($("alliances"), h("p", { class: "muted" }, t("Alliance is disabled in this game.")));
+    return;
+  }
   const allies = v.alliances.map((pair) => `${nameOf(pair[0])} + ${nameOf(pair[1])}`);
   const option = msg.options.find((o) => o.type === "alliance");
   fill($("alliances"),

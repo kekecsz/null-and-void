@@ -225,7 +225,7 @@ def test_tied_credit_and_theories_is_a_tied_victory():
 
 # Alliance -------------------------------------------------------------------------------------
 def test_alliance_propose_accept_and_leave_until_warning_shot():
-    state = game(n=3)
+    state = game(n=3, alliances=True)  # Alliance: an optional rule
     with pytest.raises(IllegalAction, match="not proposed"):
         apply(state, a.AcceptAlliance(seat=1, partner=0))
     state = do(state, a.ProposeAlliance(seat=0, partner=1), a.AcceptAlliance(seat=1, partner=0))
@@ -241,7 +241,7 @@ def test_alliance_propose_accept_and_leave_until_warning_shot():
 
 
 def test_last_chance_to_leave_is_simultaneous():
-    state = game(n=3)
+    state = game(n=3, alliances=True)  # Alliance: an optional rule
     state = do(state, a.ProposeAlliance(seat=0, partner=1), a.AcceptAlliance(seat=1, partner=0))
     state.period_deck = "w" + "c" * 50
     state = to_phase(state, Phase.LAST_CHANCE, {s: {"experimentation": 1} for s in range(3)})
@@ -254,7 +254,7 @@ def test_last_chance_to_leave_is_simultaneous():
 
 def test_leave_choice_can_be_withdrawn_before_commit():
     """Specification 5.3: choices in a simultaneous step stay editable until CommitPhase."""
-    state = game(n=3)
+    state = game(n=3, alliances=True)  # Alliance: an optional rule
     state = do(state, a.ProposeAlliance(seat=0, partner=1), a.AcceptAlliance(seat=1, partner=0))
     state.period_deck = "w" + "c" * 50
     state = to_phase(state, Phase.LAST_CHANCE, {s: {"experimentation": 1} for s in range(3)})

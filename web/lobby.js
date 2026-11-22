@@ -108,6 +108,7 @@ $("create").onsubmit = async (event) => {
     })),
     seed: number("seed"),
     mode: document.querySelector("input[name=mode]:checked").value,
+    alliances: $("alliances").checked,
     overrides: $("overrides").value,
     join_password: $("join-password").value,
     spectator_password: $("spectator-password").value,

@@ -53,6 +53,7 @@ class CreateGame(BaseModel):
     seats: list[SeatSpec]
     seed: int | None = None
     mode: Literal["normal", "simplified"] = "normal"  # Basic mechanics: the gameplay mode
+    alliances: bool = False  # Alliance: the optional rule, off unless enabled
     overrides: str = ""  # YAML: setting: value
     join_password: str = ""
     spectator_password: str = ""
@@ -128,8 +129,9 @@ def _setup(request: CreateGame):
         settings = scenario.settings
     else:
         raise GameError("choose a world or a scenario")
-    if request.mode != settings.mode:
-        settings = Settings.model_validate({**settings.model_dump(), "mode": request.mode})
+    alliances = request.alliances and request.mode == "normal"  # Alliance (optional, normal game only)
+    if request.mode != settings.mode or alliances != settings.alliances:
+        settings = Settings.model_validate({**settings.model_dump(), "mode": request.mode, "alliances": alliances})
     if request.overrides.strip():
         try:
             overrides = yaml.safe_load(request.overrides)

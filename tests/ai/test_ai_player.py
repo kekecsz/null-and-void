@@ -536,7 +536,7 @@ def test_no_model_call_when_commit_or_pass_is_the_only_legal_action(venus, softw
 
 def test_a_choice_with_commit_true_is_followed_by_a_commit_without_a_model_call(venus, software):
     world, settings = venus
-    state = new_game(world, settings, 1, ["a", "b"])
+    state = new_game(world, settings.model_copy(update={"alliances": True}), 1, ["a", "b"])
     view, options = player_view(state, 0), legal_actions(state, 0)  # Hiring: secret choices, then commit
     provider = FakeProvider([{"name": "propose_alliance", "arguments": {"partner": 1, "reason": "x", "commit": True}}])
     player = _player(provider, software)
@@ -569,7 +569,7 @@ def _propose(partner, commit=False):
 
 def _three_player_hiring(venus):
     world, settings = venus
-    state = new_game(world, settings, 1, ["a", "b", "c"])
+    state = new_game(world, settings.model_copy(update={"alliances": True}), 1, ["a", "b", "c"])  # proposals need alliances
     return state, player_view(state, 0), legal_actions(state, 0)
 
 
@@ -789,3 +789,11 @@ def test_an_order_that_names_too_few_students_goes_to_the_model_with_a_note(venu
     assert len(provider.calls) == 2
     assert "leaving_order did not name 2" in provider.calls[1]["items"][-1]["content"]
     assert set(state.researcher(1).staff) == {a.Task.EXPERIMENTATION}
+
+
+def test_the_model_is_told_when_alliance_is_disabled(venus):
+    _, settings = venus
+    off = instructions("A story.", "neutral", 100, "normal", settings.model_dump())
+    on = instructions("A story.", "neutral", 100, "normal", {**settings.model_dump(), "alliances": True})
+    assert "Alliance is disabled in this game." in off.split("# This game", 1)[1]
+    assert "Alliance is disabled in this game." not in on

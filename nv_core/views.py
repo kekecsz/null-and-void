@@ -218,6 +218,7 @@ def _view(state: GameState, seat: int | None) -> dict[str, Any]:
         "scenario": {"id": state.world.scenario_id, "title": state.world.title, "world": state.world.world_id,
                      "translations": state.world.translations},
         "mode": state.settings.mode,  # Basic mechanics: "normal" or "simplified"
+        "alliances_enabled": state.settings.alliances_enabled,  # Alliance (optional rule): in play in this game
         "round": state.round,
         "period": state.period,
         "phase": state.phase.value,

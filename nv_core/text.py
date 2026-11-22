@@ -50,6 +50,9 @@ def _grid(view: dict[str, Any], probes: list[dict[str, Any]], name) -> list[str]
     return [*_table(rows), "  (* Specialty Input Parameter, L1-L3 sensor level, . blank, ? not revealed)"]
 
 
+ALLIANCE_DISABLED = "Alliance is disabled in this game."  # Alliance (optional rule)
+
+
 def render_text(view: dict[str, Any]) -> str:
     names = view["players"]
     lines: list[str] = []
@@ -62,6 +65,8 @@ def render_text(view: dict[str, Any]) -> str:
     period = "Crisis period" if view["period"] == "crisis" else "Calm period"
     mode = (" | SIMPLIFIED GAME (the rulebook's simplified game rules apply)" if view.get("mode") == "simplified"
             else " | NORMAL GAME (the rulebook's normal game rules apply)")
+    if view.get("mode") != "simplified" and view.get("alliances_enabled") is False:
+        mode += " | " + ALLIANCE_DISABLED
     out(f"{view['scenario']['title']} | world {view['scenario']['world']}{mode}")
     out(f"Round {view['round']} | {period} | {view['phase']}")
     if view["result"]:

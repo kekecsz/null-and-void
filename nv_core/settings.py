@@ -15,7 +15,7 @@ from nv_core.paths import PARAMETER_DEFAULTS
 
 # Settings chosen when a game is created rather than read from the parameter file (specification
 # section 11): they may be given as overrides, and the parameter file does not list them.
-CHOICES = {"mode"}
+CHOICES = {"mode", "alliances"}
 
 
 class SettingsError(ValueError):
@@ -61,6 +61,10 @@ class Settings(_Strict):
     # Basic mechanics: the gameplay mode, chosen when the game is created (not in the parameter
     # file). A game saved before the modes existed is a normal game.
     mode: Literal["normal", "simplified"] = "normal"
+    # Alliance (an optional rule of the normal game), chosen when the game is created: off unless the
+    # players enable it (load_settings). None only in a game saved before the choice existed, which
+    # was played with alliances.
+    alliances: StrictBool | None = None
     # Players
     min_players: StrictInt
     max_players: StrictInt
@@ -154,6 +158,11 @@ class Settings(_Strict):
         if self.simplified:
             return self.nobel_condition if self.nobel_condition_simplified is None else self.nobel_condition_simplified
         return self.nobel_condition - tier
+
+    @property
+    def alliances_enabled(self) -> bool:
+        """Alliance: the optional rule is in play (never in the simplified game)."""
+        return not self.simplified and self.alliances is not False
 
     @property
     def simplified(self) -> bool:
@@ -300,4 +309,5 @@ def load_settings(overrides: dict[str, Any] | None = None, path: Path = PARAMETE
     unknown = sorted(set(overrides) - set(data) - CHOICES)
     if unknown:
         raise SettingsError(f"parameter_overrides: unknown setting(s) {', '.join(unknown)}")
-    return _validate({**data, **overrides}, Path(path), set(overrides))
+    # Alliance is an optional rule, off unless the game enables it.
+    return _validate({"alliances": False, **data, **overrides}, Path(path), set(overrides))

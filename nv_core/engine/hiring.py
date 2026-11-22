@@ -115,7 +115,8 @@ def reveal_period_cards(ctx: Ctx) -> None:
             revealed=len(revealed), left=len(state.period_deck))
     if "w" in revealed:
         state.warning_revealed = True
-        ctx.log("warning_shot", "The Warning shot card is revealed: last chance to leave alliances")
+        ctx.log("warning_shot", "The Warning shot card is revealed" + (": last chance to leave alliances"
+                                                                         if ctx.settings.alliances_enabled else ""))
     if "x" in revealed:
         state.crisis_revealed = True
         state.period = "crisis"
@@ -152,7 +153,8 @@ def finish_last_chance(ctx: Ctx) -> None:
                         seat=seat, partner=partner, action="leave")
         state.pending[seat].leave_alliances = []
     state.last_chance_done = True
-    ctx.log("alliance", "Alliances are now unbreakable", action="final")
+    if ctx.settings.alliances_enabled:
+        ctx.log("alliance", "Alliances are now unbreakable", action="final")
 
 
 # Student task check -------------------------------------------------------------------------

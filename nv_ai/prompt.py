@@ -19,6 +19,7 @@ from nv_core.engine import Option
 from nv_core.markdown_text import read_markdown
 from nv_core.paths import RULEBOOK
 from nv_core.state import Task
+from nv_core.text import ALLIANCE_DISABLED
 from nv_core.text import render_text
 
 # Rulebook sections a player does not need (specification 8.1): the backstory (the scenario
@@ -237,11 +238,14 @@ def instructions(story: str, persona: str, notes_max: int, mode: str = "normal",
         raise ValueError(f"unknown persona {persona!r} (available: {', '.join(PERSONAS)})")
     if mode not in GAME_MODES:
         raise ValueError(f"unknown game mode {mode!r} (available: {', '.join(GAME_MODES)})")
+    game = GAME_MODES[mode]
+    if mode == "normal" and settings is not None and settings.get("alliances") is False:  # Alliance (optional rule)
+        game += " " + ALLIANCE_DISABLED
     return "\n\n".join(
         [
             rules_text(settings),
             INTERFACE.format(notes_max=notes_max),
-            "# This game\n\n" + GAME_MODES[mode],
+            "# This game\n\n" + game,
             "# The scenario\n\n" + story,
             "# Your persona\n\n" + PERSONAS[persona],
         ]
