@@ -196,6 +196,9 @@ body.tiles-compact { --head: 92px; --cell: 122px; --tile: 21px; }
 button.on, button.on:hover { background: var(--accent); color: #fff; }
 button.commit-waiting, button.commit-waiting:hover { background: #e4e4de; border-color: var(--blank); color: var(--muted); }
 .note-bad { font-size: 12px; color: var(--bad); }
+.seen-warning { font-weight: 700; margin: 4px 0; }
+.relevant-records { margin-top: 10px; padding: 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); }
+.relevant-kind { margin: 6px 0 2px; }
 
 .box { border: 1px solid var(--line); border-radius: 5px; background: var(--panel); padding-block: 2px; margin-inline: -1px; }
 .box.is-target { outline: 2px solid var(--accent); outline-offset: -1px; }

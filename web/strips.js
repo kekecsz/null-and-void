@@ -107,6 +107,7 @@ let selected = null;  // {id, slots, label, sub}: the strip the others are compa
 // Runs after every redraw. The selection follows its strip (a strip being formulated changes),
 // and ends when the strip is gone.
 function refreshHighlights() {
+  if (typeof updateRelevantRecords === "function") updateRelevantRecords();  // the prediction task's box (tasks.js)
   const strips = [...document.querySelectorAll("#board .strip.can-select")];
   if (selected) {
     const now = strips.find((n) => n.stripInfo.id === selected.id);
@@ -374,7 +375,8 @@ function manuscriptBox(m, o) {
     id: o.id, onclick: o.onclick,
     top: { key: `D${m.id}`, head: `D${m.id}`, sub: o.sub, subStrong: o.subStrong, slots: content && content.kind === "theory" ? ideaSlots(content) : {},
       text: !content ? t("(face down)") : content.kind === "method" ? t("method for {parameter}", { parameter: content.parameter }) : null, tail: o.tail },
-    records: (m.record_cards || []).map((r, n) => ({ key: `D${m.id}/${n}`, head: r.kind === "observation" ? t("Observation") : t("Experiment"), slots: r.cards })),
+    records: (m.record_cards || []).map((r, n) => ({ key: `D${m.id}/${n}`, head: r.label || (r.kind === "observation" ? t("Observation") : t("Experiment")),
+      sub: r.label ? (r.kind === "observation" ? t("observation record") : t("experiment record")) : null, slots: r.cards })),
   });
 }
 function renderPortal() {

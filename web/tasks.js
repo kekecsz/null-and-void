@@ -18,7 +18,8 @@ const task = {
   autoSelected: null,    // the strip selected for the player at the start of the prediction step
 };
 function clearDrafts() {
-  Object.assign(task, { picks: {}, cited: new Set(), sensor: null, sensorCited: new Set(), boxes: [], target: 0, afterSend: null, closed: new Set() });
+  Object.assign(task, { picks: {}, cited: new Set(), sensor: null, sensorCited: new Set(), boxes: [], target: 0, afterSend: null, closed: new Set(),
+    relevantProbe: null });
 }
 const optionOf = (type) => msg.options.find((o) => o.type === type);
 const none = { actions: [] };
@@ -169,7 +170,40 @@ function predictionRows(option) {
         h("span", { class: "pair" }, choice(false, t("Predict")), choice(true, t("Preregister")))]);
     });
     return h("div", { class: "probe-group" }, head, isOpen ? h("div", { class: "probe-predictions" }, rows) : null);
-  });
+  }).concat([h("div", { id: "relevant-records", class: "relevant-records" }, relevantRecordsContent())]);
+}
+
+// Relevant full records (prediction task): the records the player can see (visibleRecords) that
+// hold a state for every input parameter and world outcome and do not contradict the selected
+// Probe's visible states. Experiment records first, then observations; within each, the player's
+// own records first, then supporting records. The Probe stays chosen until another is selected
+// (in the World Grid or on a Probe's strip in this panel), so records can be clicked here too.
+function relevantProbe() {
+  const m = selected && /^P(\d+)$/.exec(selected.label || "");
+  if (m) task.relevantProbe = { round: view().round, index: Number(m[1]) - 1 };
+  const chosen = task.relevantProbe;
+  return chosen && chosen.round === view().round ? view().probes[chosen.index] : null;
+}
+function relevantRecordsContent() {
+  const probe = relevantProbe();
+  const title = groupLabel(probe ? t("Relevant full records for P{probe}", { probe: probe.index + 1 }) : t("Relevant full records"));
+  if (!probe) return [title, h("p", { class: "muted small" }, t("Select a Probe to populate"))];
+  const shown = { ...(probe.readings || {}), ...(probe.outcomes || {}) };
+  const full = (slots) => view().variables.every((x) => slots[x.id]);
+  const fits = (slots) => view().variables.every((x) => !shown[x.id] || slots[x.id] === shown[x.id]);
+  const records = visibleRecords().filter((r) => full(r.slots) && fits(r.slots));
+  const group = (kind, name) => {
+    const items = records.filter((r) => r.kind === kind).sort((a, b) => (a.own ? 0 : 1) - (b.own ? 0 : 1));
+    return items.length ? [h("div", { class: "muted small relevant-kind" }, name),
+      items.map((r) => strip({ key: `relevant/${r.label}/${r.source}`, head: r.label, sub: r.source, slots: r.slots }))] : [];
+  };
+  const rows = [...group("experiment", t("Experiments")), ...group("observation", t("Observations"))];
+  return [title, rows.length ? rows : h("p", { class: "muted small" }, t("No full record of yours or in the literature fits this Probe."))];
+}
+// Called when the selection changes (strips.js refreshHighlights): the box follows the chosen Probe.
+function updateRelevantRecords() {
+  const box = document.getElementById("relevant-records");
+  if (box) fill(box, relevantRecordsContent());
 }
 
 const predictionStrip = (q, tail) => strip({ key: `Q${q.id}`, head: `Q${q.id}`, sub: t("T{theory} on P{probe}", { theory: q.theory, probe: q.probe + 1 }), slots: { ...q.inputs, ...q.outcomes }, tail });
@@ -216,6 +250,55 @@ function citeButtons(ids, chosen, proposed, usable, toggle) {
   }, methodLabel(id)));
 }
 
+// Records the player can see (specification 7.4): their own, in the Records area or archived, and
+// the supporting records of the manuscripts and papers they may look at (Supporting observational
+// and experimental records). Each: label (E21, O100, OD5), kind, slots, source (where it is).
+function visibleRecords() {
+  const v = view();
+  const own = msg.spectator ? [] : labRecords(v.lab).flatMap(([area, records]) => records.map((r) => ({
+    label: r.head, kind: r.kind, slots: r.slots, own: true, source: area === "archive" ? t("Archive") : t("Records area") })));
+  const attached = (items, letter) => items.flatMap((p) => (p.record_cards || []).map((r) => ({
+    label: r.label || `${letter}${p.id}`, kind: r.kind, slots: r.cards, own: false,
+    source: t("Supporting record for {paper}", { paper: `${letter === "D" ? "D" : p.kind === "theory" ? "T" : "M"}${p.id}` }) })));
+  return [...own, ...attached(v.manuscripts, "D"), ...attached(v.published, "P")];
+}
+const inputKey = (slots) => inputVars().map((x) => slots[x.id] || "").join("|");
+const allInputs = (slots) => inputVars().every((x) => slots && slots[x.id]);
+// Seen world states (experiment specification): every combination of the 4 input states shown on a
+// visible record, or stated by a published theory; each with the labels it was seen on.
+function seenInputStates() {
+  const seen = new Map();
+  const add = (slots, label) => { if (allInputs(slots)) seen.set(inputKey(slots), [...(seen.get(inputKey(slots)) || []), label]); };
+  for (const r of visibleRecords()) add(r.slots, r.label);
+  for (const p of view().published) if (p.kind === "theory") add(p.inputs, `T${p.id}`);
+  return seen;
+}
+// Auto-fill: the open input slots get states that make an unseen combination, the states least
+// often seen first (ties at random), keeping the player's own picks. Only when every input can be
+// specified (free parameters plus methods for different parameters), so the result is sure to be unseen.
+function autoFillChoice(tpl) {
+  const ids = inputVars().map((x) => x.id);
+  const open = ids.filter((id) => !task.picks[id]);
+  const methodParameters = new Set(tpl.methods.map((m) => m.parameter));
+  if (!open.length || methodParameters.size < ids.length - tpl.free_input_parameters) return null;
+  const seen = seenInputStates();
+  const often = {};  // parameter -> state -> how many seen combinations have it
+  for (const key of seen.keys()) key.split("|").forEach((state, i) => { often[ids[i]] = often[ids[i]] || {}; often[ids[i]][state] = (often[ids[i]][state] || 0) + 1; });
+  let best = [], lowest = Infinity;
+  const walk = (i, picks) => {
+    if (i === open.length) {
+      if (seen.has(inputKey(picks))) return;
+      const score = open.reduce((sum, id) => sum + ((often[id] || {})[picks[id]] || 0), 0);
+      if (score < lowest) { lowest = score; best = []; }
+      if (score === lowest) best.push({ ...picks });
+      return;
+    }
+    for (const state of tpl.states[open[i]]) walk(i + 1, { ...picks, [open[i]]: state });
+  };
+  walk(0, { ...task.picks });
+  return best.length ? best[Math.floor(Math.random() * best.length)] : null;
+}
+
 // See Experimentation in the rulebook: free parameters, plus one per cited method. Citations made
 // by hand are kept; auto-cite only adds what is still missing.
 function experimentPlan(tpl) {
@@ -250,10 +333,20 @@ function experimentRows(option) {
     sendThen({ type: "run_experiment", specified, cited_methods: [...plan.cited, ...plan.proposed].map((m) => m.id) },
       () => { task.picks = {}; task.cited = new Set(); });
   };
+  const filled = autoFillChoice(tpl);
+  const autoFill = () => {
+    task.picks = { ...filled };
+    for (const m of experimentPlan(tpl).proposed) task.cited.add(m.id);  // auto-cite, as when running
+    redraw();
+  };
+  const seenOn = allInputs(task.picks) ? seenInputStates().get(inputKey(task.picks)) : null;
   const form = strip({ key: "form:experiment", head: t("New experiment"), sub: t("click a tile to choose"), slots,
     cellFor: (variable) => (variable.kind === "input" ? pickerCell(variable, tpl.states[variable.id], "random") : cell(tile(null, "result"))),
     tail: [
       h("button", { class: "primary", disabled: plan.possible ? null : true, onclick: run }, plan.ready ? t("Run") : t("Auto-cite and run")),
+      h("button", { class: filled ? "primary" : "", disabled: filled ? null : true, onclick: autoFill,
+        title: filled ? t("Fill the open slots with states that make an unseen world state, citing the methods needed")
+          : t("Possible only when every input parameter can be specified and an unseen world state is left") }, t("Auto-fill")),
       h("button", { onclick: () => { task.picks = {}; task.cited = new Set(); redraw(); } }, t("Clear")),
     ] });
   const parameterOf = (id) => tpl.methods.find((m) => m.id === id).parameter;
@@ -268,6 +361,7 @@ function experimentRows(option) {
     h("div", { class: "cite" }, t("{n} chosen, {free} free. Cite methods:", { n: plan.specified.length, free: tpl.free_input_parameters }),
       ids.length ? citeButtons(ids, plan.cited.map((m) => m.id), plan.proposed.map((m) => m.id), (id) => plan.specified.includes(parameterOf(id)), toggle) : h("span", { class: "muted" }, t("none available")),
       plan.possible ? null : h("span", { class: "note-bad" }, t("Not enough methods for these parameters: choose fewer."))),
+    seenOn ? h("div", { class: "note-bad seen-warning" }, t("This world state has already been seen: {list}", { list: seenOn.join(", ") })) : null,
     sensorRow()];
 }
 
