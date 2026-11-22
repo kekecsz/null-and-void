@@ -5,7 +5,7 @@ from nv_core.engine.context import Ctx
 from nv_core.engine.ending import credit_victory, end_game, nobel_at_crisis_end
 from nv_core.engine.publication import describe
 from nv_core.engine.records import clean_up as clean_up_records
-from nv_core.state import Paper, PaperLog, RoundLog, Task
+from nv_core.state import Card, Paper, PaperLog, RoundLog, SupportRecord, Task
 
 
 def talent_development(ctx: Ctx) -> None:
@@ -48,9 +48,6 @@ def cleanup(ctx: Ctx) -> None:
     ready.sort(key=lambda m: (order.index(m.author), m.id))
     for manuscript in ready:
         state.manuscripts.remove(manuscript)
-        for record in manuscript.records:
-            for card in record.cards:
-                ctx.discard_card(card)
         paper = Paper(
             id=state.new_id(),
             idea=manuscript.idea,
@@ -59,6 +56,7 @@ def cleanup(ctx: Ctx) -> None:
             open_access=manuscript.open_access,
             round=state.round,
         )
+        paper.records = [_kept_record(ctx, record, paper.open_access) for record in manuscript.records]
         state.published.append(paper)
         state.paper_log.append(PaperLog(
             paper=paper.id, manuscript=manuscript.id, idea=paper.idea, author=paper.author, tier=paper.tier,
@@ -147,3 +145,17 @@ def cleanup(ctx: Ctx) -> None:
     for seat in order:
         clean_up_records(ctx, state.researcher(seat))
     state.first_player = (state.first_player + 1) % state.n_players
+
+
+def _kept_record(ctx: Ctx, record: SupportRecord, open_access: bool) -> SupportRecord:
+    """Supporting records stay with the published paper. Each card that came from a deck (an Input
+    Parameter Deck or the Probe deck) is swapped for the same State Card from the general supply and
+    goes to its discard pile, so the decks keep their proportions (Pieces: Decks and discard piles).
+    An open access paper's records get a public id (OD<n>) that does not tell where they came from."""
+    cards = []
+    for card in record.cards:
+        if card.origin != "supply":
+            ctx.discard_card(card)
+            card = Card(var=card.var, state=card.state, origin="supply")
+        cards.append(card)
+    return record.model_copy(update={"cards": cards, "open_data": ctx.state.new_id() if open_access else None})

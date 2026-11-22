@@ -53,6 +53,12 @@ def _grid(view: dict[str, Any], probes: list[dict[str, Any]], name) -> list[str]
 ALLIANCE_DISABLED = "Alliance is disabled in this game."  # Alliance (optional rule)
 
 
+def _record_line(record: dict[str, Any]) -> str:
+    """A supporting record: its label (O12, E9 + E11 for its author; OD5 for others), kind and cards."""
+    label = f"{record['label']} " if record.get("label") else ""
+    return f"{label}{record['kind']} record: {_values(record['cards'])}"
+
+
 def render_text(view: dict[str, Any]) -> str:
     names = view["players"]
     lines: list[str] = []
@@ -146,7 +152,10 @@ def render_text(view: dict[str, Any]) -> str:
             flags.append("Fresh out of print")
         counters = f" | Nobel {p['nobel']}/{p['nobel_threshold']} | Retraction {p['retraction']}/{view['retraction_threshold']}" if p["kind"] == "theory" else ""
         patents = f" | patents: {', '.join(name(s) for s in p['patents'])}" if p["patents"] else ""
-        out(f"  {letter}{p['id']} {name(p['author'])} tier {p['tier']}: {idea_text(p)}{counters}{patents}{' | ' + ', '.join(flags) if flags else ''}")
+        hidden = f" | {p['records']} supporting record(s), seen by the author only" if p.get("records") and p.get("record_cards") is None else ""
+        out(f"  {letter}{p['id']} {name(p['author'])} tier {p['tier']}: {idea_text(p)}{counters}{patents}{' | ' + ', '.join(flags) if flags else ''}{hidden}")
+        for record in p.get("record_cards") or []:  # supporting records stay with the paper
+            out(f"      {_record_line(record)}")
 
     # Submission Portal ---------------------------------------------------------------------
     if view["manuscripts"]:
@@ -162,7 +171,7 @@ def render_text(view: dict[str, Any]) -> str:
                 spectator = f" | votes {m['vote_list']} | fabricated records {m['fabricated_records']}" if "vote_list" in m else ""
                 out(f"  {title}: {where}D{m['id']} {name(m['author'])} tier {m['tier']} | {m['records']} record(s){' | open access' if m['open_access'] else ''}{extra}{content}{spectator}")
                 for record in m.get("record_cards") or []:
-                    out(f"      {record['kind']} record: {_values(record['cards'])}")
+                    out(f"      {_record_line(record)}")
 
     # Predictions ---------------------------------------------------------------------------
     if view["predictions"] or view["hidden_predictions"]:

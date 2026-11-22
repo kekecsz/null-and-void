@@ -14,7 +14,7 @@ from nv_core.engine.context import Event
 from nv_core.engine.reports import player_reports
 from nv_core.engine.records import positions, slips
 from nv_core.paths import TASK_ACTIONS
-from nv_core.state import Card, GameState, Idea, Manuscript, Paper, Phase, Prediction, RecordArea, Researcher
+from nv_core.state import Card, GameState, Idea, Manuscript, Paper, Phase, Prediction, RecordArea, Researcher, SupportRecord
 
 # Probes are dealt at the start of the Observation and prediction phase.
 _DEALT = {Phase.PREDICTION, Phase.REVEAL, Phase.SCORING_ORDER, Phase.DEVELOPMENT, Phase.SUBMISSION, Phase.PEER_REVIEW}
@@ -51,7 +51,24 @@ def _records(state: GameState, r: Researcher) -> dict[str, Any]:
     return area
 
 
-def _paper(state: GameState, paper: Paper) -> dict[str, Any]:
+def record_source(record: SupportRecord) -> str:
+    """Where a supporting record came from, as its author knows it: O12, or E9 (E9 + E11 when its
+    cards come from several experiments)."""
+    if record.kind == "observation":
+        return f"O{record.observation}"
+    return " + ".join(f"E{e}" for e in record.experiments) or "E?"
+
+
+def _record_entries(records: list[SupportRecord], sources: bool) -> list[dict[str, Any]]:
+    """Supporting records with their cards. ``sources``: labelled with where they came from (the
+    author, spectators); otherwise an open access paper's records go by their public id (OD<n>),
+    and a manuscript's (for peer reviewers) by none."""
+    return [{"kind": r.kind, "label": record_source(r) if sources else (f"OD{r.open_data}" if r.open_data else None),
+             "cards": _cards(r.cards)} for r in records]
+
+
+def _paper(state: GameState, paper: Paper, seat: int | None = None, spectator: bool = False) -> dict[str, Any]:
+    own = spectator or paper.author == seat
     return {
         **_idea(paper.idea),
         "id": paper.id,
@@ -64,6 +81,9 @@ def _paper(state: GameState, paper: Paper) -> dict[str, Any]:
         "retraction": paper.retraction,
         "fresh": paper.fresh,
         "patents": list(paper.patents),
+        # Supporting records stay with the paper: open access, everyone sees them; else the author only.
+        "records": len(paper.records),
+        "record_cards": _record_entries(paper.records, own) if own or paper.open_access else None,
     }
 
 
@@ -106,7 +126,7 @@ def _lab_capacity_cost(state: GameState, r: Researcher) -> int | None:
     return costs[step] if 0 <= step < len(costs) else None
 
 
-def _manuscript(m: Manuscript, show_content: bool, show_records: bool, spectator: bool) -> dict[str, Any]:
+def _manuscript(m: Manuscript, show_content: bool, show_records: bool, spectator: bool, own: bool = False) -> dict[str, Any]:
     """``show_records``: the author, peer reviewers allocated to it (Peer review: they "peek at
     the manuscript") and spectators see the supporting record cards too."""
     data: dict[str, Any] = {
@@ -120,9 +140,7 @@ def _manuscript(m: Manuscript, show_content: bool, show_records: bool, spectator
         "records": len(m.records),
         "open_access": m.open_access,
         "content": _idea(m.idea) if show_content else None,
-        "record_cards": (
-            [{"kind": r.kind, "cards": _cards(r.cards)} for r in m.records] if show_records else None
-        ),
+        "record_cards": _record_entries(m.records, sources=spectator or own) if show_records else None,
     }
     if spectator:
         data["vote_list"] = list(m.votes)
@@ -249,13 +267,14 @@ def _view(state: GameState, seat: int | None) -> dict[str, Any]:
         "researchers": researchers,
         "alliances": [list(pair) for pair in state.alliances],
         "proposals": [list(pair) for pair in state.proposals],
-        "published": [_paper(state, p) for p in state.published],
+        "published": [_paper(state, p, seat, spectator) for p in state.published],
         "manuscripts": [
             _manuscript(
                 m,
                 show_content=spectator or m.open_access or m.author == seat or m.position in reviewing,
                 show_records=spectator or m.author == seat or m.position in reviewing,
                 spectator=spectator,
+                own=m.author == seat,
             )
             for m in state.manuscripts
         ],

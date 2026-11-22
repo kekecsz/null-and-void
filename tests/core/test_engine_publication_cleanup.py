@@ -3,6 +3,7 @@ processing), Talent development, Clean-up (publication, grants, unused staff, un
 funding, records), Alliance, game end, views and replay."""
 
 import json
+import re
 
 import pytest
 
@@ -14,6 +15,7 @@ from nv_core.engine.ending import credit_victory, end_game
 from nv_core.engine.publication import finish_peer_review, rounds_in_processing
 from nv_core.record import GameRecord
 from nv_core.state import Card, ExperimentCard, Idea, Manuscript, Observation, Phase, StaffCount, SupportRecord, Task
+from nv_core.text import render_text
 from nv_core.views import player_view, spectator_view
 from tests.core.engine_helpers import do, game, publish, set_readings, settings, to_phase, tiny_world
 
@@ -182,6 +184,44 @@ def test_cleanup_publishes_scores_and_moves_the_grant_marker():
     assert r.money == S.grant_track[r.grant_position - 1].funding
 
 
+@pytest.mark.parametrize("open_access", [True, False])
+def test_supporting_records_stay_with_the_published_paper(open_access):
+    """Supporting observational and experimental records: they stay with the paper after publication,
+    seen by everyone when open access, else by the author only. Cards from a deck are swapped for
+    State Cards from the supply, the deck cards going to their discard piles."""
+    state = game()
+    observation = SupportRecord(kind="observation", observation=701, cards=[
+        Card(var="IP1", state="a", origin="input_deck"), Card(var="IP2", state=None, origin="supply"),
+        Card(var="IP3", state=None, origin="supply"), Card(var="WO1", state="up", origin="probe", stack=5)])
+    experiment = SupportRecord(kind="experiment", experiments=[801, 802], fabricated=True, cards=[
+        Card(var="IP1", state="a", origin="supply"), Card(var="IP2", state="x", origin="input_deck"),
+        Card(var="IP3", state="p", origin="supply"), Card(var="WO1", state="up", origin="supply")])
+    m = _manuscript(state, 2, open_access=open_access)
+    m.records, m.tokens = [observation, experiment], 0
+    state.manuscripts.append(m)
+    discards = {v: len(state.input_discards.get(v, [])) for v in ("IP1", "IP2")}
+    probe_discard = len(state.probe_discard)
+    cleanup(Ctx(state))
+    paper = next(p for p in state.published if p.idea.id == 950)
+    assert [[c.state for c in r.cards] for r in paper.records] == [["a", None, None, "up"], ["a", "x", "p", "up"]]
+    assert all(c.origin == "supply" for r in paper.records for c in r.cards)
+    assert len(state.input_discards["IP1"]) == discards["IP1"] + 1 and len(state.input_discards["IP2"]) == discards["IP2"] + 1
+    assert len(state.probe_discard) == probe_discard + 1
+    mine = next(p for p in player_view(state, 0)["published"] if p["id"] == paper.id)
+    theirs = next(p for p in player_view(state, 1)["published"] if p["id"] == paper.id)
+    assert [r["label"] for r in mine["record_cards"]] == ["O701", "E801 + E802"]
+    assert mine["records"] == theirs["records"] == 2
+    if open_access:
+        labels = [r["label"] for r in theirs["record_cards"]]
+        assert all(re.fullmatch(r"OD\d+", x) for x in labels) and len(set(labels)) == 2
+        assert theirs["record_cards"][1]["cards"] == {"IP1": "a", "IP2": "x", "IP3": "p", "WO1": "up"}
+        assert f"{labels[1]} experiment record: IP1=a" in render_text(player_view(state, 1))
+    else:
+        assert theirs["record_cards"] is None
+        assert "2 supporting record(s), seen by the author only" in render_text(player_view(state, 1))
+    assert "E801 + E802 experiment record" in render_text(player_view(state, 0))
+
+
 def test_cleanup_counts_students_as_unused_and_unpaid_postdocs_leave():
     """Clean-up phase: the unused-staff penalty comes before unpaid postdocs and students leave."""
     state = game()
@@ -291,7 +331,7 @@ def test_peer_reviewers_see_the_records_of_their_manuscripts():
     assert player_view(state, 1)["manuscripts"][0]["record_cards"] is None
     state.phase, state.review_cards = Phase.PEER_REVIEW, {1: [position]}
     record_cards = player_view(state, 1)["manuscripts"][0]["record_cards"]
-    assert record_cards == [{"kind": "observation", "cards": {"IP1": "a", "IP2": None, "IP3": None, "WO1": "up"}}]
+    assert record_cards == [{"kind": "observation", "label": None, "cards": {"IP1": "a", "IP2": None, "IP3": None, "WO1": "up"}}]
 
 
 def test_spectator_sees_true_probe_states():

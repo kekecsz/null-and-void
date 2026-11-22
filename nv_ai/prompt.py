@@ -94,7 +94,8 @@ actions you can take now.
 At the table, researchers remember world states through their records, not by heart, and this
 game keeps that fair. The game log never shows world states (Probe readings and outcomes,
 experiment results): you see them in your view, in the World Grid of the current round (and of
-the last round, until new Probes are dealt) and in your Records area for the records you hold.
+the last round, until new Probes are dealt), in your Records area for the records you hold, and
+in the supporting records of published papers you may see (open access papers, and your own).
 Your notes must not hold exact world states either: no Probe readings or outcomes, no experiment
 inputs or results, no lists of which input states gave which outcomes.
 To remember a world state, keep its record in your Records area, and archive the records you want

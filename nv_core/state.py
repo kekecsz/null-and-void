@@ -185,6 +185,9 @@ class Paper(_Model):
     fresh: bool = True  # Fresh out of print marker
     sideways: bool = False  # unused: kept so games saved under the earlier citation rule load
     patents: list[int] = []  # one entry per patent: the seat that owns it
+    # Supporting observational and experimental records: they stay with the paper (seen by everyone
+    # when open access, else by the author only). Empty in games saved before they were kept.
+    records: list["SupportRecord"] = []
 
     @property
     def kind(self) -> str:
@@ -200,6 +203,10 @@ class SupportRecord(_Model):
     observation: int | None = None
     experiments: list[int] = []  # the experiments the cards came from
     fabricated: bool = False  # hidden: the cards do not come from one experiment (specification 5.5)
+    open_data: int | None = None  # published open access: the record's public id (OD<n>), which hides its source
+
+
+Paper.model_rebuild()  # Paper refers to SupportRecord, defined after it
 
 
 class Manuscript(_Model):
