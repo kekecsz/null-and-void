@@ -184,7 +184,7 @@ function render() {
   const v = view();
   if (spectator || !v) actionsShown = null;  // the actions panel shows something else now
   if (!v) {
-    for (const id of ["actions", "grid", "records", "ideas", "literature", "portal", "methods", "predictions", "lab", "tracks", "alliances"]) $(id).innerHTML = "";
+    for (const id of ["actions", "grid", "records", "ideas", "literature", "portal", "predictions", "lab", "tracks", "alliances"]) $(id).innerHTML = "";
     selected = null;
     setTaskHeading();
     refreshHighlights();
@@ -202,7 +202,6 @@ function render() {
   renderLab();
   renderLiterature();
   renderPortal();
-  renderMethods();
   renderPredictions();
   renderTracks();
   renderAlliances();
@@ -309,8 +308,8 @@ const TASK_WHEN = {
 const TASK_ORDER = ["experimentation", "data_collection", "development", "write_up", "peer_review", "talent_development", "grants"];
 const taskOrder = (task) => (TASK_ORDER.includes(task) ? TASK_ORDER.indexOf(task) : TASK_ORDER.length);
 // A staff task's name, translated. The engine's "experimentation" is the rulebook's Experimentation and equipment task.
-const TASK_NAMES = { experimentation: "experimentation and equipment" };
-const tTask = (task) => t(TASK_NAMES[task] || task.replace("_", " "));
+const STAFF_TASK_NAMES = { experimentation: "experimentation and equipment" };
+const tTask = (task) => t(STAFF_TASK_NAMES[task] || task.replace("_", " "));
 // A staff task's name with, on hover, what the task does (docs/task_actions.yaml, sent in the view).
 function taskName(task) {
   const actions = ((view() && view().reference && view().reference.task_actions) || {})[task];
@@ -396,12 +395,6 @@ function renderAlliances() {
     v.proposals.length ? h("p", {}, t("Proposed: ") + v.proposals.map(([a, b]) => `${nameOf(a)} -> ${nameOf(b)}`).join(", ")) : null,
     option ? completeActions(option) : null,
   );
-}
-
-function renderMethods() {
-  const methods = view().published.filter((p) => p.kind === "method").sort((a, b) => ownFirst(a, b) || a.id - b.id);
-  fill($("methods"), methods.length ? methods.map((m) => h("div", {}, `M${m.id} ${m.parameter} `, chip(m.author), " ", t("tier {n}", { n: m.tier }),
-    m.open_access ? ` ${t("open access")}` : "", m.fresh ? ` ${t("fresh")}` : "")) : h("span", { class: "muted" }, t("None published yet.")));
 }
 
 function renderPredictions() {
