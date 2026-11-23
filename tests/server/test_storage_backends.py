@@ -152,13 +152,13 @@ def test_the_phase_bar_names_every_step_of_the_engine_in_order():
     """Specification 7.4, Phase bar: a step the client does not know would leave the bar unmarked."""
     import re
 
-    from nv_core.engine import ORDER
+    from nv_core.engine import STEPS
 
     script = (REPO_ROOT / "web" / "game.js").read_text(encoding="utf-8")
     block = script[script.index("const ROUND_PHASES = [") : script.index("const STEP_ORDER")]
     lists = re.findall(r'\["[^"]+",\s*\[(.*?)\]\]', block, flags=re.S)  # the steps of each phase
     named = [text for steps in lists for text in re.findall(r'"([^"]+)"', steps)]
-    assert named == [phase.value for phase in ORDER]
+    assert named == [phase.value for phase in STEPS]  # ORDER, then the retirement step at the end of Clean-up
 
 
 # Deployment: the API key never leaves this computer in the upload or the container -----------------

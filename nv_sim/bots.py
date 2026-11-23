@@ -114,6 +114,9 @@ class RandomBot:
             leaves = by_type["leave_alliance"].actions
             if rng.random() < w.last_chance_leave:
                 return rng.choice(leaves)
+        if "decide_retirement" in by_type and "retirement" not in self._done:  # Retirement: a coin toss
+            self._done.add("retirement")
+            return rng.choice(by_type["decide_retirement"].actions)
         if "make_prediction" in by_type and "predictions" not in self._done:
             if rng.random() < w.another_prediction:
                 makes = by_type["make_prediction"].actions

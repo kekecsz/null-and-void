@@ -166,6 +166,7 @@ class StrategyBot:
             ("submit", self._submissions),
             ("revise", self._submissions),
             ("review_vote", self._votes),
+            ("decide_retirement", self._retirement),
         ]
         for kind, planner in planners:
             if kind in by_type and planner.__name__ not in self._done:
@@ -540,6 +541,11 @@ class StrategyBot:
                 allocation=allocation,
             )
         ]
+
+    def _retirement(self, view, by_type) -> list[BaseModel]:
+        """Retirement: once the Warning shot is out, the Crisis is near, so retiring is the safe side."""
+        want = bool(view.get("warning_revealed"))
+        return [x for x in by_type["decide_retirement"].actions if x.retire == want]
 
     def _leaving(self, view, by_type) -> list[BaseModel]:
         t = by_type["choose_leaving_students"].template

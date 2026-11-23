@@ -615,6 +615,7 @@ function describe(a) {
     case "accept_alliance": return t("Accept the alliance with {name}", { name: n(a.partner) });
     case "leave_alliance": return t("Leave the alliance with {name}", { name: n(a.partner) });
     case "stay_in_alliance": return t("Stay in the alliance with {name}", { name: n(a.partner) });
+    case "decide_retirement": return a.retire ? t("Retire as an Emeritus Professor") : t("Do not retire");
     default: return JSON.stringify(a);
   }
 }
@@ -775,6 +776,7 @@ const TITLES = {
   develop_method: "Develop a method", revise: "Revise a manuscript", archive_records: "Archive records",
   withdraw_submission: "Undo this step's submission or revision", leave_alliance: "Last chance to leave an alliance",
   stay_in_alliance: "Stay in an alliance",
+  decide_retirement: "Retirement: decide in secret, revealed together",
 };
 const TASK_NAMES = {
   make_prediction: ["make predictions", 'your own theories first, then those closest to the Nobel Prize. Under each Probe, the theories that fit it. Amounts apply if revealed.'],

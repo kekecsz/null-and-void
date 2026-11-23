@@ -2,7 +2,8 @@
 Research grants and Patents, which happen during Clean-up)."""
 
 from nv_core.engine.context import Ctx
-from nv_core.engine.ending import credit_victory, end_game, nobel_at_crisis_end
+from nv_core.engine import retirement
+from nv_core.engine.ending import crisis_end
 from nv_core.engine.publication import describe
 from nv_core.engine.records import clean_up as clean_up_records
 from nv_core.state import Card, Paper, PaperLog, RoundLog, SupportRecord, Task
@@ -78,6 +79,8 @@ def cleanup(ctx: Ctx) -> None:
         state.researcher(paper.author).publications_this_round += 1
         if not s.simplified:  # Publication scoring: normal game only
             ctx.credit(paper.author, s.publication_reward(paper.tier, paper.open_access), f"{letter}{paper.id} published")
+    # Retirement: a new Tier 5 paper may make its author decide (at the end of this phase)
+    retirement.due(ctx, [p for p in state.published if p.round == state.round])  # published just now
     for manuscript in state.manuscripts:
         if manuscript.area == "accept" and manuscript.tokens:
             manuscript.tokens -= 1
@@ -137,8 +140,7 @@ def cleanup(ctx: Ctx) -> None:
 
     if state.period == "crisis":
         if state.rounds_in_crisis >= s.crisis_length:
-            if not nobel_at_crisis_end(ctx):
-                end_game(ctx, "credit", credit_victory(ctx))
+            crisis_end(ctx, "credit")
             return
         state.rounds_in_crisis += 1
 

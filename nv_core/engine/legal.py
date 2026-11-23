@@ -75,6 +75,7 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
                     "task_caps": {
                         Task.TALENT_DEVELOPMENT.value: 1,
                         **({Task.EXPERIMENTATION.value: r.lab_capacity} if r.lab_capacity is not None else {}),
+                        **({Task.DATA_COLLECTION.value: 0} if r.retired else {}),  # Retirement
                     },
                     "every_staff_member_needs_a_task": True,
                 },
@@ -87,6 +88,9 @@ def legal_actions(state: GameState, seat: int) -> list[Option]:
                 partner = pair[0] if pair[1] == seat else pair[1]
                 cls = a.StayInAlliance if partner in chosen else a.LeaveAlliance
                 options.append(Option(type=cls.model_fields["type"].default, actions=[cls(seat=seat, partner=partner)]))
+    elif phase == Phase.RETIREMENT and waiting:  # Retirement: retire, or not
+        options.append(Option(type="decide_retirement",
+                              actions=[a.DecideRetirement(seat=seat, retire=True), a.DecideRetirement(seat=seat, retire=False)]))
     elif phase == Phase.STUDENT_CHECK and waiting:
         options.append(
             Option(

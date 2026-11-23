@@ -1,5 +1,6 @@
 """Ending the game (Victory, Nobel Prize, Crisis, Academic credit rules, Alliance)."""
 
+from nv_core.engine import retirement
 from nv_core.engine.context import Ctx
 from nv_core.state import GameResult, Phase
 
@@ -22,11 +23,13 @@ def end_game(ctx: Ctx, ending: str, primary: list[int], theory: int | None = Non
     ctx.log("game_over", f"Game over ({ending.replace('_', ' ')}). Winners: {names}", ending=ending)
 
 
-def credit_victory(ctx: Ctx) -> list[int]:
-    """The researchers who win an academic credit victory (Victory; Academic credit rules)."""
+def credit_victory(ctx: Ctx, seats: list[int] | None = None) -> list[int]:
+    """The researchers who win an academic credit victory (Victory; Academic credit rules), among
+    ``seats`` (the survivors of the Crisis; default everyone)."""
     state = ctx.state
-    best = max(r.credit for r in state.researchers)
-    leaders = [r.seat for r in state.researchers if r.credit == best]
+    field = [r for r in state.researchers if seats is None or r.seat in seats]
+    best = max(r.credit for r in field)
+    leaders = [r.seat for r in field if r.credit == best]
 
     def theories(seat: int) -> int:
         return sum(1 for p in state.published if p.author == seat and p.kind == "theory")
@@ -35,12 +38,13 @@ def credit_victory(ctx: Ctx) -> list[int]:
     return [seat for seat in leaders if theories(seat) == most]
 
 
-def nobel_at_crisis_end(ctx: Ctx) -> bool:
+def nobel_at_crisis_end(ctx: Ctx, seats: list[int] | None = None) -> bool:
     """Nobel Prize: checked once more when the Crisis ends. Of the theories at or above their
-    threshold, the one furthest above it wins; on a tie the authors share the prize."""
+    threshold, the one furthest above it wins; on a tie the authors share the prize. Only the
+    theories of ``seats`` count (the survivors of a Crisis Crash; default everyone)."""
     state, s = ctx.state, ctx.settings
     above = {p.id: p.nobel - s.nobel_threshold(p.tier) for p in state.published
-             if p.kind == "theory" and p.nobel >= s.nobel_threshold(p.tier)}
+             if p.kind == "theory" and p.nobel >= s.nobel_threshold(p.tier) and (seats is None or p.author in seats)}
     if not above:
         return False
     best = max(above.values())
@@ -52,10 +56,26 @@ def nobel_at_crisis_end(ctx: Ctx) -> bool:
     return True
 
 
+def crisis_end(ctx: Ctx, ending: str, seats: list[int] | None = None) -> None:
+    """When the Crisis ends (after its last round, or in a Crisis Crash): the Nobel Prize check, then
+    the retirement bonus if nobody won it, then the academic credit victory, all among ``seats``."""
+    if nobel_at_crisis_end(ctx, seats):
+        return
+    retirement.bonus(ctx)
+    end_game(ctx, ending, credit_victory(ctx, seats))
+
+
 def check_crisis_crash(ctx: Ctx) -> bool:
+    """Crisis Crash: the non-retired researchers lose, and their alliances break; retired researchers
+    survive, and the Crisis ends for them (Crisis; Retirement)."""
     state = ctx.state
     if state.period == "crisis" and state.unsuccessful_predictions >= ctx.settings.crisis_condition:
         ctx.log("crisis_crash", f"{state.unsuccessful_predictions} unsuccessful predictions: Crisis Crash")
-        end_game(ctx, "crisis_crash", [])
+        survivors = retirement.survivors(state)
+        if not survivors:
+            end_game(ctx, "crisis_crash", [])
+            return True
+        state.alliances = [pair for pair in state.alliances if all(seat in survivors for seat in pair)]
+        crisis_end(ctx, "crisis_crash", survivors)
         return True
     return False

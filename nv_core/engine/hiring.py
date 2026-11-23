@@ -54,6 +54,8 @@ def check_allocation(ctx: Ctx, r: Researcher, a: AllocateStaff) -> None:
     for task in POSTDOC_ONLY:
         if a.allocation.get(task, StaffCount()).students:
             raise IllegalAction(f"{task.value} is a postdoc-only task")
+    if r.retired and a.allocation.get(Task.DATA_COLLECTION, StaffCount()).total:
+        raise IllegalAction("a retired researcher cannot allocate staff to data collection (Retirement)")
     if a.allocation.get(Task.TALENT_DEVELOPMENT, StaffCount()).total > 1:
         raise IllegalAction("only one staff member can be allocated to talent development")
     if r.lab_capacity is not None and a.allocation.get(Task.EXPERIMENTATION, StaffCount()).total > r.lab_capacity:

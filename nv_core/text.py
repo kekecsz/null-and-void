@@ -116,6 +116,7 @@ def render_text(view: dict[str, Any]) -> str:
     rows = [["", "credit", "money", "grant", "talent", "lab", "postdocs", "students", "stacks", "records", "patents"]]
     for r in view["researchers"]:
         mark = " (first)" if r["seat"] == view["first_player"] else ""
+        mark += " (retired)" if r.get("retired") else ""
         done = " (ready)" if r["committed"] else ""
         rows.append(
             [

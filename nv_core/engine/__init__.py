@@ -13,7 +13,7 @@ from collections.abc import Callable, Iterable
 from pydantic import BaseModel
 
 from nv_core import actions as a
-from nv_core.engine import alliances, cleanup, development, experimentation, hiring, observation, publication, reports
+from nv_core.engine import alliances, cleanup, development, experimentation, hiring, observation, publication, reports, retirement
 from nv_core.engine.context import Ctx, Event, IllegalAction
 from nv_core.engine.setup import create_game
 from nv_core.settings import Settings
@@ -43,7 +43,8 @@ def _end_of_round(ctx: Ctx) -> None:
     ctx.phase_name = "Clean-up phase"
     cleanup.cleanup(ctx)
     ctx.phase_name = ""
-    reports.close_report(ctx.state, reports.CLEANUP)
+    if not ctx.state.retirement_due or ctx.state.result:  # else the report closes after the retirement decisions
+        reports.close_report(ctx.state, reports.CLEANUP)
 
 
 # The steps of a round, in rulebook order. ``start`` sets who must decide (or nobody);
@@ -66,6 +67,9 @@ STEPS: dict[Phase, _Step] = {
     ),
 }
 ORDER = list(STEPS)
+# Retirement decisions come at the end of the Clean-up phase (after the round's last step), and only
+# when someone's new Tier 5 publication makes them due; so this step is not in ORDER.
+STEPS[Phase.RETIREMENT] = _Step(retirement.start, retirement.finish, retirement.check_commit)
 
 # Steps where every waiting researcher decides in secret and commits.
 SIMULTANEOUS = {
@@ -77,6 +81,7 @@ SIMULTANEOUS = {
     Phase.DEVELOPMENT,
     Phase.SUBMISSION,
     Phase.PEER_REVIEW,
+    Phase.RETIREMENT,
 }
 
 
@@ -89,11 +94,20 @@ def _advance(ctx: Ctx) -> None:
             reports.close_report(state, reports.ENDS[state.phase])
         if state.result:
             return
-        index = ORDER.index(state.phase) + 1
+        if state.phase == Phase.RETIREMENT:
+            reports.close_report(state, reports.CLEANUP)
+            index = len(ORDER)
+        else:
+            index = ORDER.index(state.phase) + 1
+            if index == len(ORDER):
+                _end_of_round(ctx)
+                if state.result:
+                    return
+                if state.retirement_due:  # Retirement: decided before the next round starts
+                    state.phase = Phase.RETIREMENT
+                    STEPS[state.phase].start(ctx)
+                    continue
         if index == len(ORDER):
-            _end_of_round(ctx)
-            if state.result:
-                return
             state.round += 1
             index = 0
             ctx.log("round", f"Round {state.round} begins")
@@ -145,6 +159,7 @@ HANDLERS: dict[type, tuple[Phase | None, Callable]] = {
     a.AcceptAlliance: (None, alliances.accept),
     a.LeaveAlliance: (None, alliances.leave),
     a.StayInAlliance: (Phase.LAST_CHANCE, alliances.stay),
+    a.DecideRetirement: (Phase.RETIREMENT, retirement.decide),
     a.CommitPhase: (None, _commit),
 }
 

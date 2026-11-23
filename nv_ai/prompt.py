@@ -62,6 +62,7 @@ DESCRIPTIONS: dict[str, str] = {
     "accept_alliance": "Alliance: accept a proposed alliance.",
     "leave_alliance": "Alliance: leave a formal alliance (in the last chance stage: choose to leave).",
     "stay_in_alliance": "Alliance: withdraw a leave choice in the last chance to leave stage.",
+    "decide_retirement": "Retirement: decide in secret whether to retire as an Emeritus Professor (retire=true) or not.",
     "commit": "Commit: your choices for this simultaneous step are final.",
 }
 

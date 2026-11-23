@@ -44,6 +44,7 @@ class Phase(StrEnum):
     DEVELOPMENT = "Development phase"
     SUBMISSION = "Publication: submission and revisions"
     PEER_REVIEW = "Publication: peer review"
+    RETIREMENT = "Clean-up phase: retirement"  # Retirement (normal game only), after the round's Clean-up
     GAME_OVER = "Game over"
 
 
@@ -155,6 +156,7 @@ class Researcher(_Model):
     fired: int = 0
     leaving_students: int = 0  # Student task check: how many must leave
     unpaid: int = 0
+    retired: bool = False  # Retirement: an Emeritus Professor for the rest of the game
     publications_this_round: int = 0
     # Experimentation and equipment phase: how many staff members may be allocated to
     # Experimentation (None: a game saved before lab capacity existed), and whether it was
@@ -354,6 +356,7 @@ class Pending(_Model):
     votes: dict[int, Literal["accept", "revise"]] = {}
     scoring_order: list[int] | None = None  # unused: kept so games saved under the earlier scoring order load
     submissions: list[SubmissionUndo] = []  # Publication: submission and revisions
+    retire: bool | None = None  # Retirement: the decision behind the lab shield
 
 
 class GameState(_Model):
@@ -372,6 +375,7 @@ class GameState(_Model):
     warning_revealed: bool = False
     last_chance_done: bool = False  # after this, alliances are unbreakable
     crisis_revealed: bool = False
+    retirement_due: list[int] = []  # Retirement: who decides at the end of this Clean-up phase
     rounds_in_crisis: int = 0
     unsuccessful_predictions: int = 0
     first_player: int = 0

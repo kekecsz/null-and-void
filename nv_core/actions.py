@@ -179,6 +179,12 @@ class StayInAlliance(_Action):
 
 
 # Simultaneous steps
+# Retirement (normal game only)
+class DecideRetirement(_Action):
+    type: Literal["decide_retirement"] = "decide_retirement"
+    retire: bool
+
+
 class CommitPhase(_Action):
     type: Literal["commit"] = "commit"
 
@@ -207,6 +213,7 @@ Action = Annotated[
         AcceptAlliance,
         LeaveAlliance,
         StayInAlliance,
+        DecideRetirement,
         CommitPhase,
     ],
     Field(discriminator="type"),

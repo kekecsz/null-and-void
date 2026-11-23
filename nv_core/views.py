@@ -207,6 +207,7 @@ def _view(state: GameState, seat: int | None) -> dict[str, Any]:
                 "money": r.money,
                 "grant_position": r.grant_position,
                 "talent_position": r.talent_position,
+                "retired": r.retired,  # Retirement: an Emeritus Professor
                 "lab_capacity": r.lab_capacity,
                 "lab_capacity_cost": _lab_capacity_cost(state, r),
                 "postdocs": r.postdocs,

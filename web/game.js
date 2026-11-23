@@ -262,7 +262,8 @@ function renderBanner() {
 }
 
 // The phases of a round, as the phase bar shows them, each with the engine's steps (nv_core.state.Phase)
-// that belong to it. The last two have no step: they run by themselves at the end of the round.
+// that belong to it. The last two run by themselves at the end of the round; Clean-up stops only for
+// retirement decisions (Retirement).
 const ROUND_PHASES = [
   ["Hiring", ["Hiring and task allocation phase", "Alliance: last chance to leave", "Student task check phase"]],
   ["Experimentation", ["Experimentation and equipment phase"]],
@@ -271,7 +272,7 @@ const ROUND_PHASES = [
   ["Development", ["Development phase"]],
   ["Publication", ["Publication: submission and revisions", "Publication: peer review"]],
   ["Talent development", []],
-  ["Clean-up", []],
+  ["Clean-up", ["Clean-up phase: retirement"]],
 ];
 // The engine's steps in round order, and the steps where each staff task works. Talent development
 // and Grants work after the last step (Talent development and Clean-up phases), so they are never
@@ -367,7 +368,8 @@ function labInto(box, v, me, lab) {
 
 function renderTracks() {
   const v = view();
-  const who = (r) => h("span", {}, chip(r.seat), r.committed ? h("span", { class: "muted" }, ` ${t("ready")}`) : null);
+  const who = (r) => h("span", {}, chip(r.seat), r.retired ? h("span", { class: "muted", title: t("Retired as an Emeritus Professor: no Data collection; does not lose in a Crisis Crash") }, ` ${t("emeritus")}`) : null,
+    r.committed ? h("span", { class: "muted" }, ` ${t("ready")}`) : null);
   if (simplified()) {
     fill($("tracks"), table(["", t("Credit"), t("Money"), t("Lab"), t("Postdocs")],
       v.researchers.map((r) => [who(r), r.credit, r.money, r.lab_capacity ?? "\u2013", r.postdocs])));
