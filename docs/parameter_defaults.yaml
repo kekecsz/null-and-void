@@ -68,6 +68,7 @@ nobel_condition: 9                         # consecutive successful predictions,
 nobel_condition_simplified: 6              # consecutive successful predictions in the simplified game
 retraction_threshold: 3                    # retraction counter value
 retraction_ac_penalty: -5                  # academic credit
+retirement_bonus: 50                       # academic credit
 
 # Crisis
 crisis_condition: 6                        # unsuccessful predictions

@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.22. 12:30
+Last updated: 2026.11.23. 21:30
 
 \[Front page goes here\]
 
@@ -22,11 +22,9 @@ The researchers compete with each other and can achieve individual victory as we
 
 The ultimate victory condition is to win the Nobel Prize. The Nobel Prize is awarded for a theory that was used to successfully predict the world state (\[nobel\_condition\] \- journal tier) times consecutively. Winning the Nobel Prize is hard, and in many games, no Nobel Prize will be awarded.
 
-A Crisis Crash is the ultimate lose condition. If a crisis hits and there are \[crisis\_condition\] total unsuccessful predictions (false predictions or missed predictions), everyone loses regardless of their academic credit.
+A Crisis Crash is the ultimate lose condition. If a crisis hits and there are \[crisis\_condition\] total unsuccessful predictions (false predictions or missed predictions), everyone loses regardless of their academic credit. Early retirement is possible to escape losing to the Crisis.
 
-The researchers score academic credit for academic activities such as publishing theories in prestigious journals, using theories to make successful predictions, and other researchers citing their theories or methods when making predictions. They can also lose credit if their theory is retracted. Successful predictions during the crisis score extra points for the researcher making the prediction and the publisher of the theory being cited. At game end, if it ended without a Nobel Prize or a Crisis Crash, the researcher with the highest academic credit wins.
-
-Researchers can form an alliance, where if either of them wins the game, the other player would also win.
+The researchers score academic credit for academic activities such as publishing theories in prestigious journals, using theories to make successful predictions, and other researchers citing their theories or methods when making predictions. They can also lose credit if their theory is retracted. Successful predictions during the crisis score extra points for the researcher making the prediction and the publisher of the theory being cited. At game end, if it ended without a Nobel Prize and there are researchers who survived the Crisis, the researcher with the highest academic credit wins among the survivors.
 
 # Backstory
 
@@ -568,6 +566,18 @@ Once the Retraction counter reaches \[retraction\_threshold\], the theory become
 
 \[Figure: literature\_theory\_close\_to\_nobel\_another\_close\_to\_retraction.png\]
 
+# Retirement (normal game only)
+
+If a Researcher has gained enough fame and recognition they can choose to retire early as an Emeritus Professor. 
+
+Once a researcher reaches their second Tier 5 Publications in the literature (only active, non-retracted publications count, that are in the Published Papers area), they need to decide whether they want to Retire. If they do, they are not allowed to allocate staff to Data collection during the rest of the game.
+
+Retired researchers do not lose due to the Crisis Crash. Retirement is only possible before the Crisis hits. 
+
+If a researcher declines going into retirement, they get the option to do so again after every subsequent Tier 5 Publication given that the Crisis did not hit yet and that they have at least two Tier 5 publications in the literature.
+
+Retired researchers who still have at least two Tier 5 publications in the Published Papers area get \[retirement\_bonus\] academic credits right after the Crisis ends if the Nobel Prize was not awarded to any researcher.
+
 # Crisis
 
 \[Illustration: Venus mountain.jpg\]
@@ -580,7 +590,7 @@ The Crisis period lasts for a total of \[crisis\_length\] rounds. If no other ga
 
 During the Crisis period, making successful predictions become a matter of life and death. The researchers must avert the crisis for long enough for a long term solution to be worked out. The number of unsuccessful predictions is tracked on the Crisis track. Each failed prediction counts as an unsuccessful prediction. Additionally, one unsuccessful prediction is scored for each Probe where no one made a prediction.
 
-When the total number of unsuccessful predictions during the Crisis period reaches \[crisis\_condition\], it is called a Crisis Crash. A Crisis Crash ends the game immediately and all researchers lose collectively.
+When the total number of unsuccessful predictions during the Crisis period reaches \[crisis\_condition\], it is called a Crisis Crash. If there is a Crisis Crash, all non-retired researchers lose collectively. A Crisis Crash also breaks all alliances of players who lost due to the Crisis Crash, so they are unable to win via allied victory.
 
 # Talent development phase (normal game only)
 
@@ -602,7 +612,7 @@ Return the Researcher's markers from the Probe time slots.
 
 Any Fresh out of print markers are removed.
 
-Those manuscripts in the Accept area of the Submission Portal that have 0 Rounds in processing tokens during the publication step of the Clean-up phase are revealed (if not open already), published, and when in the normal game, scored. When published, theories and methods are moved to the Published Papers area and they each get a Fresh out of print marker (meaning that they can only be used by the researcher who published them until the marker is present).
+Those manuscripts in the Accept area of the Submission Portal that have 0 Rounds in processing tokens during the publication step of the Clean-up phase are revealed (if not open already), published, and when in the normal game, scored. When published, theories and methods are moved to the Published Papers area and they each get a Fresh out of print marker (meaning that they can only be used by the researcher who published them until the marker is present). Retirement decisions have to be made at this point if applicable. If several researchers retire in the same Clean-up, they decide by placing the retirement marker behind their lab shield on either the “retire” or “don’t retire” side up. Discussion is allowed during the decision, but it does not have to be true. They reveal their decisions at the same time.
 
 Normal game: 1 Rounds in processing token is removed from each manuscript in the accept area of the Submission Portal.
 
@@ -634,7 +644,7 @@ The First researcher token moves to the next player counterclockwise.
 
 Alliance is an optional rule. The players need to agree before starting the game whether they play with alliance enabled or not (if this was not discussed before the game, by default, it is not allowed). If alliance is enabled, a formal alliance can be formed at any time before the Crisis card is revealed. 
 
-A formal alliance between two researchers means that if one of the researchers would win the game due to any game rule, the other player would also win. The formal alliance needs to be publicly announced and accepted by all players in the alliance. Alliances can be broken at any time unilaterally until the Warning shot card is revealed. At the time the Warning shot card is revealed, a “last chance to leave” stage is triggered, where players get a last chance to leave a formal alliance. This is decided secretly (behind the lab shields) in parallel by researchers by setting aside the alliance tokens that the player wants to leave. Once everyone is done, decisions are revealed at the same time for every player. Once this stage is over (everyone who wants leaves or passes), alliances are unbreakable.
+A formal alliance between two researchers means that if one of the researchers would win the game due to any game rule, the other player would also win. The formal alliance needs to be publicly announced and accepted by all players in the alliance. Alliances can be broken at any time unilaterally until the Warning shot card is revealed. At the time the Warning shot card is revealed, a “last chance to leave” stage is triggered, where players get a last chance to leave a formal alliance. This is decided secretly (behind the lab shields) in parallel by researchers by setting aside the alliance tokens that the player wants to leave. Once everyone is done, decisions are revealed at the same time for every player. Once this stage is over (everyone who wants leaves or passes), alliances are unbreakable voluntarily.
 
 A player can be in a pairwise alliance with any number of other players. Alliance victory is not transitional; it only applies to the direct allies of the primary victor.
 

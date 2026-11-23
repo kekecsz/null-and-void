@@ -131,6 +131,8 @@ class Settings(_Strict):
     nobel_condition_simplified: StrictInt | None = None
     retraction_threshold: StrictInt
     retraction_ac_penalty: StrictInt
+    # Retirement (normal game only). None only in a game saved before the rule existed: no retirement.
+    retirement_bonus: StrictInt | None = None
     # Crisis
     crisis_condition: StrictInt
     crisis_length: StrictInt
