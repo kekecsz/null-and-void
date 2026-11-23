@@ -112,7 +112,7 @@ def _crisis(state, retired, unsuccessful=None):
 
 def test_a_crisis_crash_spares_retired_researchers_who_then_win_on_credit_with_their_bonus():
     """Crisis: non-retired researchers lose and their alliances break; the Crisis ends for the survivors:
-    Nobel check, then the bonus (two Tier 5 papers still published), then credit among them."""
+    no Nobel Prize, the bonus (two Tier 5 papers still published), then credit among them."""
     state = _crisis(game(n=3, alliances=True), retired=[1, 2], unsuccessful=S.crisis_condition)
     state.alliances = [[0, 1]]  # 0 loses: the alliance breaks, so 0 does not win through 1
     for seat, credit in ((0, 99), (1, 10), (2, 20)):
@@ -130,14 +130,13 @@ def test_without_retired_researchers_a_crisis_crash_has_no_winners():
     assert check_crisis_crash(Ctx(state)) and state.result.winners == []
 
 
-def test_at_a_crash_only_survivors_theories_can_win_the_nobel_prize():
+def test_no_nobel_prize_after_a_crisis_crash_even_for_survivors():
+    """Crisis: a game ending in a Crisis Crash awards no Nobel Prize; the survivors' bonus and credit decide."""
     state = _crisis(game(n=2), retired=[1], unsuccessful=S.crisis_condition)
-    loser = publish(state, 0, inputs={"IP1": "a"}, outcomes={"WO1": "up"}, tier=1)
-    loser.nobel = S.nobel_threshold(1) + 2
     survivor = publish(state, 1, inputs={"IP1": "b"}, outcomes={"WO1": "up"}, tier=1)
-    survivor.nobel = S.nobel_threshold(1)
+    survivor.nobel = S.nobel_threshold(1) + 2
     check_crisis_crash(Ctx(state))
-    assert state.result.ending == "nobel" and state.result.winners == [1] and state.result.theory == survivor.id
+    assert state.result.ending == "crisis_crash" and state.result.winners == [1] and state.result.theory is None
 
 
 def test_at_the_end_of_the_crisis_the_bonus_comes_before_the_credit_victory():

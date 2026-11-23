@@ -8,12 +8,6 @@ Each entry gives the document and section, the exact text, the possible readings
 
 ---
 
-## Retirement: answers waiting for the rulebook
-
-- **Where:** Retirement (normal game only); Crisis.
-- **Zoltan's answers (2026-11-23), implemented:** (1) when several researchers decide in the same Clean-up phase, they decide in secret at the same time: "If several researchers retire in the same Clean-up, they decide by placing the retirement marker behind their lab shield on either the 'retire' or 'don't retire' side up. Discussion is allowed during the decision, but it does not have to be true. They reveal their decisions at the same time." (2) A Crisis Crash counts as the end of the Crisis for the retirement bonus. (3) At the end of the Crisis the order is: Nobel Prize check, then the retirement bonus if nobody won it, then the academic credit victory. (4) At a Crisis Crash the Nobel Prize check covers the theories of all survivors (the retired researchers).
-- **For the rulebook:** (1) in Retirement; (2)-(4) in Retirement or Crisis, and the Nobel Prize section ("checked ... immediately when the Crisis ends") could mention the Crash.
-
 ## Unpaid postdocs in the simplified game
 
 - **Where:** Clean-up phase.

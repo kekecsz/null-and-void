@@ -56,10 +56,11 @@ def nobel_at_crisis_end(ctx: Ctx, seats: list[int] | None = None) -> bool:
     return True
 
 
-def crisis_end(ctx: Ctx, ending: str, seats: list[int] | None = None) -> None:
-    """When the Crisis ends (after its last round, or in a Crisis Crash): the Nobel Prize check, then
-    the retirement bonus if nobody won it, then the academic credit victory, all among ``seats``."""
-    if nobel_at_crisis_end(ctx, seats):
+def crisis_end(ctx: Ctx, ending: str, seats: list[int] | None = None, nobel: bool = True) -> None:
+    """When the Crisis ends (after its last round, or in a Crisis Crash): the Nobel Prize check (not
+    after a Crisis Crash), then the retirement bonus if nobody won it, then the academic credit
+    victory, among ``seats``."""
+    if nobel and nobel_at_crisis_end(ctx, seats):
         return
     retirement.bonus(ctx)
     end_game(ctx, ending, credit_victory(ctx, seats))
@@ -67,7 +68,8 @@ def crisis_end(ctx: Ctx, ending: str, seats: list[int] | None = None) -> None:
 
 def check_crisis_crash(ctx: Ctx) -> bool:
     """Crisis Crash: the non-retired researchers lose, and their alliances break; retired researchers
-    survive, and the Crisis ends for them (Crisis; Retirement)."""
+    survive, and the Crisis ends for them: no Nobel Prize, the retirement bonus, then the academic
+    credit victory among them (Crisis; Retirement)."""
     state = ctx.state
     if state.period == "crisis" and state.unsuccessful_predictions >= ctx.settings.crisis_condition:
         ctx.log("crisis_crash", f"{state.unsuccessful_predictions} unsuccessful predictions: Crisis Crash")
@@ -76,6 +78,6 @@ def check_crisis_crash(ctx: Ctx) -> bool:
             end_game(ctx, "crisis_crash", [])
             return True
         state.alliances = [pair for pair in state.alliances if all(seat in survivors for seat in pair)]
-        crisis_end(ctx, "crisis_crash", survivors)
+        crisis_end(ctx, "crisis_crash", survivors, nobel=False)
         return True
     return False
