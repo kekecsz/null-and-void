@@ -1,6 +1,6 @@
 # Null and Void
 
-Last updated: 2026.11.23. 22:24
+Last updated: 2026.11.23. 22:53
 
 \[Front page goes here\]
 
@@ -572,11 +572,11 @@ If a Researcher has gained enough fame and recognition they can choose to retire
 
 Once a researcher reaches their second Tier 5 Publications in the literature (only active, non-retracted publications count, that are in the Published Papers area), they need to decide whether they want to Retire. If they do, they are not allowed to allocate staff to Data collection during the rest of the game.
 
-Retired researchers do not lose due to the Crisis Crash. Retirement is only possible before the Crisis hits. 
+Retirement is only possible before the Crisis hits. Retired researchers do not lose due to the Crisis Crash.
 
 If a researcher declines going into retirement, they get the option to do so again after every subsequent Tier 5 Publication given that the Crisis did not hit yet and that they have at least two Tier 5 publications in the literature.
 
-Retired researchers who still have at least two Tier 5 publications in the Published Papers area get \[retirement\_bonus\] academic credits right after the Crisis ends if the Nobel Prize was not awarded to any researcher.
+Retired researchers who still have at least two Tier 5 publications in the Published Papers area get a Retirement Bonus: \[retirement\_bonus\] academic credits right after the Crisis ends (even if it ends with a Crisis Crash) if the Nobel Prize was not awarded to any researcher. This Retirement Bonus is applied before the academic credit victory is checked. 
 
 # Crisis
 
@@ -590,7 +590,7 @@ The Crisis period lasts for a total of \[crisis\_length\] rounds. If no other ga
 
 During the Crisis period, making successful predictions become a matter of life and death. The researchers must avert the crisis for long enough for a long term solution to be worked out. The number of unsuccessful predictions is tracked on the Crisis track. Each failed prediction counts as an unsuccessful prediction. Additionally, one unsuccessful prediction is scored for each Probe where no one made a prediction.
 
-When the total number of unsuccessful predictions during the Crisis period reaches \[crisis\_condition\], it is called a Crisis Crash. If there is a Crisis Crash, all non-retired researchers lose collectively. A Crisis Crash also breaks all alliances of players who lost due to the Crisis Crash, so they are unable to win via allied victory.
+When the total number of unsuccessful predictions during the Crisis period reaches \[crisis\_condition\], it is called a Crisis Crash. If there is a Crisis Crash, all non-retired researchers lose collectively. A Crisis Crash also breaks all alliances of players who lost due to the Crisis Crash, so they are unable to win via allied victory. If the game ends with a Crisis Crash, no Nobel Prize is awarded, even if there are surviving researchers (due to retirement).
 
 # Talent development phase (normal game only)
 
