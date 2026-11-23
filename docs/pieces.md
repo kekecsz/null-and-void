@@ -51,7 +51,7 @@ The game uses the pieces below. The computer version uses the same pieces in vir
 
 - Lab shield.  
 - Player mat with:  
-  - the staff allocation mat, with one area for each task (Development, Data collection, Experimentation, Write-up, Peer-review, Talent development with room for one staff member, and Grants) and a Fired postdocs area;  
+  - the staff allocation mat, with one area for each task (Development, Data collection, Experimentation and equipment, Write-up, Peer-review, Talent development with room for one staff member, and Grants) and a Fired postdocs area;  
   - Records area with numbered positions, and Archive area  
   - the Grant funding track (positions 1–6, with the Grant position table printed beside it);  
   - the Talent development track (positions 0–\[talent\_track\_max\]).  
@@ -61,6 +61,7 @@ The game uses the pieces below. The computer version uses the same pieces in vir
 - Author indicator cards: 20\.  
 - Patent tokens: 15\.  
 - Probe link cards: 4 of each Probe number (P1–P6), placed with a prediction stack to show which Probe the prediction is made for.  
-- Alliance tokens: 4, one per possible ally, shown when a formal alliance is formed.
+- Alliance tokens: 4, one per possible ally, shown when a formal alliance is formed.  
+- Retirement marker (normal game only): one double-sided marker, “retire” on one side and “don’t retire” on the other. Placed behind the lab shield to decide on Retirement, then revealed; a retired researcher keeps it “retire” side up next to their player mat for the rest of the game.
 
 (Designer’s note: a physical copy built exactly to these rules would be bulky. A tabletop version will need cheaper equivalents, e.g. one Probe card per stack with a flap over each parameter, or a Game Period track with the Crisis card hidden at a secret position.)
